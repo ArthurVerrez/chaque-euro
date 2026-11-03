@@ -73,9 +73,9 @@ const steps = [
         </h2>
       </div>
       <p>
-        Sous chaque chiffre, « Voir la source » vous mène au fichier officiel et « Voir le calcul »
-        au traitement utilisé. La date visible indique la période des données. « Méthode » précise
-        le périmètre, la date de récupération et les limites.
+        Sous chaque chiffre, «&nbsp;Voir la source&nbsp;» vous mène au fichier officiel et
+        «&nbsp;Voir le calcul&nbsp;» au traitement utilisé. La date visible indique la période des
+        données. «&nbsp;Méthode&nbsp;» précise le périmètre, la date de récupération et les limites.
       </p>
       {benefitsTotal && (
         <div class="card">
@@ -85,9 +85,9 @@ const steps = [
           </h3>
           <p>
             {formatBillions(benefitsTotal.amount)} en {benefitsTotal.year}. Dans le classeur DREES,
-            consultez l'onglet « prestations_1959_2024 », ligne « TOTAL », colonne{" "}
-            {benefitsTotal.year}. Le calcul reprend les six grands risques, vérifie leur somme
-            contre ce total et convertit les millions d'euros en euros.
+            consultez l'onglet «&nbsp;prestations_1959_2024&nbsp;», ligne «&nbsp;TOTAL&nbsp;»,
+            colonne {benefitsTotal.year}. Le calcul reprend les six grands risques, vérifie leur
+            somme contre ce total et convertit les millions d'euros en euros.
           </p>
           <Provenance provenance={protection.provenance} />
         </div>

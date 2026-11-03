@@ -29,7 +29,7 @@ const figures = [
   },
   {
     icon: "people" as const,
-    label: "Boursiers MESR",
+    label: "Boursiers recensés",
     value: formatNumber(scholarship.recipients),
     note: `Rentrée ${scholarship.year}, périmètre SIES`,
   },
@@ -69,7 +69,7 @@ const sections = [
     </p>
     <BarList
       slot="chart"
-      caption="Vie étudiante, programme 231 : CP et stade budgétaire"
+      caption="Vie étudiante : dépenses, budget voté et projet"
       items={data.budget
         .filter((row) => row.programme === "231")
         .map((row) => ({
@@ -96,13 +96,13 @@ const sections = [
     </p>
     <p>
       Vous comparez ici des <Term id="credits-paiement">crédits de paiement</Term> : consommés en
-      2025, votés pour 2026 et proposés pour 2027. Le PLF 2027 reste un projet au 2 novembre 2026.
-      Les transferts de périmètre entre programmes empêchent d’interpréter chaque variation comme
-      une hausse ou une baisse à service inchangé.
+      2025, votés pour 2026 et proposés pour 2027. Le <Term id="plf">PLF</Term> 2027 reste un projet
+      au 2 novembre 2026. Les transferts de périmètre entre programmes empêchent d’interpréter
+      chaque variation comme une hausse ou une baisse à service inchangé.
     </p>
     <BarList
       slot="chart"
-      caption="Universités et recherche, programme 150 : CP"
+      caption="Universités : dépenses, budget voté et projet"
       items={data.budget
         .filter((row) => row.programme === "150")
         .map((row) => ({

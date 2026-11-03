@@ -25,14 +25,14 @@ const figure = (kind: string, label: string) => ({
 ---
 
 <Democracy
-  title="Élus et institutions"
+  title="Élus"
   description="Mandats, groupes et votes publics des parlementaires, fonctions gouvernementales et répertoire des élus locaux."
   icon="elected"
-  answer="Retrouvez les mandats officiels et les votes publics. La participation aux scrutins décrit les votes enregistrés pendant le mandat, sans mesurer l’ensemble du travail parlementaire."
+  answer="Retrouvez votre député ou sénateur et ses votes publics. La participation mesure les votes enregistrés, pas tout le travail parlementaire."
   figures={[
     figure("deputy", "Députés en exercice"),
     figure("senator", "Sénateurs en exercice"),
-    figure("minister", "Fonctions gouvernementales AN"),
+    figure("minister", "Fonctions gouvernementales"),
   ]}
   provenance={data.provenance}
   sections={[
@@ -44,7 +44,7 @@ const figure = (kind: string, label: string) => ({
     <div class="section-head">
       <h2>
         <Icon name="elected" />
-        Le répertoire parlementaire
+        Trouver votre député ou sénateur
       </h2>
     </div>
     <form class="filters" method="get">

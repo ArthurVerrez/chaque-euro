@@ -58,6 +58,7 @@ const summaries = org
 const figures = summaries.map((summary) => ({
   icon: summary.icon,
   label: summary.label,
+  term: summary.icon === "grant" ? ("jaune-associations" as const) : ("montant-marche" as const),
   value: formatEuros(summary.amount),
   note: summary.note,
 }));
@@ -77,7 +78,7 @@ const contractClauses = [
   .sort((a, b) => b.flow.amount - a.flow.amount)
   .map(
     ({ flow, verb }) =>
-      `${verb} ${plural(flow.count, "marché public", "marchés publics")} pour ${formatEuros(flow.amount)}`,
+      `${verb} ${plural(flow.count, "marché public", "marchés publics")} prévoyant ${formatEuros(flow.amount)}`,
   );
 const answer =
   [
@@ -242,10 +243,10 @@ const description = answer ?? "Aucune donnée publique pour ce SIREN.";
               <Explainer title="Ce que cette liste ne dit pas">
                 <p>
                   Les données de {org.grants.year} proviennent de l'
-                  <Term id="jaune-associations">annexe « Jaune »</Term>. Elles incluent des
-                  subventions, des prestations de services et d'autres versements que le fichier ne
-                  distingue pas. Les aides des collectivités et des opérateurs ne sont pas couvertes
-                  de façon exhaustive.
+                  <Term id="jaune-associations">annexe «&nbsp;Jaune&nbsp;»</Term>. Elles incluent
+                  des subventions, des prestations de services et d'autres versements que le fichier
+                  ne distingue pas. Les aides des collectivités et des opérateurs ne sont pas
+                  couvertes de façon exhaustive.
                 </p>
               </Explainer>
             </div>

@@ -17,12 +17,12 @@ if (/^[0-9][0-9AB][0-9]{3}$/i.test(compact)) {
 const results = query.length >= 2 ? await search(query) : [];
 const summary =
   results.length === 0
-    ? `Aucun résultat pour «${NBSP}${query}${NBSP}».`
+    ? `Aucune fiche pour «${NBSP}${query}${NBSP}».`
     : `${results.length === 20 ? "Les 20 premiers résultats" : `${results.length} résultat${results.length > 1 ? "s" : ""}`} pour «${NBSP}${query}${NBSP}».`;
 ---
 
 <Base
-  title={query ? `Recherche&nbsp;: ${query}` : "Rechercher"}
+  title={query ? `Recherche : ${query}` : "Rechercher"}
   description="Cherchez une entreprise, une association, un acheteur public ou une commune."
   noindex
 >
@@ -33,7 +33,7 @@ const summary =
         <Icon name="search" />
         <h1>Rechercher</h1>
       </div>
-      <p class="lead">Une organisation (nom ou SIREN) ou une commune.</p>
+      <p class="lead">Cherchez une entreprise, association ou commune par nom.</p>
       <SearchForm query={query} autofocus={!query} />
     </div>
   </header>
@@ -59,8 +59,22 @@ const summary =
         </ul>
         {results.length === 0 && (
           <p>
-            Essayez un autre mot du nom, ou parcourez les <a href="/organisations">organisations</a>{" "}
-            et les <a href="/communes">communes</a>.
+            Essayez un autre nom, ou consultez l’
+            <a href="/argent-public">
+              <Icon name="euro" size={15} />
+              argent public
+            </a>
+            , les{" "}
+            <a href="/elus">
+              <Icon name="elected" size={15} />
+              élus
+            </a>{" "}
+            et les{" "}
+            <a href="/communes">
+              <Icon name="town" size={15} />
+              communes
+            </a>
+            .
           </p>
         )}
       </section>

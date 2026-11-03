@@ -62,13 +62,12 @@ const highest = sorted.at(-1);
         <Icon name="town" />
         <h1>Combien dépense votre commune&nbsp;?</h1>
       </div>
-      <p class="lead">Les comptes de {formatNumber(index.count)} communes, par habitant.</p>
-      <SearchForm />
+      <p class="lead">Comparez {formatNumber(index.count)} communes par habitant.</p>
+      <SearchForm placeholder="Ex. Lyon, Ambérieu-en-Bugey…" />
     </div>
   </header>
 
   <div class="container">
-    <CommuneDgfHistory />
     <section class="section" aria-labelledby="carte">
       <div class="section-head">
         <h2 id="carte">
@@ -196,7 +195,7 @@ const highest = sorted.at(-1);
                 Dépense par habitant
               </th>
               <th scope="col" class="num hide-small">
-                Médiane de la strate
+                <Term id="mediane">Médiane</Term> par taille
               </th>
               <th scope="col" class="num">
                 Écart
@@ -231,6 +230,7 @@ const highest = sorted.at(-1);
       <p class="footnote small muted">Paris inclut aussi ses dépenses de département.</p>
       <Provenance provenance={index.provenance} />
     </section>
+    <CommuneDgfHistory />
   </div>
 </Base>
 

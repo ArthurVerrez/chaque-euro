@@ -55,35 +55,11 @@ const mandateRows = (items: typeof mandates) =>
   }))}
   provenance={data.provenance}
   sections={[
-    { id: "mandats", label: "Mandats", icon: "elected" },
     { id: "votes", label: "Votes", icon: "vote" },
+    { id: "mandats", label: "Mandats", icon: "elected" },
     { id: "interets", label: "Intérêts déclarés", icon: "declaration" },
   ]}
 >
-  <section id="mandats" class="section">
-    <div class="section-head">
-      <h2>
-        <Icon name="elected" />
-        Mandats et organes
-      </h2>
-    </div>
-    <PublicTable
-      caption="Mandats, fonctions et appartenances datées"
-      columns={["Fonction et organe", "Début", "Fin"]}
-      rows={mandateRows(offices)}
-    />
-    {committees.length > 0 && (
-      <details>
-        <summary>Commissions et autres fonctions ({formatNumber(committees.length)})</summary>
-        <PublicTable
-          caption="Historique des commissions"
-          columns={["Fonction et organe", "Début", "Fin"]}
-          rows={mandateRows(committees)}
-        />
-      </details>
-    )}
-    <Provenance provenance={data.provenance} />
-  </section>
   <section id="votes" class="section">
     <div class="section-head">
       <h2>
@@ -115,6 +91,30 @@ const mandateRows = (items: typeof mandates) =>
       ])}
     />
     <Provenance provenance={data.voteProvenance} />
+  </section>
+  <section id="mandats" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="elected" />
+        Mandats et fonctions
+      </h2>
+    </div>
+    <PublicTable
+      caption="Mandats, fonctions et appartenances datées"
+      columns={["Fonction et institution", "Début", "Fin"]}
+      rows={mandateRows(offices)}
+    />
+    {committees.length > 0 && (
+      <details>
+        <summary>Commissions et autres fonctions ({formatNumber(committees.length)})</summary>
+        <PublicTable
+          caption="Historique des commissions"
+          columns={["Fonction et institution", "Début", "Fin"]}
+          rows={mandateRows(committees)}
+        />
+      </details>
+    )}
+    <Provenance provenance={data.provenance} />
   </section>
   <section id="interets" class="section">
     <div class="section-head">

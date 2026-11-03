@@ -13,13 +13,7 @@ import Toc from "../components/Toc.astro";
 import Base from "../layouts/Base.astro";
 import { getPublicMoney, getPublicIndicators } from "../lib/data";
 import { PUBLIC_SECTORS, PUBLIC_FUNCTIONS, publicMoneyFlow } from "../lib/flows";
-import {
-  formatEuro,
-  formatEuros,
-  formatNumber,
-  formatBillions,
-  formatPercent,
-} from "../lib/format";
+import { formatEuro, formatEuros, formatBillions, formatPercent } from "../lib/format";
 
 const FIRST_YEAR = 2000;
 const [money, indicators] = await Promise.all([getPublicMoney(), getPublicIndicators()]);
@@ -114,19 +108,19 @@ const figures: Figure[] = [
     label: "Par ménage",
     term: "menage",
     value: formatEuro(spending / households),
-    note: `${formatNumber(households)} ménages (Insee)`,
+    note: "repère, pas votre facture",
   },
   {
     icon: "state",
     label: "Budget de l'État",
     value: formatEuros(stateBudget.spent),
-    note: "voté par le Parlement",
+    note: `dépensé en ${stateBudget.year}`,
   },
   {
     icon: "socialSecurity",
     label: "Sécurité sociale",
     value: formatEuros(latest("S1314")?.spending ?? 0),
-    note: "son propre budget, voté à part",
+    note: "périmètre Insee, hôpitaux compris",
   },
 ];
 const years = sector("S13")?.years.filter((entry) => entry.year >= FIRST_YEAR) ?? [];
@@ -156,7 +150,7 @@ const answer = `En ${year}, l'État, la Sécurité sociale, les collectivités e
     items={[
       { href: "#en-bref", label: "En bref", icon: "info" },
       { href: "#qui", label: "Qui dépense", icon: "compare" },
-      { href: "#usages", label: "À quoi il sert", icon: "flow" },
+      { href: "#usages", label: "Où va l’argent", icon: "flow" },
       { href: "#prelevements", label: "Qui prélève quoi", icon: "revenue" },
       { href: "#europe", label: "Comparer avec l’Europe", icon: "europe" },
       { href: "#dette", label: "Dette trimestrielle", icon: "debt" },
@@ -172,8 +166,8 @@ const answer = `En ${year}, l'État, la Sécurité sociale, les collectivités e
           Qui dépense
         </h2>
         <p>
-          Quatre familles d'<Term id="administrations-publiques">administrations publiques</Term>.
-          Elles se versent de l'argent entre elles : on ne le compte qu'une fois.
+          Quatre familles d'<Term id="administrations-publiques">administrations publiques</Term>,
+          sans doubles comptes.
         </p>
       </div>
       <div class="card">
@@ -213,10 +207,7 @@ const answer = `En ${year}, l'État, la Sécurité sociale, les collectivités e
         <h2 id="titre-usages">
           <Icon name="flow" />À quoi sert tout l'argent public
         </h2>
-        <p>
-          Tout est mis en commun, puis réparti par usage. Dernière année détaillée :{" "}
-          {functions.year}.
-        </p>
+        <p>Dépenses par usage, dernière année détaillée : {functions.year}.</p>
       </div>
       <div class="card">
         <FlowChart
@@ -285,7 +276,7 @@ const answer = `En ${year}, l'État, la Sécurité sociale, les collectivités e
         { metric: "spending" as const, label: "Dépenses publiques" },
         { metric: "revenue" as const, label: "Recettes publiques" },
         { metric: "balance" as const, label: "Solde public (excédent +, déficit −)" },
-        { metric: "debt" as const, label: "Dette de Maastricht" },
+        { metric: "debt" as const, label: "Dette publique" },
       ].map(({ metric, label }) => (
         <div class="card">
           <BarList caption={`${label}, ${europeYear} (% du PIB)`} items={europeBars(metric)} />
@@ -332,16 +323,20 @@ const answer = `En ${year}, l'État, la Sécurité sociale, les collectivités e
             La dette au dernier trimestre
           </h2>
           <p>
-            <Term id="dette-publique">Dette de Maastricht</Term> à la fin de{" "}
+            <Term id="dette-publique">Dette publique</Term> à la fin de{" "}
             {debt.period.replace("Q", "T")}
             {debt.status?.includes("p") ? ", donnée provisoire" : ""}.
+            <a class="more" href="/analyses/deficit-par-president">
+              <Icon name="trend" size={16} /> Dette et déficit : l’évolution
+            </a>
           </p>
         </div>
         <KeyFigures
           figures={[
             {
               icon: "debt",
-              label: "Dette brute consolidée",
+              label: "Dette publique",
+              term: "dette-publique",
               value: formatBillions(debt.amount),
               note: "toutes les administrations publiques",
             },
@@ -353,6 +348,7 @@ const answer = `En ${year}, l'État, la Sécurité sociale, les collectivités e
             },
           ]}
         />
+
         <Provenance provenance={indicators.debt.provenance} />
       </section>
     )}

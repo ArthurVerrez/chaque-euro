@@ -7,6 +7,9 @@ import SearchForm from "../components/SearchForm.astro";
 import ShareBar from "../components/ShareBar.astro";
 import Term from "../components/Term.astro";
 import { ANALYSES } from "../lib/analyses";
+import type { Provenance as Evidence } from "../lib/data";
+import type { IconName } from "../lib/icons";
+import type { TermId } from "../lib/glossary";
 import { kindIcon } from "../lib/icons";
 import Base from "../layouts/Base.astro";
 import { getHome, getOrganisationsIndex, getStateBudget } from "../lib/data";
@@ -53,24 +56,42 @@ const keyFigures = [
   {
     value: formatEuros(budget.spent),
     label: `dépensés par l'État en ${budget.year} (budget général)`,
-    source: "PLRG 2025",
+    icon: "state",
+    term: "budget-general",
+    provenance: budget.provenance,
   },
   facts.contracts_count && {
     value: formatNumber(facts.contracts_count.value),
     label: `marchés publics notifiés en ${facts.contracts_count.period}`,
-    source: "DECP",
+    icon: "contract",
+    term: "notification",
+    provenance: home.contractsProvenance,
   },
   facts.grants_amount && {
     value: formatEuros(facts.grants_amount.value),
-    label: `versés par l'État aux associations en ${facts.grants_amount.period}`,
-    source: "Jaune associations",
+    label: `versés aux associations en ${facts.grants_amount.period}`,
+    icon: "grant",
+    term: "jaune-associations",
+    provenance: organisations.grantsProvenance,
   },
   facts.communes_median_spending_per_capita && {
     value: formatEuro(facts.communes_median_spending_per_capita.value),
-    label: `dépensés par habitant par la commune médiane en ${facts.communes_median_spending_per_capita.period}`,
-    source: "OFGL",
+    label: `par habitant, commune médiane (${facts.communes_median_spending_per_capita.period})`,
+    icon: "town",
+    term: "mediane",
+    provenance: home.strataProvenance,
   },
-].filter((figure): figure is { value: string; label: string; source: string } => Boolean(figure));
+].filter(
+  (
+    figure,
+  ): figure is {
+    value: string;
+    label: string;
+    icon: IconName;
+    term: TermId;
+    provenance: Evidence;
+  } => Boolean(figure),
+);
 const doors = [
   {
     icon: "building" as const,
@@ -115,13 +136,11 @@ const doors = [
   <section class="hero">
     <div class="container hero-grid">
       <div>
-        <p class="hero-kicker">Données publiques ouvertes, expliquées</p>
+        <p class="hero-kicker">Données officielles</p>
         <h1>Où va l'argent public&nbsp;?</h1>
-        <p class="hero-lead">
-          Marchés publics, subventions, budgets&nbsp;: chaque chiffre avec sa source officielle.
-        </p>
+        <p class="hero-lead">Votre commune, l'État, vos élus : des chiffres sourcés.</p>
         <SearchForm variant="hero" />
-        <ul class="chips" aria-label="Exemples de recherche">
+        <ul class="chips" aria-label="Accès directs">
           <li>
             <a href="/organisation/775672272">
               <Icon name="association" size={15} />
@@ -129,27 +148,27 @@ const doors = [
             </a>
           </li>
           <li>
-            <a href="/organisation/329338883">
-              <Icon name="company" size={15} />
-              Colas France
+            <a href="/argent-public">
+              <Icon name="euro" size={15} />
+              Tout l'argent public
             </a>
           </li>
           <li>
-            <a href="/commune/69123">
+            <a href="/communes">
               <Icon name="town" size={15} />
-              Lyon
+              Votre commune
             </a>
           </li>
           <li>
-            <a href="/commune/13055">
-              <Icon name="town" size={15} />
-              Marseille
+            <a href="/elus">
+              <Icon name="elected" size={15} />
+              Vos élus
             </a>
           </li>
           <li>
-            <a href="/budget-etat">
-              <Icon name="state" size={15} />
-              Budget de l'État
+            <a href="/analyses/deficit-par-president">
+              <Icon name="debt" size={15} />
+              Dette et déficit
             </a>
           </li>
         </ul>
@@ -159,9 +178,18 @@ const doors = [
         <dl>
           {keyFigures.map((figure) => (
             <div>
-              <dt>{figure.label}</dt>
+              <dt>
+                <Icon name={figure.icon} size={15} /> <Term id={figure.term}>{figure.label}</Term>
+              </dt>
               <dd>{figure.value}</dd>
-              <dd class="panel-source">Source : {figure.source}</dd>
+              <dd class="panel-source">
+                <a href={figure.provenance.citations[0]?.source.pageUrl}>
+                  <Icon name="source" size={13} /> Voir la source
+                </a>
+                <a href={figure.provenance.calculationUrl}>
+                  <Icon name="code" size={13} /> Voir le calcul
+                </a>
+              </dd>
             </div>
           ))}
         </dl>
@@ -228,7 +256,7 @@ const doors = [
           />
           <p>
             <a class="more" href="/budget-etat">
-              Toutes les missions
+              Les politiques financées
             </a>
           </p>
           <Provenance provenance={budget.provenance} />
@@ -237,15 +265,15 @@ const doors = [
         <article class="card">
           <h3>
             <Icon name="contract" />
-            Les marchés publics publiés chaque année
+            Les marchés publics attribués chaque année
           </h3>
           <p class="card-sub">
             {facts.contracts_count && facts.contracts_amount && (
               <>
                 En {facts.contracts_count.period},{" "}
                 <strong>{formatNumber(facts.contracts_count.value)} marchés</strong> ont été
-                publiés, pour <strong>{formatEuros(facts.contracts_amount.value)}</strong> prévus
-                aux contrats.
+                <Term id="notification">notifiés</Term>, pour{" "}
+                <strong>{formatEuros(facts.contracts_amount.value)}</strong> prévus aux contrats.
               </>
             )}
           </p>
@@ -268,8 +296,8 @@ const doors = [
             Ce que dépensent les communes, selon leur taille
           </h3>
           <p class="card-sub">
-            Dépense médiane par habitant en {facts.communes_median_spending_per_capita?.period}, par
-            strate de population.
+            Dépense <Term id="mediane">médiane</Term> par habitant en{" "}
+            {facts.communes_median_spending_per_capita?.period}, par taille de commune.
           </p>
           <BarList caption="Dépenses totales par habitant (médiane)" items={strata} />
           <p>
@@ -434,11 +462,16 @@ const doors = [
   }
 
   .hero-panel {
+    --link: #a9c4ee;
     background: rgb(255 255 255 / 6%);
     border: 1px solid rgb(255 255 255 / 18%);
     border-radius: var(--radius);
     padding: 1.25rem 1.5rem;
     backdrop-filter: blur(4px);
+  }
+
+  .hero-panel :global(.term:hover) {
+    background: rgb(255 255 255 / 10%);
   }
 
   .panel-title {
@@ -479,6 +512,14 @@ const doors = [
     font-weight: 750;
     line-height: 1.15;
     color: #fff;
+  }
+
+  .panel-source a {
+    color: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-right: 0.5rem;
   }
 
   .hero-panel .panel-source {

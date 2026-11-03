@@ -12,7 +12,7 @@ import type { IconName } from "../lib/icons";
 const downloads = await getDownloads();
 const TABLES: Record<string, { label: string; icon: IconName }> = {
   state_monthly: { label: "Exécution mensuelle de l'État", icon: "calendar" },
-  state_titles: { label: "Dépenses de l'État par titre", icon: "layers" },
+  state_titles: { label: "Dépenses de l'État par type", icon: "layers" },
   state_ministries: { label: "Dépenses de l'État par ministère", icon: "state" },
   state_assets: { label: "Bilan de l'État", icon: "state" },
   compulsory_levies: { label: "Prélèvements obligatoires", icon: "revenue" },
@@ -302,12 +302,12 @@ const FORMATS: Record<string, { label: string; icon: IconName }> = {
         <Icon name="download" />
         <h1>Télécharger les données</h1>
       </div>
-      <p class="lead">Toutes les tables du site, en CSV et en Parquet.</p>
+      <p class="lead">CSV pour tableur, Parquet pour outil de données.</p>
       <KeyFigures
         figures={[
           {
             icon: "list",
-            label: "Tables",
+            label: "Jeux de données",
             value: formatNumber(downloads.tables.length),
           },
           {
@@ -401,8 +401,9 @@ const FORMATS: Record<string, { label: string; icon: IconName }> = {
       <div class="grid">
         <Explainer title="Dans un tableur">
           <p>
-            Ouvrez le fichier CSV contenu dans l'archive avec Excel ou LibreOffice. Les comptes des
-            communes dépassent le million de lignes, la limite d'Excel : utilisez alors le Parquet.
+            Décompressez l’archive CSV, puis ouvrez le fichier dans Excel ou LibreOffice. Les
+            comptes des communes dépassent la limite d’un million de lignes d’Excel : utilisez un
+            outil de données et le Parquet.
           </p>
         </Explainer>
         <Explainer title="Avec un outil de données">

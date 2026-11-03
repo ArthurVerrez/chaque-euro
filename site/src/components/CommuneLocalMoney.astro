@@ -36,7 +36,7 @@ const euros = (value: number | null) => (value === null ? "n.d." : formatEuros(v
   <div class="section-head">
     <h2 id="titre-fiscalite-locale">
       <Icon name="localTax" />
-      Fiscalité locale 2025
+      Impôts locaux 2025
     </h2>
     <p>
       Taux et <Term id="base-fiscale">bases fiscales</Term>, par bénéficiaire, comparés aux communes
@@ -135,7 +135,7 @@ const euros = (value: number | null) => (value === null ? "n.d." : formatEuros(v
       })}
     </div>
   ) : (
-    <p class="muted">Commune absente du REI 2025. Aucun taux n’est estimé.</p>
+    <p class="muted">Aucune donnée fiscale 2025 disponible ici. Aucun taux estimé.</p>
   )}
   <Explainer title="Ce que les taux permettent de comparer">
     <p>
@@ -150,10 +150,10 @@ const euros = (value: number | null) => (value === null ? "n.d." : formatEuros(v
       lissages et taxes annexes ne permettent pas de déduire votre avis d’imposition de ce tableau.
     </p>
     <p>
-      La TEOM distingue ses zones de taux. Sa part incitative éventuelle n’est pas incluse dans le
-      taux. La majoration de taxe d’habitation est affichée séparément. La CFE est ventilée entre
-      les zones fiscales ; dans le Grand Paris, son bénéficiaire peut être un établissement public
-      territorial.
+      La taxe d’enlèvement des ordures ménagères distingue ses zones de taux. Sa part incitative
+      éventuelle n’est pas incluse dans le taux. La majoration de taxe d’habitation est affichée
+      séparément. La cotisation foncière des entreprises est ventilée entre les zones fiscales ;
+      dans le Grand Paris, son bénéficiaire peut être un établissement public territorial.
     </p>
   </Explainer>
   <Provenance provenance={data.taxProvenance} />
@@ -192,7 +192,7 @@ const euros = (value: number | null) => (value === null ? "n.d." : formatEuros(v
       ]}
     />
   ) : (
-    <p class="muted">Commune absente du fichier IRCOM. Aucun montant n’est estimé.</p>
+    <p class="muted">Aucune donnée d’impôt sur le revenu disponible ici. Aucun montant estimé.</p>
   )}
   <Explainer title="Revenus des habitants, recette de l’État">
     <p>
@@ -200,8 +200,8 @@ const euros = (value: number | null) => (value === null ? "n.d." : formatEuros(v
       Le revenu fiscal de référence n’est ni le salaire ni le revenu disponible.
     </p>
     <p>
-      Les données soumises au secret fiscal restent indiquées « n.d. ». Pour Paris, Lyon et
-      Marseille, les arrondissements sont regroupés ; une cellule secrète empêche d’afficher le
+      Les données soumises au secret fiscal restent indiquées «&nbsp;n.d.&nbsp;». Pour Paris, Lyon
+      et Marseille, les arrondissements sont regroupés ; une cellule secrète empêche d’afficher le
       total correspondant. L’impôt net peut être négatif si les crédits d’impôt dépassent l’impôt
       dû.
     </p>

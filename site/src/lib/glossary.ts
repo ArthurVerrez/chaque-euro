@@ -13,11 +13,29 @@ interface GlossaryEntry {
 }
 
 export const GLOSSARY = {
+  "million-milliard": {
+    term: "Million et milliard d’euros",
+    theme: "lecture",
+    definition:
+      "1 M€ vaut un million d’euros. 1 Md€ vaut un milliard d’euros, soit 1 000 millions.",
+  },
+  cnccfp: {
+    term: "CNCCFP",
+    theme: "lecture",
+    definition:
+      "Commission nationale des comptes de campagne et des financements politiques. Elle contrôle les comptes des candidats et des partis ; ses décisions administratives ne sont pas des condamnations pénales.",
+  },
+  hatvp: {
+    term: "HATVP",
+    theme: "lecture",
+    definition:
+      "Haute Autorité pour la transparence de la vie publique. Elle contrôle notamment les déclarations d’intérêts des responsables publics et tient le registre des représentants d’intérêts.",
+  },
   "participation-scrutins": {
     term: "Participation aux scrutins publics",
     theme: "lecture",
     definition:
-      "Votes pour, contre et abstentions enregistrés, divisés par les scrutins publics publiés pendant le mandat. Un vote par délégation compte. Ce taux ne mesure ni la présence physique ni l'ensemble du travail parlementaire.",
+      "Votes pour, contre et abstentions enregistrés, délégations incluses, divisés par les scrutins publics publiés pendant le mandat. Ce taux ne mesure ni la présence physique ni tout le travail parlementaire.",
   },
   "declaration-interets": {
     term: "Déclaration d'intérêts et d'activités",
@@ -41,7 +59,7 @@ export const GLOSSARY = {
     term: "Base fiscale",
     theme: "communes",
     definition:
-      "Valeur retenue pour calculer un impôt avant application du taux. Pour la fiscalité locale, elle repose notamment sur la valeur locative cadastrale et les exonérations. Elle ne représente pas la valeur de marché des biens.",
+      "Valeur utilisée pour calculer l’impôt avant application du taux, notamment la valeur locative cadastrale après exonérations. Elle diffère de la valeur de marché des biens.",
   },
   "foyer-fiscal": {
     term: "Foyer fiscal",
@@ -59,7 +77,7 @@ export const GLOSSARY = {
     term: "Participation électorale",
     theme: "lecture",
     definition:
-      "Nombre de votants divisé par le nombre d’inscrits. Les votes blancs et nuls sont inclus parmi les votants. Au second tour, seuls les électeurs appelés à voter entrent dans ce calcul.",
+      "Nombre de votants, votes blancs et nuls inclus, divisé par le nombre d’inscrits. Au second tour, seuls les électeurs appelés à voter sont comptés.",
   },
   cpv: {
     term: "Code CPV",
@@ -95,31 +113,31 @@ export const GLOSSARY = {
     term: "Représentation d’intérêts",
     theme: "organisations",
     definition:
-      "Actions visant à influencer une décision publique. Les registres HATVP et UE décrivent des activités déclarées et des moyens, selon des périmètres différents. Une fiche d’activité peut regrouper plusieurs actions.",
+      "Actions visant à influencer une décision publique, déclarées aux registres français et européen selon des périmètres différents. Une fiche peut regrouper plusieurs actions.",
   },
   "aide-partis": {
     term: "Aide publique aux partis",
     theme: "etat",
     definition:
-      "Financement public attribué aux partis selon la loi du 11 mars 1988. Les comptes distinguent deux fractions et d’autres aides publiques. Une aide comptabilisée par un parti n’est pas nécessairement un versement direct de l’État pour le même exercice.",
+      "Financement public des partis, encadré par la loi du 11 mars 1988, en deux fractions et autres aides. Une aide comptabilisée n’atteste pas un versement direct de l’État la même année.",
   },
   "non-affectation": {
     term: "Universalité budgétaire et non-affectation",
     theme: "etat",
     definition:
-      "En principe, les recettes du budget de l'État financent ensemble ses dépenses, sans réserver chaque impôt à un usage. C'est la non-affectation, l'un des volets de l'universalité budgétaire. La loi prévoit des exceptions, notamment les taxes affectées, les comptes spéciaux et les fonds de concours.",
+      "En principe, les recettes de l’État financent ensemble ses dépenses, sans réserver chaque impôt à un usage. La loi prévoit des exceptions : taxes affectées, comptes spéciaux et fonds de concours.",
   },
   "branche-securite-sociale": {
     term: "Branche de la Sécurité sociale",
     theme: "etat",
     definition:
-      "Ensemble de régimes obligatoires de base couvrant un risque : maladie, vieillesse, famille, accidents du travail et maladies professionnelles, ou autonomie. Leurs comptes relèvent des lois de financement de la Sécurité sociale (LFSS). L'assurance chômage et les retraites complémentaires sont en dehors de ces cinq branches.",
+      "Régimes de base couvrant la maladie, la vieillesse, la famille, les accidents du travail et maladies professionnelles ou l’autonomie, régis par les lois de financement de la Sécurité sociale (LFSS). Le chômage et les retraites complémentaires sont exclus.",
   },
   ondam: {
     term: "ONDAM",
     theme: "etat",
     definition:
-      "Objectif national de dépenses d'assurance maladie voté dans la loi de financement de la Sécurité sociale. Il couvre des soins de ville, des établissements de santé et des services médico-sociaux. Son périmètre traverse plusieurs branches et ne couvre pas toutes leurs dépenses.",
+      "Objectif national de dépenses d’assurance maladie, voté par le Parlement. Il couvre des soins de ville, des établissements de santé et des services médico-sociaux, sur plusieurs branches, sans couvrir toutes leurs dépenses.",
   },
   "titre-budgetaire": {
     term: "Titre budgétaire",
@@ -167,7 +185,7 @@ export const GLOSSARY = {
     term: "Dette publique au sens de Maastricht",
     theme: "etat",
     definition:
-      "Dette brute des administrations publiques à la fin de l’année, consolidée pour ne pas compter les dettes qu’elles détiennent entre elles. Elle est distincte du déficit annuel.",
+      "Total restant à rembourser par les administrations publiques à une date donnée, sans compter leurs dettes entre elles. Le déficit mesure l’écart annuel entre dépenses et recettes.",
   },
   perequation: {
     term: "Péréquation",
@@ -242,7 +260,7 @@ export const GLOSSARY = {
       "Aide financière versée à un organisme, souvent une association, pour une action d'intérêt général. Contrairement à un marché, l'organisme ne vend rien en échange.",
   },
   "jaune-associations": {
-    term: "Annexe « Jaune » associations",
+    term: "Annexe «\u00a0Jaune\u00a0» associations",
     theme: "etat",
     definition:
       "Document joint chaque année au projet de loi de finances. Il liste les versements de l'État aux associations deux ans plus tôt : subventions, prestations de services et autres crédits.",
@@ -272,7 +290,7 @@ export const GLOSSARY = {
       "Sommes que l'État est autorisé à payer pendant l'année. Les crédits votés sont distincts des crédits consommés, qui correspondent aux dépenses exécutées.",
   },
   "loi-de-finances": {
-    term: "Loi de finances",
+    term: "Loi de finances initiale (LFI)",
     theme: "etat",
     definition:
       "Loi votée chaque année par le Parlement. Elle autorise les recettes et les dépenses de l'État pour l'année suivante.",

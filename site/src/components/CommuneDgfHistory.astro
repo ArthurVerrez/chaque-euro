@@ -14,10 +14,10 @@ const data = await getCommuneDgfHistory();
   <div class="section-head">
     <h2 id="titre-dotations">
       <Icon name="grant" />
-      La DGF dans les comptes des communes
+      L’aide de l’État aux communes
     </h2>
     <p>
-      La <Term id="dgf">dotation globale de fonctionnement</Term> comptabilisée, en euros courants.
+      <Term id="dgf">DGF</Term> comptabilisée, en euros courants.
     </p>
   </div>
   <div class="card">
@@ -34,9 +34,9 @@ const data = await getCommuneDgfHistory();
       DGF des départements ni des intercommunalités. La couverture varie avec les comptes publiés.
     </p>
     <p>
-      Les attributions DGCL 2026 ne sont pas intégrées : la licence n’est pas précisée dans le
-      catalogue DGCL ni dans le miroir OFGL. Les comptes exécutés 2025 ne sont pas présentés comme
-      des allocations 2026.
+      Les attributions DGCL 2026 ne sont pas intégrées : le téléchargement DGCL était indisponible
+      lors de la vérification du 2 novembre 2026. Les comptes exécutés 2025 ne sont pas présentés
+      comme des allocations 2026.
     </p>
   </Explainer>
   <Provenance provenance={data.provenance} />

@@ -351,7 +351,7 @@ const METHOD = {
   voted:
     "Crédits de paiement votés pour 2026 (état B de la loi de finances), mission par mission. Les missions sont rapprochées de celles de 2025 par leur nom.",
   publicFinances:
-    "Dépenses et recettes de chaque sous-secteur des administrations publiques, en comptabilité nationale. Le total « Ensemble » retire les flux entre sous-secteurs.",
+    "Dépenses et recettes de chaque sous-secteur des administrations publiques, en comptabilité nationale. Le total «\u00a0Ensemble\u00a0» retire les flux entre sous-secteurs.",
   publicAccounts:
     "Tableaux Insee 3.203 à 3.214, montants convertis en euros. Les totaux de dépenses et recettes des quatre familles sont contrôlés contre le tableau 3.215 à 0,05 Md€ près. Le solde est la recette moins la dépense. Les transferts fiscaux et impôts non recouvrables corrigent les impôts reçus. Investissement : formation de capital et autres acquisitions nettes d’actifs non financiers. Les subventions et autres transferts comprennent le reste des dépenses, dont les impôts acquittés. Par ménage : dépenses divisées par le nombre de ménages Insee, sans représenter votre contribution personnelle.",
   publicFunctions:

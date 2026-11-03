@@ -23,6 +23,7 @@ const figures = [
   {
     icon: "debt" as const,
     label: "Dette publique",
+    term: "dette-publique" as const,
     value: formatBillions(latest.apu_debt!),
     note: `${rate(latest.apu_debt_ratio!)} du PIB à fin ${latest.year}`,
   },
@@ -68,10 +69,10 @@ const sections = [
     </p>
     <LineChart
       slot="chart"
-      caption="Solde annuel des APU et de l’État, en % du PIB"
+      caption="Solde public et État (% du PIB)"
       labels={data.years.map((row) => String(row.year))}
       series={[
-        { label: "Ensemble des APU", values: data.years.map((row) => row.apu_ratio) },
+        { label: "Ensemble public", values: data.years.map((row) => row.apu_ratio) },
         { label: "État, comptabilité nationale", values: data.years.map((row) => row.state_ratio) },
       ]}
       format={rate}
@@ -100,7 +101,7 @@ const sections = [
       caption="Solde annuel, en Md€ courants"
       labels={data.years.map((row) => String(row.year))}
       series={[
-        { label: "Ensemble des APU", values: data.years.map((row) => row.apu_balance) },
+        { label: "Ensemble public", values: data.years.map((row) => row.apu_balance) },
         { label: "État", values: data.years.map((row) => row.state_balance) },
       ]}
       format={formatBillions}
@@ -109,7 +110,7 @@ const sections = [
   </Section>
   <Section
     id="dette"
-    title="La dette est un stock, le déficit un flux"
+    title="La dette reste à rembourser, le déficit est annuel"
     icon="debt"
     provenance={data.provenance}
   >
@@ -120,16 +121,16 @@ const sections = [
       interviennent aussi.
     </p>
     <p>
-      En {latest.year}, elle représente {formatBillions(latest.apu_debt!)} pour toutes les APU, dont{" "}
-      {formatBillions(latest.state_debt!)} pour la contribution de l’État. Les ratios ci-dessous
-      utilisent le PIB de chaque année.
+      En {latest.year}, elle représente {formatBillions(latest.apu_debt!)} pour l’ensemble public,
+      dont {formatBillions(latest.state_debt!)} pour la contribution de l’État. Les ratios
+      ci-dessous utilisent le PIB de chaque année.
     </p>
     <LineChart
       slot="chart"
-      caption="Dette de Maastricht à fin décembre, en % du PIB"
+      caption="Dette publique à fin décembre, en % du PIB"
       labels={debt.map((row) => String(row.year))}
       series={[
-        { label: "Ensemble des APU", values: debt.map((row) => row.apu_debt_ratio) },
+        { label: "Ensemble public", values: debt.map((row) => row.apu_debt_ratio) },
         { label: "Contribution de l’État", values: debt.map((row) => row.state_debt_ratio) },
       ]}
       format={rate}
@@ -149,10 +150,10 @@ const sections = [
     </p>
     <LineChart
       slot="chart"
-      caption="Dette de Maastricht à fin décembre, en Md€ courants"
+      caption="Dette publique à fin décembre, en Md€ courants"
       labels={debt.map((row) => String(row.year))}
       series={[
-        { label: "Ensemble des APU", values: debt.map((row) => row.apu_debt) },
+        { label: "Ensemble public", values: debt.map((row) => row.apu_debt) },
         { label: "Contribution de l’État", values: debt.map((row) => row.state_debt) },
       ]}
       format={formatBillions}

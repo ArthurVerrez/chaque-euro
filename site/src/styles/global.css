@@ -99,7 +99,7 @@ h3,
 h4 {
   line-height: 1.15;
   margin: 0 0 0.5rem;
-  text-wrap: balance;
+  text-wrap: pretty;
   color: var(--text);
 }
 
@@ -121,19 +121,15 @@ h3 {
   letter-spacing: -0.01em;
 }
 
-h2:has(> svg),
 h3:has(> svg) {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-h2:has(> svg) {
-  align-items: flex-start;
-}
-
 h2 > svg {
-  flex: none;
+  vertical-align: -0.3em;
+  margin-right: 0.5rem;
   width: 2.25rem;
   height: 2.25rem;
   padding: 0.5rem;

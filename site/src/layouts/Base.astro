@@ -29,7 +29,7 @@ const groups: { title: string; items: { href: string; label: string; icon: IconN
   {
     title: "Argent public",
     items: [
-      { href: "/argent-public", label: "Vue d'ensemble", icon: "euro" },
+      { href: "/argent-public", label: "Tout l'argent public", icon: "euro" },
       { href: "/budget-etat", label: "Budget de l'État", icon: "state" },
       { href: "/argent-public/operateurs", label: "Opérateurs de l'État", icon: "building" },
       { href: "/argent-public/collectivites", label: "Collectivités locales", icon: "town" },
@@ -107,7 +107,7 @@ const current = (href: string) =>
     </a>
     <header class="topbar">
       <a class="brand" href="/" aria-label="Chaque Euro, accueil">
-        <img class="mark" src="/favicon.svg" alt="" width="40" height="40" />
+        <img class="mark" src="/logo.svg" alt="" width="40" height="40" />
         <span class="wordmark">
           <span class="name">Chaque Euro</span>
           <span class="tagline">L'argent public, expliqué</span>
@@ -129,7 +129,7 @@ const current = (href: string) =>
       <aside class="sidebar" id="navigation" popover>
         <div class="sidebar-head">
           <a class="brand" href="/" aria-label="Chaque Euro, accueil">
-            <img class="mark" src="/favicon.svg" alt="" width="40" height="40" />
+            <img class="mark" src="/logo.svg" alt="" width="40" height="40" />
             <span class="wordmark">
               <span class="name">Chaque Euro</span>
               <span class="tagline">L'argent public, expliqué</span>
@@ -176,9 +176,8 @@ const current = (href: string) =>
             <div>
               <p class="footer-brand">Chaque Euro</p>
               <p>
-                Un site indépendant, non affilié à l'État, qui rend lisibles les données publiques
-                ouvertes sur l'argent public. Chaque chiffre renvoie vers sa source officielle et
-                vers le calcul qui le produit.
+                Site indépendant de l'État. Chaque chiffre renvoie à sa source officielle et à son
+                calcul.
               </p>
             </div>
             <nav aria-label="Données">

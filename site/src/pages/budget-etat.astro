@@ -15,13 +15,7 @@ import Toc from "../components/Toc.astro";
 import Base from "../layouts/Base.astro";
 import { getStateBudget, getStateExecution, type PublicSector } from "../lib/data";
 import { stateFlow } from "../lib/flows";
-import {
-  formatEuro,
-  formatEuros,
-  formatNumber,
-  formatPercent,
-  formatBillions,
-} from "../lib/format";
+import { formatEuro, formatEuros, formatPercent, formatBillions } from "../lib/format";
 
 const [budget, execution] = await Promise.all([getStateBudget(), getStateExecution()]);
 const monthlyYear = Math.max(...execution.monthly.rows.map((row) => row.year));
@@ -91,7 +85,7 @@ const figures = [
     label: "Dépenses",
     term: "credits-paiement" as const,
     value: formatEuros(budget.spent),
-    note: `crédits consommés en ${budget.year}`,
+    note: `dépensé en ${budget.year}`,
   },
   {
     icon: "revenue" as const,
@@ -111,7 +105,7 @@ const figures = [
     label: "Par ménage",
     term: "menage" as const,
     value: formatEuro(budget.perHousehold),
-    note: `${formatNumber(budget.households)} ménages (Insee)`,
+    note: "repère, pas votre facture",
   },
 ];
 const FIRST_YEAR = 2000;
@@ -164,7 +158,7 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
       <p class="badges">
         <span class="badge">
           <Icon name="state" size={14} />
-          Budget général · exécution {budget.year}
+          <Term id="budget-general">Budget général</Term> · dépenses {budget.year}
         </span>
       </p>
       <div class="entity">
@@ -179,193 +173,60 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
   <Toc
     items={[
       { href: "#en-bref", label: "En bref", icon: "info" },
+      { href: "#repartition", label: "Sur 100 €", icon: "share" },
+      { href: "#perimetre", label: "État et argent public", icon: "euro" },
+      { href: "#circuit", label: "Recettes et dépenses", icon: "flow" },
+      { href: "#recettes", label: "D'où vient l'argent", icon: "revenue" },
+      { href: "#missions", label: "Politiques financées", icon: "layers" },
       { href: "#annee-en-cours", label: "L’année en cours", icon: "calendar" },
-      { href: "#nature", label: "Par nature", icon: "layers" },
+      { href: "#nature", label: "Types de dépenses", icon: "layers" },
       { href: "#ministeres", label: "Par ministère", icon: "state" },
       { href: "#bilan", label: "Bilan de l’État", icon: "scale" },
       { href: "#budget-vert", label: "Budget vert", icon: "ecology" },
-      { href: "#perimetre", label: "Et le reste ?", icon: "euro" },
-      { href: "#circuit", label: "Recettes et dépenses", icon: "flow" },
-      { href: "#recettes", label: "D'où vient l'argent", icon: "revenue" },
-      { href: "#repartition", label: "Sur 100 €", icon: "share" },
-      { href: "#missions", label: "Mission par mission", icon: "layers" },
       { href: "#evolution", label: "Année par année", icon: "trend" },
       { href: "#budget-2026", label: `Budget ${next.year}`, icon: "calendar" },
     ]}
   />
 
   <div class="container">
-    <section class="section" id="annee-en-cours" aria-labelledby="titre-annee-en-cours">
+    <section class="section" id="repartition" aria-labelledby="titre-repartition">
       <div class="section-head">
-        <h2 id="titre-annee-en-cours">
-          <Icon name="calendar" />
-          L'année en cours
+        <h2 id="titre-repartition">
+          <Icon name="share" />
+          Sur 100 € dépensés par l'État
         </h2>
         <p>
-          Exécution provisoire {monthlyYear}, cumulée de janvier à {months.at(-1)?.toLowerCase()}.
+          Les six principales <Term id="mission">missions</Term> représentent{" "}
+          {formatPercent(topShare)} des dépenses.
         </p>
       </div>
-      <KeyFigures
-        figures={[
-          {
-            icon: "spending",
-            label: "Dépenses nettes",
-            value: formatBillions(latestMonth.spending),
-            note: "budget général",
-          },
-          {
-            icon: "revenue",
-            label: "Recettes nettes",
-            value: formatBillions(latestMonth.revenue),
-            note: "avant prélèvements et fonds de concours",
-          },
-          {
-            icon: "debt",
-            label: "Solde budgétaire",
-            value: formatBillions(latestMonth.balance),
-            note: "comptes spéciaux inclus",
-          },
-        ]}
-      />
-      {[
-        { metric: "spending" as const, caption: "Dépenses nettes cumulées" },
-        { metric: "revenue" as const, caption: "Recettes nettes cumulées" },
-        { metric: "balance" as const, caption: "Solde budgétaire cumulé" },
-      ].map(({ metric, caption }) => (
+      <div class="grid">
         <div class="card">
-          <LineChart
-            caption={caption}
-            labels={months}
-            series={monthlySeries(metric)}
-            format={formatBillions}
+          <ShareBar
+            caption={`Dépenses du budget général en ${budget.year}`}
+            whole="dépenses du budget général"
+            parts={parts}
           />
         </div>
-      ))}
-      <Explainer title="Des cumuls provisoires, pas les comptes annuels">
-        <p>
-          Chaque point additionne les opérations depuis janvier. Les années sont comparées au même
-          mois. Le solde inclut les prélèvements sur recettes, fonds de concours, comptes spéciaux
-          et budgets annexes : il ne se déduit pas des deux premiers chiffres seuls. Les comptes
-          2025 présentés ailleurs sur cette page restent distincts.
-        </p>
-      </Explainer>
-      <Provenance provenance={execution.monthly.provenance} />
-    </section>
-    <section class="section" id="nature" aria-labelledby="titre-nature">
-      <div class="section-head">
-        <h2 id="titre-nature">
-          <Icon name="layers" />
-          Par nature de dépense
-        </h2>
-        <p>
-          Exécution 2025 par <Term id="titre-budgetaire">titre budgétaire</Term>, remboursements
-          d'impôts inclus.
-        </p>
-      </div>
-      <div class="card">
-        <BarList
-          caption="Crédits de paiement consommés en 2025"
-          items={amountBars(execution.titles.rows)}
-        />
-      </div>
-      <Provenance provenance={execution.titles.provenance} />
-    </section>
-    <section class="section" id="ministeres" aria-labelledby="titre-ministeres">
-      <div class="section-head">
-        <h2 id="titre-ministeres">
-          <Icon name="state" />
-          Par ministère
-        </h2>
-        <p>Exécution 2025 selon les ministères de gestion de cette année.</p>
-      </div>
-      <div class="card">
-        <BarList
-          caption="Budget général exécuté en 2025"
-          items={amountBars(execution.ministries.rows)}
-        />
-      </div>
-      <Explainer title="Le périmètre de ce classement">
-        <p>
-          Les programmes sont rattachés à la nomenclature DGFiP 2025. Les remboursements et
-          dégrèvements sont inclus dans le ministère responsable ; ils correspondent à des impôts
-          rendus aux contribuables. Les pouvoirs publics restent un poste distinct.
-        </p>
-      </Explainer>
-      <Provenance provenance={execution.ministries.provenance} />
-    </section>
-    {assets && (
-      <section class="section" id="bilan" aria-labelledby="titre-bilan">
-        <div class="section-head">
-          <h2 id="titre-bilan">
-            <Icon name="scale" />
-            Le bilan de l'État
-          </h2>
-          <p>Valeurs comptables au 31 décembre {assets.year}, État seul.</p>
-        </div>
-        <KeyFigures
-          figures={[
-            {
-              icon: "building",
-              label: "Actif",
-              term: "actif-etat",
-              value: formatBillions(assets.assets),
-            },
-            {
-              icon: "debt",
-              label: "Passif",
-              term: "passif-etat",
-              value: formatBillions(assets.liabilities),
-            },
-            {
-              icon: "scale",
-              label: "Situation nette",
-              term: "situation-nette",
-              value: formatBillions(assets.net_position),
-            },
-          ]}
-        />
-        <Explainer title="Ce que le bilan permet de lire">
+        <Explainer title={"Qu'est-ce qu'une mission\u00a0?"}>
           <p>
-            La situation nette est l'actif moins le passif. Les engagements hors bilan sont exclus.
-            Le droit de lever l'impôt n'est pas comptabilisé comme un actif. Ce bilan ne mesure ni
-            la richesse nationale ni la dette de Maastricht de toutes les administrations.
+            Le <Term id="budget-general">budget général</Term> de l'État est découpé en missions
+            (une grande politique publique, comme l'enseignement scolaire ou la défense),
+            elles-mêmes divisées en <Term id="programme">programmes</Term> confiés à un ministère.
           </p>
-        </Explainer>
-        <Provenance provenance={execution.assets.provenance} />
-      </section>
-    )}
-    <section class="section" id="budget-vert" aria-labelledby="titre-budget-vert">
-      <div class="section-head">
-        <h2 id="titre-budget-vert">
-          <Icon name="ecology" />
-          Le budget vert
-        </h2>
-        <p>
-          <Term id="budget-vert">Cotation environnementale</Term> des crédits proposés au PLF 2026.
-        </p>
-      </div>
-      <div class="card">
-        <BarList
-          caption="Crédits budgétaires proposés, PLF 2026"
-          items={amountBars(
-            execution.green.rows.map((row) => ({
-              ...row,
-              label: row.label === "NC" ? "Non coté" : row.label,
-            })),
+          {refunds && (
+            <p>
+              La mission «&nbsp;
+              <Term id="remboursements-degrevements">Remboursements et dégrèvements</Term>&nbsp;» (
+              {formatEuros(refunds.spent)}) correspond surtout à des impôts rendus aux contribuables
+              et aux entreprises.
+            </p>
           )}
-        />
+        </Explainer>
       </div>
-      <Explainer title="Un périmètre propre au budget vert">
-        <p>
-          Ces montants sont des propositions du PLF 2026. Ils ne sont ni les dépenses exécutées
-          2025, ni le budget finalement voté. Le fichier retraite les contributions aux pensions et
-          comprend des prélèvements sur recettes. Les taxes affectées et dépenses fiscales sont
-          exclues ici. Les cotations portent sur six objectifs ; une cotation neutre ne signifie pas
-          une dépense inutile.
-        </p>
-      </Explainer>
-      <Provenance provenance={execution.green.provenance} />
+      <Provenance provenance={budget.provenance} />
     </section>
+
     <section class="section" id="perimetre" aria-labelledby="titre-perimetre">
       <div class="section-head">
         <h2 id="titre-perimetre">
@@ -480,48 +341,16 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
       <Provenance provenance={revenue.provenance} />
     </section>
 
-    <section class="section" id="repartition" aria-labelledby="titre-repartition">
-      <div class="section-head">
-        <h2 id="titre-repartition">
-          <Icon name="share" />
-          Sur 100 € dépensés par l'État
-        </h2>
-        <p>Les six plus grandes missions représentent {formatPercent(topShare)} des dépenses.</p>
-      </div>
-      <div class="grid">
-        <div class="card">
-          <ShareBar
-            caption={`Dépenses du budget général en ${budget.year}`}
-            whole="dépenses du budget général"
-            parts={parts}
-          />
-        </div>
-        <Explainer title={"Qu'est-ce qu'une mission\u00a0?"}>
-          <p>
-            Le <Term id="budget-general">budget général</Term> de l'État est découpé en missions
-            (une grande politique publique, comme l'enseignement scolaire ou la défense),
-            elles-mêmes divisées en <Term id="programme">programmes</Term> confiés à un ministère.
-          </p>
-          {refunds && (
-            <p>
-              La mission «&nbsp;
-              <Term id="remboursements-degrevements">Remboursements et dégrèvements</Term>&nbsp;» (
-              {formatEuros(refunds.spent)}) correspond surtout à des impôts rendus aux contribuables
-              et aux entreprises.
-            </p>
-          )}
-        </Explainer>
-      </div>
-      <Provenance provenance={budget.provenance} />
-    </section>
-
     <section class="section" id="missions" aria-labelledby="titre-missions">
       <div class="section-head">
         <h2 id="titre-missions">
           <Icon name="layers" />
-          Mission par mission
+          Les politiques financées
         </h2>
-        <p>Ouvrez une mission pour voir ses programmes.</p>
+        <p>
+          Ouvrez une <Term id="mission">mission</Term> pour voir ses{" "}
+          <Term id="programme">programmes</Term>.
+        </p>
       </div>
       <ol class="missions card">
         {budget.missions.map((mission, index) => (
@@ -586,6 +415,183 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
         ))}
       </ol>
       <Provenance provenance={budget.provenance} />
+    </section>
+
+    <section class="section" id="annee-en-cours" aria-labelledby="titre-annee-en-cours">
+      <div class="section-head">
+        <h2 id="titre-annee-en-cours">
+          <Icon name="calendar" />
+          L'année en cours
+        </h2>
+        <p>
+          Exécution provisoire {monthlyYear}, cumulée de janvier à {months.at(-1)?.toLowerCase()}.
+        </p>
+      </div>
+      <KeyFigures
+        figures={[
+          {
+            icon: "spending",
+            label: "Dépenses nettes",
+            value: formatBillions(latestMonth.spending),
+            note: "budget général",
+          },
+          {
+            icon: "revenue",
+            label: "Recettes nettes",
+            value: formatBillions(latestMonth.revenue),
+            note: "avant prélèvements et fonds de concours",
+          },
+          {
+            icon: "debt",
+            label: "Solde budgétaire",
+            value: formatBillions(latestMonth.balance),
+            note: "comptes spéciaux inclus",
+          },
+        ]}
+      />
+      {[
+        { metric: "spending" as const, caption: "Dépenses nettes cumulées" },
+        { metric: "revenue" as const, caption: "Recettes nettes cumulées" },
+        { metric: "balance" as const, caption: "Solde budgétaire cumulé" },
+      ].map(({ metric, caption }) => (
+        <div class="card">
+          <LineChart
+            caption={caption}
+            labels={months}
+            series={monthlySeries(metric)}
+            format={formatBillions}
+          />
+        </div>
+      ))}
+      <Explainer title="Des cumuls provisoires, pas les comptes annuels">
+        <p>
+          Chaque point additionne les opérations depuis janvier. Les années sont comparées au même
+          mois. Le solde inclut les prélèvements sur recettes, fonds de concours, comptes spéciaux
+          et budgets annexes : il ne se déduit pas des deux premiers chiffres seuls. Les comptes
+          2025 présentés ailleurs sur cette page restent distincts.
+        </p>
+      </Explainer>
+      <Provenance provenance={execution.monthly.provenance} />
+    </section>
+
+    <section class="section" id="nature" aria-labelledby="titre-nature">
+      <div class="section-head">
+        <h2 id="titre-nature">
+          <Icon name="layers" />
+          Par nature de dépense
+        </h2>
+        <p>
+          Exécution 2025 par <Term id="titre-budgetaire">titre budgétaire</Term>, remboursements
+          d'impôts inclus.
+        </p>
+      </div>
+      <div class="card">
+        <BarList
+          caption="Crédits de paiement consommés en 2025"
+          items={amountBars(execution.titles.rows)}
+        />
+      </div>
+      <Provenance provenance={execution.titles.provenance} />
+    </section>
+
+    <section class="section" id="ministeres" aria-labelledby="titre-ministeres">
+      <div class="section-head">
+        <h2 id="titre-ministeres">
+          <Icon name="state" />
+          Par ministère
+        </h2>
+        <p>Exécution 2025 selon les ministères de gestion de cette année.</p>
+      </div>
+      <div class="card">
+        <BarList
+          caption="Budget général exécuté en 2025"
+          items={amountBars(execution.ministries.rows)}
+        />
+      </div>
+      <Explainer title="Le périmètre de ce classement">
+        <p>
+          Les programmes sont rattachés à la nomenclature DGFiP 2025. Les remboursements et
+          dégrèvements sont inclus dans le ministère responsable ; ils correspondent à des impôts
+          rendus aux contribuables. Les pouvoirs publics restent un poste distinct.
+        </p>
+      </Explainer>
+      <Provenance provenance={execution.ministries.provenance} />
+    </section>
+
+    {assets && (
+      <section class="section" id="bilan" aria-labelledby="titre-bilan">
+        <div class="section-head">
+          <h2 id="titre-bilan">
+            <Icon name="scale" />
+            Le bilan de l'État
+          </h2>
+          <p>Valeurs comptables au 31 décembre {assets.year}, État seul.</p>
+        </div>
+        <KeyFigures
+          figures={[
+            {
+              icon: "building",
+              label: "Actif",
+              term: "actif-etat",
+              value: formatBillions(assets.assets),
+            },
+            {
+              icon: "debt",
+              label: "Passif",
+              term: "passif-etat",
+              value: formatBillions(assets.liabilities),
+            },
+            {
+              icon: "scale",
+              label: "Situation nette",
+              term: "situation-nette",
+              value: formatBillions(assets.net_position),
+            },
+          ]}
+        />
+        <Explainer title="Ce que le bilan permet de lire">
+          <p>
+            La situation nette est l'actif moins le passif. Les engagements hors bilan sont exclus.
+            Le droit de lever l'impôt n'est pas comptabilisé comme un actif. Ce bilan ne mesure ni
+            la richesse nationale ni la dette de Maastricht de toutes les administrations.
+          </p>
+        </Explainer>
+        <Provenance provenance={execution.assets.provenance} />
+      </section>
+    )}
+
+    <section class="section" id="budget-vert" aria-labelledby="titre-budget-vert">
+      <div class="section-head">
+        <h2 id="titre-budget-vert">
+          <Icon name="ecology" />
+          Le budget vert
+        </h2>
+        <p>
+          <Term id="budget-vert">Cotation environnementale</Term> des crédits proposés au{" "}
+          <Term id="plf">PLF</Term> 2026.
+        </p>
+      </div>
+      <div class="card">
+        <BarList
+          caption="Crédits budgétaires proposés, PLF 2026"
+          items={amountBars(
+            execution.green.rows.map((row) => ({
+              ...row,
+              label: row.label === "NC" ? "Non coté" : row.label,
+            })),
+          )}
+        />
+      </div>
+      <Explainer title="Un périmètre propre au budget vert">
+        <p>
+          Ces montants sont des propositions du PLF 2026. Ils ne sont ni les dépenses exécutées
+          2025, ni le budget finalement voté. Le fichier retraite les contributions aux pensions et
+          comprend des prélèvements sur recettes. Les taxes affectées et dépenses fiscales sont
+          exclues ici. Les cotations portent sur six objectifs ; une cotation neutre ne signifie pas
+          une dépense inutile.
+        </p>
+      </Explainer>
+      <Provenance provenance={execution.green.provenance} />
     </section>
 
     <section class="section" id="evolution" aria-labelledby="titre-evolution">

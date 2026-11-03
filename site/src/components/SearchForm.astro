@@ -5,14 +5,20 @@ interface Props {
   query?: string;
   variant?: "hero" | "page";
   autofocus?: boolean;
+  placeholder?: string;
 }
 
-const { query = "", variant = "page", autofocus = false } = Astro.props;
+const {
+  query = "",
+  variant = "page",
+  autofocus = false,
+  placeholder = "Ex. Croix-Rouge, Lyon…",
+} = Astro.props;
 ---
 
 <form class:list={["search", variant]} action="/recherche" method="get" role="search">
   <label class="visually-hidden" for={`q-${variant}`}>
-    Organisation, SIREN ou commune
+    Entreprise, association ou commune
   </label>
   <span class="field">
     <Icon name="search" size={20} />
@@ -21,7 +27,7 @@ const { query = "", variant = "page", autofocus = false } = Astro.props;
       name="q"
       type="search"
       value={query}
-      placeholder="Ex. Croix-Rouge, Lyon…"
+      placeholder={placeholder}
       autocomplete="off"
       autofocus={autofocus}
       required
