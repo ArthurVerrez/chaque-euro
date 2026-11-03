@@ -1,5 +1,6 @@
 ---
 import CommuneLocalMoney from "../../components/CommuneLocalMoney.astro";
+import CommuneFunctions from "../../components/CommuneFunctions.astro";
 import Answer from "../../components/Answer.astro";
 import Icon from "../../components/Icon.astro";
 import Breadcrumbs from "../../components/Breadcrumbs.astro";
@@ -15,7 +16,7 @@ import ShareBar from "../../components/ShareBar.astro";
 import Term from "../../components/Term.astro";
 import Toc from "../../components/Toc.astro";
 import Base from "../../layouts/Base.astro";
-import { getCommuneLocal, getCommune, type FinanceLine } from "../../lib/data";
+import { getCommuneFunctions, getCommuneLocal, getCommune, type FinanceLine } from "../../lib/data";
 import { communeFlow } from "../../lib/flows";
 import { NBSP, formatEuro, formatEuros, formatNumber } from "../../lib/format";
 
@@ -26,6 +27,7 @@ const commune = /^[0-9][0-9AB][0-9]{3}$/.test(insee)
 if (!commune) Astro.response.status = 404;
 const accounts = commune?.accounts;
 const local = commune ? await getCommuneLocal(insee) : null;
+const functions = accounts ? await getCommuneFunctions(insee, accounts.year) : null;
 
 const find = (lines: FinanceLine[], item: string): FinanceLine | undefined =>
   lines.find((entry) => entry.item === item);
@@ -164,6 +166,12 @@ const title = commune
               ))}
             </ul>
           </nav>
+          <p>
+            <a href={`/elus?commune=${insee}#trouver`}>
+              <Icon name="elected" size={18} />
+              Votre député et vos sénateurs
+            </a>
+          </p>
           {accounts.year !== commune.latestYear && (
             <p class="older small">
               Vous consultez les comptes {accounts.year}.{" "}
@@ -184,6 +192,7 @@ const title = commune
             : []),
           { href: "#evolution", label: "Évolution", icon: "trend" },
           { href: "#depenses", label: "Où va l'argent", icon: "spending" },
+          { href: "#services", label: "Par service", icon: "building" },
           { href: "#recettes", label: "D'où vient l'argent", icon: "revenue" },
           { href: "#fiscalite-locale", label: "Fiscalité", icon: "localTax" },
           { href: "#dotations", label: "Dotations", icon: "grant" },
@@ -342,6 +351,8 @@ const title = commune
           </div>
           <Provenance provenance={commune.provenance} />
         </section>
+
+        {functions && <CommuneFunctions data={functions} />}
 
         <section class="section" id="recettes" aria-labelledby="titre-recettes">
           <div class="section-head">

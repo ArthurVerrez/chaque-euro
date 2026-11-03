@@ -770,3 +770,83 @@ CREATE INDEX campaign_lines_account ON campaign_account_lines(election_id, candi
 CREATE UNIQUE INDEX local_executives_id ON local_executives(id);
 CREATE UNIQUE INDEX cada_opinions_id ON cada_opinions(dossier_id);
 CREATE INDEX transparency_alerts_filter ON transparency_alerts(rule, election_id, territory_code);
+
+CREATE TABLE org_groups (
+  siren TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  as_of TEXT NOT NULL,
+  analysis_path TEXT
+);
+
+CREATE TABLE org_group_members (
+  group_siren TEXT NOT NULL,
+  siren TEXT NOT NULL,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  legal_category TEXT NOT NULL,
+  active INTEGER NOT NULL,
+  parent_siren TEXT,
+  source_id TEXT NOT NULL,
+  source_ref TEXT NOT NULL,
+  identifier_source_id TEXT NOT NULL,
+  identifier_ref TEXT NOT NULL,
+  PRIMARY KEY (group_siren, siren)
+) WITHOUT ROWID;
+CREATE INDEX org_group_members_siren ON org_group_members(siren);
+
+CREATE TABLE org_group_amounts (
+  group_siren TEXT NOT NULL,
+  siren TEXT NOT NULL,
+  measure TEXT NOT NULL,
+  year INTEGER NOT NULL,
+  amount REAL,
+  count INTEGER NOT NULL,
+  unpriced INTEGER NOT NULL,
+  estimated INTEGER NOT NULL,
+  PRIMARY KEY (group_siren, siren, measure, year)
+) WITHOUT ROWID;
+
+CREATE TABLE commune_constituencies (
+  insee TEXT,
+  department_code TEXT,
+  constituency INTEGER,
+  source_id TEXT
+);
+CREATE UNIQUE INDEX commune_constituencies_id ON commune_constituencies(insee, department_code, constituency);
+
+CREATE TABLE mandate_constituencies (
+  mandate_id TEXT,
+  department_code TEXT,
+  constituency INTEGER,
+  source_id TEXT
+);
+CREATE UNIQUE INDEX mandate_constituencies_id ON mandate_constituencies(mandate_id);
+CREATE INDEX mandate_constituencies_territory ON mandate_constituencies(department_code, constituency);
+
+CREATE TABLE commune_function_labels (
+  nomenclature TEXT,
+  function_code TEXT,
+  label TEXT,
+  sort INTEGER
+);
+CREATE UNIQUE INDEX commune_function_labels_id ON commune_function_labels(nomenclature, function_code);
+
+CREATE TABLE commune_functions (
+  insee TEXT,
+  year INTEGER,
+  nomenclature TEXT,
+  function_code TEXT,
+  amount REAL,
+  per_capita REAL
+);
+CREATE UNIQUE INDEX commune_functions_id ON commune_functions(insee, year, nomenclature, function_code);
+
+CREATE TABLE commune_function_strata (
+  stratum TEXT,
+  year INTEGER,
+  nomenclature TEXT,
+  function_code TEXT,
+  median_per_capita REAL,
+  communes INTEGER
+);
+CREATE UNIQUE INDEX commune_function_strata_id ON commune_function_strata(stratum, year, nomenclature, function_code);

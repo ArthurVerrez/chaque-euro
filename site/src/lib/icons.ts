@@ -103,6 +103,7 @@ export const ICONS = {
   code: Code,
   columns: ChartColumn,
   company: Briefcase,
+  group: Network,
   compare: GitCompare,
   contract: FileText,
   contribution: Handshake,

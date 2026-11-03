@@ -73,6 +73,8 @@ const TABLES: Record<string, { label: string; icon: IconName }> = {
   public_people: { label: "Élus et fonctions publiques", icon: "elected" },
   public_organs: { label: "Organes parlementaires", icon: "state" },
   public_mandates: { label: "Mandats et appartenances", icon: "elected" },
+  mandate_constituencies: { label: "Circonscriptions des députés", icon: "map" },
+  commune_constituencies: { label: "Circonscriptions de chaque commune", icon: "map" },
   public_ballots: { label: "Scrutins publics", icon: "vote" },
   public_votes: { label: "Votes nominatifs", icon: "vote" },
   public_vote_corrections: { label: "Corrections et intentions de vote", icon: "info" },
@@ -92,6 +94,9 @@ const TABLES: Record<string, { label: string; icon: IconName }> = {
   orgs: { label: "Organisations", icon: "building" },
   org_years: { label: "Marchés par organisation et par année", icon: "calendar" },
   org_counterparts: { label: "Principaux partenaires", icon: "people" },
+  org_groups: { label: "Groupes documentés", icon: "group" },
+  org_group_members: { label: "Entités des groupes", icon: "group" },
+  org_group_amounts: { label: "Montants par entité de groupe", icon: "group" },
   contracts: { label: "Marchés publics", icon: "contract" },
   org_contracts: { label: "Organisations de chaque marché", icon: "list" },
   source_files: { label: "Fichiers sources des marchés", icon: "source" },
@@ -109,6 +114,9 @@ const TABLES: Record<string, { label: string; icon: IconName }> = {
   commune_turnout: { label: "Participation électorale par commune", icon: "vote" },
   department_turnout: { label: "Participation électorale par département", icon: "vote" },
   commune_dgf_history: { label: "DGF dans les comptes communaux", icon: "grant" },
+  commune_functions: { label: "Dépenses des communes par service", icon: "town" },
+  commune_function_strata: { label: "Médianes par service", icon: "town" },
+  commune_function_labels: { label: "Libellés des services", icon: "list" },
   communes: { label: "Communes", icon: "town" },
   commune_years: { label: "Population des communes par année", icon: "people" },
   commune_finances: { label: "Comptes des communes", icon: "spending" },
@@ -196,6 +204,8 @@ const GROUPS: { id: string; title: string; icon: IconName; tables: string[] }[] 
       "public_people",
       "public_organs",
       "public_mandates",
+      "mandate_constituencies",
+      "commune_constituencies",
       "public_ballots",
       "public_votes",
       "public_vote_corrections",
@@ -221,6 +231,9 @@ const GROUPS: { id: string; title: string; icon: IconName; tables: string[] }[] 
       "orgs",
       "org_years",
       "org_counterparts",
+      "org_groups",
+      "org_group_members",
+      "org_group_amounts",
       "contracts",
       "org_contracts",
       "source_files",
@@ -269,6 +282,9 @@ const GROUPS: { id: string; title: string; icon: IconName; tables: string[] }[] 
       "commune_turnout",
       "department_turnout",
       "commune_dgf_history",
+      "commune_functions",
+      "commune_function_strata",
+      "commune_function_labels",
       "communes",
       "commune_years",
       "commune_finances",
@@ -280,10 +296,18 @@ const GROUPS: { id: string; title: string; icon: IconName; tables: string[] }[] 
   { id: "reperes", title: "Repères", icon: "trend", tables: ["facts", "timeline"] },
 ];
 const byName = new Map(downloads.tables.map((table) => [table.table, table]));
-const groups = GROUPS.map((group) => ({
-  ...group,
-  tables: group.tables.flatMap((name) => byName.get(name) ?? []),
-}));
+const grouped = new Set(GROUPS.flatMap((group) => group.tables));
+const groups = [
+  ...GROUPS,
+  {
+    id: "autres",
+    title: "Autres données",
+    icon: "list" as const,
+    tables: downloads.tables.map((table) => table.table).filter((name) => !grouped.has(name)),
+  },
+]
+  .map((group) => ({ ...group, tables: group.tables.flatMap((name) => byName.get(name) ?? []) }))
+  .filter((group) => group.tables.length > 0);
 const files = downloads.tables.flatMap((table) => table.files);
 const FORMATS: Record<string, { label: string; icon: IconName }> = {
   csv: { label: "CSV", icon: "csv" },

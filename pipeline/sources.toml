@@ -1643,3 +1643,120 @@ kind = "reference"
 vintage = "Allocations 2026 non récupérées"
 usage = "Référence officielle des allocations, distinctes de la DGF comptabilisée dans les comptes communaux."
 limits = ["Vérification du 2 novembre 2026 : délai HTTPS dépassé, HTTP 503 ; le catalogue DGCL ne fournit que les fichiers 2016-2019.", "Aucun montant 2026 importé. L'absence de licence explicite n'empêche pas la réutilisation sous CRPA avec source et date."]
+
+[[sources]]
+id = "sncf-groupe-2025"
+short_name = "SNCF, périmètre 2025"
+name = "Rapport financier annuel 2025 du groupe SNCF, filiales et participations"
+publisher = "SNCF"
+page_url = "https://www.groupe-sncf.com/fr/groupe/finances/essentiel-groupe"
+file_url = "https://www.groupe-sncf.com/medias-publics/2026-02/rapport-financier-annuel-2025-groupe-sncf.pdf"
+filename = "rapport.pdf"
+licence = "public-facts"
+frequency = "Annuelle"
+kind = "file"
+data_date = "2025-12-31"
+usage = "Liens de contrôle avec SIREN publiés dans les comptes annuels, sans rapprochement par nom."
+limits = ["Périmètre partiel : seules les filiales françaises identifiées par SIREN dans les tableaux retenus sont couvertes.", "Les participations minoritaires sont exclues. Le périmètre au 31 décembre 2025 ne reconstitue pas l'historique des acquisitions et cessions.", "Seuls les faits d'identification et de contrôle sont repris, pas le rapport ni ses illustrations."]
+
+[[sources]]
+id = "sncf-reseau-groupe-2025"
+short_name = "SNCF Réseau, périmètre 2025"
+name = "Rapport financier annuel 2025 de SNCF Réseau, filiales et participations"
+publisher = "SNCF Réseau"
+page_url = "https://www.sncf-reseau.com/fr/document-financier/rapport-financier-annuel-sncf-reseau-2025"
+file_url = "https://echanges.dila.gouv.fr/OPENDATA/AMF/189/2026/02/FC189616891_20260304.zip"
+filename = "rapport.zip"
+licence = "public-facts"
+frequency = "Annuelle"
+kind = "file"
+data_date = "2025-12-31"
+usage = "Contrôle de SNCF Gares & Connexions par SNCF Réseau ; identité vérifiée dans la convention CP2025-213 de la Région Île-de-France."
+limits = ["Le tableau des filiales ne contient pas de SIREN. Seule SNCF Gares & Connexions est retenue, avec son identifiant expressément publié dans une convention officielle.", "Les autres sociétés de ce tableau ne sont pas rapprochées par leur nom.", "Seuls les faits d'identification et de contrôle sont repris. Archive réglementaire déposée auprès de l'AMF et diffusée par la DILA."]
+
+[[sources]]
+id = "sncf-gares-identite"
+short_name = "Région Île-de-France, identité SNCF"
+name = "Convention de financement ferroviaire, délibération CP2025-213"
+publisher = "Région Île-de-France"
+page_url = "https://www.iledefrance.fr/actes/deliberations/CP2025-213DEL.pdf"
+file_url = "https://www.iledefrance.fr/actes/deliberations/CP2025-213DEL.pdf"
+filename = "convention.pdf"
+licence = "crpa"
+frequency = "Occasionnelle"
+kind = "file"
+data_date = "2025-09-25"
+usage = "Identité et SIREN de SNCF Gares & Connexions expressément publiés dans une convention officielle."
+limits = ["La convention prouve l'identité, pas le contrôle du capital. Celui-ci provient des comptes annuels 2025 de SNCF Réseau.", "Aucune identité personnelle ni coordonnée n'est reprise."]
+
+
+[[sources]]
+id = "commune-circonscriptions-2024"
+short_name = "Insee"
+name = "Table de correspondance communes-circonscriptions législatives"
+publisher = "Institut national de la statistique et des études économiques"
+page_url = "https://www.insee.fr/fr/statistiques/6436476"
+file_url = "https://www.insee.fr/fr/statistiques/fichier/6436476/circo_composition.xlsx"
+filename = "composition.xlsx"
+licence = "lo2"
+frequency = "À chaque découpage électoral"
+kind = "file"
+data_date = "2026-06-08"
+usage = "Correspondance commune-circonscription du découpage en vigueur aux législatives 2024."
+limits = ["Table INSEE publiée le 8 juin 2026, codes communaux de 2021 rapprochés avec le COG. Les contours législatifs sont ceux en vigueur depuis 2012, dont le scrutin de 2024.", "Une commune partagée affiche toutes ses circonscriptions, sans recherche par adresse.", "Les mandats en exercice proviennent du répertoire parlementaire, pas des vainqueurs du scrutin de 2024."]
+
+[[sources]]
+id = "dgfip-fonctions-2025"
+short_name = "DGFiP"
+name = "Balances communales croisées nature-fonction 2025"
+publisher = "Direction générale des finances publiques"
+page_url = "https://www.data.gouv.fr/datasets/balances-comptables-des-collectivites-et-des-etablissements-publics-locaux-avec-la-presentation-croisee-nature-fonction-2025"
+file_url = "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/balances-comptables-des-collectivites-et-des-etablissements-publics-locaux-avec-la-presentation-croisee-nature-fonction-2025/exports/csv?use_labels=false&where=cbudg%3D%271%27%20and%20%28categ%3D%27Commune%27%20or%20siren%3D%27217500016%27%29&select=exer,ident,siren,cbudg,ctype,nomen,fonction,compte,obnetdeb"
+filename = "fonctions.csv"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+data_date = "2025-12-31"
+usage = "Dépenses budgétaires de fonctionnement des budgets principaux, par fonction."
+limits = ["Communes publiant une ventilation fonctionnelle, M14 ou M57. Une absence n’est jamais remplacée par zéro.", "Comptes de classe 6, opérations budgétaires nettes des annulations, opérations d’ordre comprises. Hors investissement et budgets annexes. Non comparable au total consolidé OFGL.", "Les fonctions M14 et M57 sont conservées séparément. Médiane seulement à partir de cinq communes de même strate, année et nomenclature.", "Paris exerce aussi les compétences d’un département ; ses montants ne décrivent pas un périmètre communal ordinaire."]
+
+[[sources]]
+id = "dgfip-fonctions-notice"
+short_name = "DGFiP"
+name = "Notice des balances croisées nature-fonction"
+publisher = "Direction générale des finances publiques"
+page_url = "https://data.economie.gouv.fr/api/v2/catalog/datasets/balances-comptables-des-collectivites-et-des-etablissements-publics-locaux-avec-la-presentation-croisee-nature-fonction-2025/attachments/notice_balance_fonctionnelle_pdf"
+licence = "crpa"
+frequency = "Occasionnelle"
+kind = "reference"
+data_date = "2018-10-01"
+usage = "Méthode et limites de la ventilation fonctionnelle."
+limits = ["Les comptes sans code fonctionnel sont également publiés ; ils ne représentent pas le total des comptes ventilés."]
+
+[[sources]]
+id = "dgcl-nomenclatures"
+short_name = "DGCL"
+name = "Instructions budgétaires et comptables locales"
+publisher = "Direction générale des collectivités locales"
+page_url = "https://www.collectivites-locales.gouv.fr/gerer-les-finances-publiques-locales/budget/instructions-budgetaires-et-comptables"
+licence = "crpa"
+frequency = "Annuelle"
+kind = "reference"
+usage = "Libellés des fonctions M14 et M57, conservées séparément."
+limits = ["Les fonctions M14 et M57 de même numéro peuvent désigner des services différents."]
+
+
+[[sources]]
+id = "insee-passage-2025"
+short_name = "Insee"
+name = "Table de passage annuelle des communes 2025"
+publisher = "Institut national de la statistique et des études économiques"
+page_url = "https://www.insee.fr/fr/information/7671867"
+file_url = "https://www.insee.fr/fr/statistiques/fichier/7671867/table_passage_annuelle_2025.zip"
+filename = "passage.zip"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+data_date = "2025-01-01"
+usage = "Rapprochement des codes communaux 2021 de la table des circonscriptions avec les communes 2025."
+limits = ["Une scission d’une commune partagée entre circonscriptions n’est pas attribuée sans correspondance plus fine."]

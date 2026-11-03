@@ -9,6 +9,7 @@ interface Props {
 }
 
 const { lines, caption } = Astro.props;
+const hasComparison = lines.some((line) => line.median !== null);
 const max = Math.max(...lines.flatMap((line) => [line.perCapita ?? 0, line.median ?? 0]), 0);
 const position = (value: number) => (max > 0 ? Math.max((value / max) * 100, 0) : 0);
 const gap = (line: FinanceLine) => {
@@ -24,14 +25,16 @@ const gap = (line: FinanceLine) => {
     <Icon name="compare" size={18} />
     {caption}
   </figcaption>
-  <p class="legend small" aria-hidden="true">
-    <span class="legend-item">
-      <span class="key fill-key"></span>la commune
-    </span>
-    <span class="legend-item">
-      <span class="key tick-key"></span>médiane des communes de même taille
-    </span>
-  </p>
+  {hasComparison && (
+    <p class="legend small" aria-hidden="true">
+      <span class="legend-item">
+        <span class="key fill-key"></span>la commune
+      </span>
+      <span class="legend-item">
+        <span class="key tick-key"></span>médiane des communes de même taille
+      </span>
+    </p>
+  )}
   <ol>
     {lines.map((line) => (
       <li>

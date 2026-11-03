@@ -1,0 +1,68 @@
+---
+import Icon from "./Icon.astro";
+import CompareList from "./CompareList.astro";
+import Explainer from "./Explainer.astro";
+import Provenance from "./Provenance.astro";
+import Term from "./Term.astro";
+import type { getCommuneFunctions } from "../lib/data";
+
+interface Props {
+  data: Awaited<ReturnType<typeof getCommuneFunctions>>;
+}
+const { data } = Astro.props;
+const hasComparison = data.lines.some((line) => line.median !== null);
+---
+
+<section class="section" id="services" aria-labelledby="titre-services">
+  <div class="section-head">
+    <h2 id="titre-services">
+      <Icon name="building" />
+      Dépenses par service
+    </h2>
+    <p>Fonctionnement du budget principal, en {data.year}.</p>
+  </div>
+  {data.lines.length > 0 ? (
+    <div class="card">
+      <CompareList
+        caption={
+          hasComparison
+            ? "Par habitant, comparé aux communes de même taille"
+            : "Dépenses par habitant"
+        }
+        lines={data.lines}
+      />
+    </div>
+  ) : (
+    <p>
+      Non disponible : aucune ventilation par service importée pour cette commune et cette année.
+    </p>
+  )}
+  {data.lines.length > 0 && !hasComparison && (
+    <p class="small muted">Comparaison non disponible.</p>
+  )}
+  <Explainer title="Périmètre et couverture">
+    <p>La ventilation importée couvre uniquement 2025.</p>
+    <p>
+      Cette lecture par <Term id="fonction-budgetaire">fonction budgétaire</Term> porte sur le
+      budget principal. Les investissements, les budgets annexes et les dépenses de
+      l’intercommunalité sont exclus. Les écritures d’ordre comptables sont comprises. Elle diffère
+      des comptes consolidés présentés plus haut.
+    </p>
+    <p>
+      Chaque médiane porte sur les communes publiant le service, de même{" "}
+      <Term id="strate">strate de population</Term>, année et nomenclature comptable. Elle est non
+      disponible en dessous de cinq communes. Paris exerce aussi les compétences d’un département :
+      son périmètre diffère de celui des autres communes.
+    </p>
+    <p>
+      Une fonction absente est non disponible, jamais estimée ni remplacée par zéro. « Sans
+      ventilation par service » désigne les écritures sans code fonctionnel reconnu ; les services
+      généraux comprennent aussi les opérations non ventilables.
+    </p>
+    {data.unavailable.length > 0 && <p>Non disponible : {data.unavailable.join(", ")}.</p>}
+    {data.lines.some((line) => line.median === null) && (
+      <p>Comparaison non disponible pour certains services.</p>
+    )}
+  </Explainer>
+  <Provenance provenance={data.provenance} />
+</section>

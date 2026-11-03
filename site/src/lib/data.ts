@@ -1,6 +1,8 @@
 import { env } from "cloudflare:workers";
 import { NBSP } from "./format";
 import { pageNumber } from "./democracy";
+import { normalizeSearch, searchTopics } from "./topics";
+import { kindIcon, type IconName } from "./icons";
 
 export interface Source {
   id: string;
@@ -120,6 +122,131 @@ export interface Organisation {
   awarded: ContractFlow | null;
   grants: Grants | null;
   identity: Provenance;
+}
+
+export type GroupMeasure = ContractRole | "versement";
+
+const GROUP_MEASURES: GroupMeasure[] = ["titulaire", "acheteur", "versement"];
+
+export interface GroupAmount {
+  amount: number | null;
+  count: number;
+  unpriced: number;
+  estimated: number;
+}
+
+export interface OrganisationGroup {
+  siren: string;
+  name: string;
+  asOf: string;
+  year: number;
+  analysisPath: string | null;
+  members: {
+    siren: string;
+    name: string;
+    parentSiren: string | null;
+    amounts: Record<GroupMeasure, GroupAmount | null>;
+  }[];
+  totals: Record<GroupMeasure, GroupAmount | null>;
+  provenance: Provenance;
+  moneyProvenance: Provenance;
+}
+
+export async function getOrganisationGroup(siren: string): Promise<OrganisationGroup | null> {
+  const groupFilter = "select group_siren from org_group_members where siren = ?1";
+  const [groups, members, amounts, sources] = await db().batch<Record<string, unknown>>([
+    db().prepare(`select * from org_groups where siren in (${groupFilter})`).bind(siren),
+    db()
+      .prepare(
+        `select m.* from org_group_members m join org_groups g on g.siren = m.group_siren
+         where m.group_siren in (${groupFilter})
+         order by m.parent_siren is not null,
+           exists (select 1 from org_group_amounts a
+             where a.group_siren = m.group_siren and a.siren = m.siren
+               and a.year = cast(substr(g.as_of, 1, 4) as integer)) desc,
+           m.name`,
+      )
+      .bind(siren),
+    db()
+      .prepare(
+        `select a.* from org_group_amounts a join org_groups g on g.siren = a.group_siren
+         where a.group_siren in (${groupFilter}) and a.year = cast(substr(g.as_of, 1, 4) as integer)`,
+      )
+      .bind(siren),
+    db().prepare(SOURCES_QUERY),
+  ]);
+  const group = groups?.results[0];
+  if (!group) return null;
+  const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
+  const memberRows = members?.results ?? [];
+  const amountRows = (amounts?.results ?? []) as unknown as (GroupAmount & {
+    siren: string;
+    measure: GroupMeasure;
+  })[];
+  const totals = Object.fromEntries(
+    GROUP_MEASURES.map((measure) => {
+      const rows = amountRows.filter((row) => row.measure === measure);
+      const known = rows.filter((row) => row.amount !== null);
+      return [
+        measure,
+        rows.length
+          ? {
+              amount: known.length ? known.reduce((sum, row) => sum + row.amount!, 0) : null,
+              count: rows.reduce((sum, row) => sum + row.count, 0),
+              unpriced: rows.reduce((sum, row) => sum + row.unpriced, 0),
+              estimated: rows.reduce((sum, row) => sum + row.estimated, 0),
+            }
+          : null,
+      ];
+    }),
+  ) as OrganisationGroup["totals"];
+  const evidence = [
+    ...new Set(
+      memberRows.flatMap((row) => [
+        row["source_id"] as string,
+        row["identifier_source_id"] as string,
+      ]),
+    ),
+  ];
+  const references = [
+    ...new Set(
+      memberRows.flatMap((row) => [
+        `${index.get(row["source_id"] as string).shortName} : ${row["source_ref"] as string}`,
+        `${index.get(row["identifier_source_id"] as string).shortName} : ${row["identifier_ref"] as string}`,
+      ]),
+    ),
+  ].join(" ; ");
+  return {
+    siren: group["siren"] as string,
+    name: group["name"] as string,
+    asOf: group["as_of"] as string,
+    year: Number((group["as_of"] as string).slice(0, 4)),
+    analysisPath: group["analysis_path"] as string | null,
+    members: memberRows.map((row) => ({
+      siren: row["siren"] as string,
+      name: row["name"] as string,
+      parentSiren: row["parent_siren"] as string | null,
+      amounts: Object.fromEntries(
+        GROUP_MEASURES.map((measure) => [
+          measure,
+          amountRows.find(
+            (amount) => amount.siren === row["siren"] && amount.measure === measure,
+          ) ?? null,
+        ]),
+      ) as Record<GroupMeasure, GroupAmount | null>,
+    })),
+    totals,
+    provenance: index.provenance(
+      [...evidence.map((id) => index.cite(id)), index.cite("sirene")],
+      `Liens de contrôle expressément publiés, identifiants vérifiés. Aucun rapprochement par nom. ${references}. Les identités diffusables proviennent de Sirene. Périmètre partiel au 31 décembre 2025.`,
+      "pipeline/sql/38_organisation_groups.sql",
+    ),
+    moneyProvenance: index.provenance(
+      [index.cite("decp"), index.cite("jaune-associations")],
+      "Somme des seules entités listées, par mesure et année civile. Les marchés sont rattachés à leur notification initiale ; le montant est partagé entre cotitulaires. Montants non exploitables exclus, estimations conservées. Les versements restent dans leur année propre. Aucune somme entre marchés remportés, marchés attribués et versements. Le périmètre 2025 est appliqué aux données de 2025, sans reconstitution des dates d'entrée et de sortie. Les flux entre entités du groupe ne sont pas éliminés. Une absence de ligne ne prouve pas un montant nul.",
+      "pipeline/sql/40a_organisation_group_amounts.sql",
+    ),
+  };
 }
 
 export interface FinanceLine {
@@ -286,6 +413,8 @@ export interface StateBudget {
 }
 
 export interface SearchResult {
+  group: "Thèmes" | "Élus" | "Communes" | "Organisations";
+  icon: IconName;
   kind: string;
   name: string;
   detail: string;
@@ -880,7 +1009,17 @@ function contractFlow(
 
 export async function getOrganisation(siren: string): Promise<Organisation | null> {
   const statements = [
-    db().prepare("select * from orgs where siren = ?1").bind(siren),
+    db()
+      .prepare(
+        `select * from orgs where siren = ?1
+         union all
+         select siren, name, kind, legal_category, null, active,
+           0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+         from org_group_members where siren = ?1
+           and not exists (select 1 from orgs where siren = ?1)
+         limit 1`,
+      )
+      .bind(siren),
     db()
       .prepare("select role, year, amount, count from org_years where siren = ?1 order by year")
       .bind(siren),
@@ -1276,12 +1415,8 @@ export async function getStateBudget(): Promise<StateBudget> {
 }
 
 function ftsQuery(query: string): string | null {
-  const tokens = query
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .match(/[\p{L}\p{N}]+/gu);
-  if (!tokens) return null;
+  const tokens = normalizeSearch(query).split(" ").filter(Boolean);
+  if (!tokens.length) return null;
   return tokens
     .slice(0, 6)
     .map((token) => `"${token}"*`)
@@ -1297,20 +1432,37 @@ export async function search(query: string): Promise<SearchResult[]> {
     )
     .bind(match)
     .all<{ name: string; kind: string; ref: string; detail: string; weight: number }>();
-  const normalized = query.trim().toLowerCase();
-  return results
+  const normalized = normalizeSearch(query);
+  const entities: SearchResult[] = results
     .sort(
       (a, b) =>
-        Number(b.name.toLowerCase() === normalized) - Number(a.name.toLowerCase() === normalized) ||
-        b.weight - a.weight,
+        Number(normalizeSearch(b.name) === normalized) -
+          Number(normalizeSearch(a.name) === normalized) || b.weight - a.weight,
     )
     .slice(0, 20)
     .map((row) => ({
+      group: row.kind === "Commune" ? "Communes" : row.kind === "Élu" ? "Élus" : "Organisations",
+      icon: row.kind === "Élu" ? "elected" : kindIcon(row.kind),
       kind: row.kind,
       name: row.name,
       detail: row.detail,
-      href: row.kind === "Commune" ? `/commune/${row.ref}` : `/organisation/${row.ref}`,
+      href:
+        row.kind === "Commune"
+          ? `/commune/${row.ref}`
+          : row.kind === "Élu"
+            ? `/elus/${row.ref}`
+            : `/organisation/${row.ref}`,
     }));
+  const topics: SearchResult[] = searchTopics(query).map((topic) => ({
+    group: "Thèmes",
+    kind: "Thème",
+    name: topic.title,
+    href: topic.href,
+    icon: topic.icon,
+    detail: "",
+  }));
+  const order = ["Thèmes", "Élus", "Communes", "Organisations"];
+  return [...topics, ...entities].sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group));
 }
 
 export async function getPublicFamily(sector: string): Promise<PublicFamily> {
@@ -3607,6 +3759,114 @@ export async function getPublicBallots(params: URLSearchParams) {
       [sources.cite("an-votes"), sources.cite("senat-votes")],
       voteMethod,
       "pipeline/sql/47_public_votes.sql",
+    ),
+  };
+}
+
+export interface CommuneChoice {
+  insee: string;
+  name: string;
+  department: string;
+  departmentName: string;
+}
+
+export async function getCommuneRepresentatives(query: string) {
+  const match = ftsQuery(query);
+  const communes = !match
+    ? []
+    : await democracyRows<CommuneChoice>(
+        /^[0-9][0-9AB][0-9]{3}$/i.test(query.trim())
+          ? "select insee,name,department_code as department,department_name as departmentName from communes where insee=?"
+          : `select c.insee,c.name,c.department_code as department,c.department_name as departmentName
+             from search join communes c on c.insee=search.ref
+             where search match ? and search.kind='Commune' order by search.weight desc limit 20`,
+        [/^[0-9][0-9AB][0-9]{3}$/i.test(query.trim()) ? query.trim().toUpperCase() : match],
+      );
+  const exact = communes.filter((c) => normalizeSearch(c.name) === normalizeSearch(query));
+  const commune = exact.length === 1 ? exact[0] : communes.length === 1 ? communes[0] : null;
+  const sources = await democracySources();
+  const deputies = commune
+    ? await democracyRows<{
+        constituency: number;
+        id: string | null;
+        name: string | null;
+        group: string | null;
+      }>(
+        `select c.constituency,p.id,p.display_name as name,p.group_label as "group"
+         from commune_constituencies c left join (
+           select m.person_id,r.department_code,r.constituency
+           from mandate_constituencies r join public_mandates m on m.id=r.mandate_id
+           where m.kind='ASSEMBLEE' and m.starts_on<=date('now')
+             and (m.ends_on is null or m.ends_on>=date('now'))
+         ) m on m.department_code=c.department_code and m.constituency=c.constituency
+         left join public_people p on p.id=m.person_id and p.active=1
+         where c.insee=? order by c.constituency,p.display_name`,
+        [commune.insee],
+      )
+    : [];
+  const senators = commune
+    ? await democracyRows<PublicPerson>(
+        "select * from public_people where chamber='SENAT' and active=1 and territory_code=? order by family_name,given_name",
+        [commune.department],
+      )
+    : [];
+  return {
+    communes,
+    commune,
+    deputies,
+    senators,
+    provenance: sources.provenance(
+      [
+        sources.cite("commune-circonscriptions-2024"),
+        sources.cite("insee-passage-2025"),
+        sources.cite("an-members"),
+        sources.cite("an-history"),
+        sources.cite("senat-members"),
+      ],
+      "Table officielle INSEE des communes et circonscriptions du découpage en vigueur en 2024, codes communaux 2021 rapprochés avec le COG 2025. Toutes les circonscriptions d’une commune partagée sont conservées. Députés de la XVIIe législature : circonscription du mandat AN, dates du mandat et statut actif dans le dernier répertoire importé. Sénateurs actifs du département. Une scission ambiguë reste non disponible.",
+      "pipeline/sql/57_commune_constituencies.sql",
+    ),
+  };
+}
+
+export async function getCommuneFunctions(insee: string, year: number) {
+  const [rows, sources] = await Promise.all([
+    democracyRows<
+      Omit<FinanceLine, "amount"> & { amount: number | null; peers: number; nomenclature: string }
+    >(
+      `with budget as (
+         select distinct nomenclature from commune_functions where insee=?1 and year=?2
+       ), labels as (
+         select l.* from commune_function_labels l join budget b using(nomenclature)
+         union all select nomenclature,'unallocated','Sans ventilation par service',999 from budget
+       )
+       select l.function_code as item,l.label,'fonction' as section,l.nomenclature,
+         f.amount,f.per_capita as perCapita,
+         s.median_per_capita as median,
+         coalesce(s.communes,0) as peers
+       from labels l left join commune_functions f on f.insee=?1 and f.year=?2
+         and f.nomenclature=l.nomenclature and f.function_code=l.function_code
+       left join commune_years y on y.insee=f.insee and y.year=f.year
+       left join commune_function_strata s on s.stratum=y.stratum and s.year=f.year
+         and s.nomenclature=f.nomenclature and s.function_code=f.function_code
+       order by l.sort`,
+      [insee, year],
+    ),
+    democracySources(),
+  ]);
+  return {
+    year,
+    lines: rows.flatMap((r) => (r.amount === null ? [] : [{ ...r, amount: r.amount }])),
+    unavailable: rows.filter((r) => r.amount === null).map((r) => r.label),
+    provenance: sources.provenance(
+      [
+        sources.cite("dgfip-fonctions-2025"),
+        sources.cite("ofgl-communes", { insee, year }),
+        sources.cite("dgfip-fonctions-notice"),
+        sources.cite("dgcl-nomenclatures"),
+      ],
+      "Budget principal uniquement. Somme des opérations budgétaires au débit des comptes de classe 6, nettes des annulations, opérations d’ordre comprises. Hors investissement et budgets annexes. En M57 votée par fonction, le préfixe de chapitre 93 est retiré ; les autres chapitres spéciaux restent sans ventilation par service. Regroupement au plus long préfixe M14 ou M57. Division par la population OFGL de la même année. Médiane sur les communes publiant le service, de même strate, année et nomenclature, à partir de cinq communes. Paris comprend aussi les dépenses départementales : son périmètre diffère de celui des autres communes. Les absences ne sont pas remplacées par zéro.",
+      "pipeline/sql/58_commune_functions.sql",
     ),
   };
 }

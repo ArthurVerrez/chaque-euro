@@ -4,7 +4,9 @@ import Icon from "../../components/Icon.astro";
 import PublicTable from "../../components/PublicTable.astro";
 import PublicPagination from "../../components/PublicPagination.astro";
 import Provenance from "../../components/Provenance.astro";
-import { getElectedIndex } from "../../lib/data";
+import Explainer from "../../components/Explainer.astro";
+import Term from "../../components/Term.astro";
+import { getElectedIndex, getCommuneRepresentatives } from "../../lib/data";
 import { formatDate, formatNumber } from "../../lib/format";
 import { pageNumber, roleLabels } from "../../lib/democracy";
 const params = Astro.url.searchParams;
@@ -16,6 +18,8 @@ const filters = {
   page: pageNumber(params.get("page")),
 };
 const data = await getElectedIndex(filters);
+const communeQuery = (params.get("commune") ?? "").trim();
+const local = communeQuery ? await getCommuneRepresentatives(communeQuery) : null;
 const figure = (kind: string, label: string) => ({
   icon: "elected" as const,
   label,
@@ -36,15 +40,107 @@ const figure = (kind: string, label: string) => ({
   ]}
   provenance={data.provenance}
   sections={[
+    { id: "trouver", label: "Votre commune", icon: "town" },
     { id: "repertoire", label: "Rechercher", icon: "search" },
     { id: "scrutins", label: "Votes récents", icon: "vote" },
   ]}
 >
+  <section id="trouver" class="section" aria-labelledby="titre-trouver">
+    <div class="section-head">
+      <h2 id="titre-trouver">
+        <Icon name="town" />
+        Trouver votre député
+      </h2>
+    </div>
+    <form class="filters" method="get" action="/elus#trouver">
+      <label>
+        Votre commune
+        <input
+          name="commune"
+          type="search"
+          value={local?.commune?.name ?? communeQuery}
+          placeholder="Nom ou code Insee"
+          required
+        />
+      </label>
+      <button type="submit">Rechercher</button>
+    </form>
+    {local && (
+      <div aria-live="polite">
+        {local.commune ? (
+          <>
+            <h3>
+              <Icon name="town" size={20} />
+              {local.commune.name} ({local.commune.department})
+            </h3>
+            {new Set(local.deputies.map((p) => p.constituency)).size > 1 && (
+              <p>
+                Votre commune est partagée entre plusieurs{" "}
+                <Term id="circonscription-legislative">circonscriptions législatives</Term>.
+              </p>
+            )}
+            {local.deputies.length === 1 && (
+              <p>
+                Votre commune appartient à une seule{" "}
+                <Term id="circonscription-legislative">circonscription législative</Term>.
+              </p>
+            )}
+            {local.deputies.length > 0 ? (
+              <PublicTable
+                caption="Députés en exercice, XVIIe législature"
+                columns={["Circonscription", "Député ou députée", "Groupe"]}
+                rows={local.deputies.map((p) => [
+                  { text: `${p.constituency}${p.constituency === 1 ? "re" : "e"} circonscription` },
+                  {
+                    text: p.name ?? "Mandat en exercice non disponible",
+                    href: p.id ? `/elus/${p.id}` : null,
+                  },
+                  { text: p.group ?? "Non renseigné" },
+                ])}
+              />
+            ) : (
+              <p>Correspondance avec les circonscriptions non disponible.</p>
+            )}
+            <PublicTable
+              caption={`Sénateurs et sénatrices : ${local.commune.departmentName}`}
+              columns={["Nom", "Groupe"]}
+              rows={local.senators.map((p) => [
+                { text: p.display_name, href: `/elus/${p.id}` },
+                { text: p.group_label ?? "Non renseigné" },
+              ])}
+            />
+          </>
+        ) : local.communes.length > 0 ? (
+          <PublicTable
+            caption="Choisissez votre commune"
+            columns={["Commune", "Département"]}
+            rows={local.communes.map((c) => [
+              { text: c.name, href: `/elus?commune=${c.insee}#trouver` },
+              { text: `${c.departmentName} (${c.department})` },
+            ])}
+          />
+        ) : (
+          <p>Aucune commune trouvée. Essayez son code Insee ou un autre nom.</p>
+        )}
+        <Explainer title="Périmètre et actualisation">
+          <p>
+            Les mandats sont ceux du dernier répertoire officiel importé. Les changements ultérieurs
+            peuvent manquer. Pour une commune partagée, la recherche par adresse n’est pas proposée.
+          </p>
+          <p>
+            Le découpage est celui des législatives de 2024. Les fusions communales sont rapprochées
+            avec le Code officiel géographique 2025. Une scission ambiguë reste non disponible.
+          </p>
+        </Explainer>
+        <Provenance provenance={local.provenance} />
+      </div>
+    )}
+  </section>
   <section id="repertoire" class="section">
     <div class="section-head">
       <h2>
         <Icon name="elected" />
-        Trouver votre député ou sénateur
+        Rechercher par nom
       </h2>
     </div>
     <form class="filters" method="get">

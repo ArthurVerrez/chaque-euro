@@ -13,4 +13,21 @@ select
     insee,
     department_name || ' (' || department_code || ')',
     population
-from communes;
+from communes
+union all
+select
+    display_name,
+    'Élu',
+    id,
+    concat_ws(' · ',
+        case role_kind
+            when 'deputy' then 'Député ou députée'
+            when 'senator' then 'Sénateur ou sénatrice'
+            when 'minister' then 'Membre du gouvernement'
+            else 'Ancien mandat'
+        end,
+        territory_label,
+        group_label
+    ),
+    active
+from public_people;

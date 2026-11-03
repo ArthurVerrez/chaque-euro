@@ -1,0 +1,209 @@
+---
+import type { GroupAmount, GroupMeasure, OrganisationGroup } from "../lib/data";
+import { formatDate, formatEuros, formatSiren } from "../lib/format";
+import Explainer from "./Explainer.astro";
+import Icon from "./Icon.astro";
+import Provenance from "./Provenance.astro";
+import Term from "./Term.astro";
+
+interface Props {
+  group: OrganisationGroup;
+  siren: string;
+}
+
+const { group, siren } = Astro.props;
+const measures = [
+  { id: "titulaire", label: "Marchés remportés", icon: "award" },
+  { id: "acheteur", label: "Marchés attribués", icon: "buyer" },
+  { id: "versement", label: "Versements de l’État", icon: "grant" },
+] as const satisfies { id: GroupMeasure; label: string; icon: string }[];
+const display = (value: GroupAmount | null) =>
+  value?.amount !== null && value?.amount !== undefined
+    ? formatEuros(value.amount)
+    : value
+      ? "Montant non exploitable"
+      : "Non recensé";
+---
+
+<section class="section" id="groupe" aria-labelledby="titre-groupe">
+  <div class="section-head">
+    <h2 id="titre-groupe">
+      <Icon name="group" />
+      {group.name}
+    </h2>
+    <p>
+      <Term id="groupe-entreprises">Groupe</Term> au {formatDate(group.asOf)}, périmètre partiel.
+      Montants en {group.year}.
+    </p>
+  </div>
+  {group.analysisPath && (
+    <p class="analysis-link">
+      <a href={group.analysisPath}>
+        <Icon name="transport" size={18} /> Comprendre le financement public du rail
+      </a>
+    </p>
+  )}
+  <div class="card group-table">
+    <table>
+      <caption class="visually-hidden">
+        {`Entités documentées du ${group.name}, montants en ${group.year}`}
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Organisation</th>
+          {measures.map((measure) => (
+            <th scope="col" class="num">
+              <Icon name={measure.icon} size={16} /> {measure.label}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {group.members.map((member) => (
+          <tr class:list={{ current: member.siren === siren }}>
+            <th scope="row">
+              <a
+                href={`/organisation/${member.siren}`}
+                aria-current={member.siren === siren ? "page" : undefined}
+              >
+                <Icon name="company" size={16} />
+                {member.name}
+              </a>
+              <span class="muted small block">
+                {formatSiren(member.siren)}
+                {member.parentSiren === null ? " · Société mère" : ""}
+              </span>
+            </th>
+            {measures.map((measure) => {
+              const amount = member.amounts[measure.id];
+              return (
+                <td class="num" data-label={measure.label}>
+                  <span>
+                    {display(amount)}
+                    {amount && amount.unpriced > 0 && (
+                      <span class="muted small block">Montants incomplets</span>
+                    )}
+                    {amount && amount.estimated > 0 && (
+                      <span class="muted small block">Estimations incluses</span>
+                    )}
+                  </span>
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th scope="row">
+            <Icon name="group" size={16} /> Somme des entités listées
+            <span class="muted small block">Montants recensés uniquement</span>
+          </th>
+          {measures.map((measure) => (
+            <td class="num" data-label={measure.label}>
+              {display(group.totals[measure.id])}
+            </td>
+          ))}
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <Provenance provenance={group.moneyProvenance} />
+  <div class="explain">
+    <Explainer title="Comment lire ces montants">
+      <p>
+        Vous voyez les seules entités dont le lien avec le groupe est documenté ici. Les autres
+        sociétés du groupe peuvent manquer. Les liens sont ceux du {formatDate(group.asOf)}, sans
+        reconstitution des changements en cours d’année. Les noms viennent de Sirene.
+      </p>
+      <p>
+        Chaque colonne porte sur {group.year}. Les{" "}
+        <Term id="montant-marche">montants des marchés</Term> sont des engagements ou des plafonds,
+        parfois estimés, pas les sommes réellement payées. Les marchés remportés, les achats du
+        groupe et les versements restent séparés. Les contrats entre entités du groupe ne sont pas
+        retirés.
+      </p>
+      <p>
+        « Non recensé » signifie qu’aucune ligne ne figure dans nos données pour cette entité et
+        cette année. Cela ne signifie pas zéro. Les{" "}
+        <Term id="jaune-associations">versements de l’État</Term> viennent de l’annexe consacrée aux
+        associations, qui ne couvre pas toutes les aides aux entreprises. Les montants non
+        exploitables sont exclus des sommes.
+      </p>
+    </Explainer>
+  </div>
+  <Provenance provenance={group.provenance} />
+</section>
+
+<style>
+  .group-table {
+    overflow: hidden;
+  }
+  tbody th[scope="row"] {
+    white-space: normal;
+  }
+  th:first-child {
+    width: 40%;
+  }
+  th a,
+  .analysis-link a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .block {
+    display: block;
+  }
+  .current {
+    background: var(--navy-50);
+  }
+  tfoot {
+    background: var(--surface);
+    font-weight: 700;
+  }
+  .explain,
+  .analysis-link {
+    margin-top: 1.25rem;
+  }
+  @media (max-width: 720px) {
+    table,
+    tbody,
+    tfoot,
+    tr,
+    th,
+    td {
+      display: block;
+    }
+    thead {
+      display: none;
+    }
+    th:first-child {
+      width: auto;
+    }
+    tbody tr,
+    tfoot tr {
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    th,
+    td {
+      padding: 0.375rem 0;
+      border: 0;
+    }
+    td.num {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      white-space: normal;
+    }
+    td::before {
+      content: attr(data-label);
+      text-align: left;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+    th a {
+      overflow-wrap: anywhere;
+    }
+  }
+</style>

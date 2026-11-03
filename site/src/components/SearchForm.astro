@@ -12,13 +12,13 @@ const {
   query = "",
   variant = "page",
   autofocus = false,
-  placeholder = "Ex. Croix-Rouge, Lyon…",
+  placeholder = "Ex. dette, Lyon, Croix-Rouge…",
 } = Astro.props;
 ---
 
 <form class:list={["search", variant]} action="/recherche" method="get" role="search">
   <label class="visually-hidden" for={`q-${variant}`}>
-    Entreprise, association ou commune
+    Thème, élu, commune ou organisation
   </label>
   <span class="field">
     <Icon name="search" size={20} />

@@ -13,6 +13,7 @@ from . import (
     democracy,
     documents,
     geo,
+    groups,
     lfi,
     local_money,
     national,
@@ -20,6 +21,7 @@ from . import (
     public_accounts,
     public_roles,
     social,
+    territorial,
 )
 from .fetch import FetchRecord, sha256_of
 from .registry import Source, load_registry
@@ -28,6 +30,9 @@ PIPELINE_DIR = Path(__file__).resolve().parents[2]
 SQL_DIR = PIPELINE_DIR / "sql"
 SCHEMA_PATH = PIPELINE_DIR / "schema.sql"
 DATA_TABLES = (
+    "org_groups",
+    "org_group_members",
+    "org_group_amounts",
     *documents.TABLES,
     "lobbying_organisations",
     "lobbying_exercises",
@@ -69,6 +74,11 @@ DATA_TABLES = (
     "campaign_decisions",
     "rne_statistics",
     "local_executives",
+    "commune_constituencies",
+    "mandate_constituencies",
+    "commune_function_labels",
+    "commune_functions",
+    "commune_function_strata",
     "cada_opinions",
     "expense_reference_values",
     "cabinet_statistics",
@@ -131,6 +141,14 @@ DATA_TABLES = (
 )
 META_TABLES = ("build", "sources", "source_urls", "downloads")
 DOWNLOADS = {
+    "commune_constituencies": "Correspondance officielle communes-circonscriptions législatives.",
+    "mandate_constituencies": "Circonscriptions des mandats AN de la XVIIe législature.",
+    "commune_function_labels": "Libellés des services, nomenclatures M14 et M57 séparées.",
+    "commune_functions": "Fonctionnement 2025 des budgets principaux, par service et habitant.",
+    "commune_function_strata": "Médianes par service, à partir de cinq communes comparables.",
+    "org_groups": "Groupes documentés par un éditeur officiel, périmètre partiel et daté.",
+    "org_group_members": "Entités diffusables, SIREN et preuves officielles de contrôle.",
+    "org_group_amounts": "Montants par entité, mesure et année ; absences distinctes de zéro.",
     "procurement_competition": "Offre unique depuis 2024, couverture par acheteur et famille CPV.",
     **{
         table: "Documents officiels et structures administratives, données filtrées."
@@ -357,6 +375,8 @@ def _transform(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) 
     social.load(con, records)
     local_money.load(con, records)
     public_roles.load(con, records)
+    groups.load(con, records)
+    territorial.load(con, records)
     for script in sorted(SQL_DIR.glob("*.sql")):
         print(f"  sql {script.name}", flush=True)
         con.execute(script.read_text(encoding="utf-8"))
@@ -368,6 +388,8 @@ def _transform(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) 
     social.validate(con)
     local_money.validate(con)
     public_roles.validate(con)
+    groups.validate(con)
+    territorial.validate(con)
     return france_viewbox
 
 

@@ -13,6 +13,24 @@ interface GlossaryEntry {
 }
 
 export const GLOSSARY = {
+  "circonscription-legislative": {
+    term: "Circonscription législative",
+    theme: "lecture",
+    definition:
+      "Territoire qui élit un député à l’Assemblée nationale. Une commune peut appartenir à plusieurs circonscriptions ; connaître la commune ne suffit alors pas à identifier un seul député.",
+  },
+  "fonction-budgetaire": {
+    term: "Fonction budgétaire",
+    theme: "communes",
+    definition:
+      "Classement des dépenses selon le service rendu (enseignement, sport, voirie…), au lieu de leur nature comptable (salaires, achats…). Les communes ne publient pas toutes cette ventilation. Les nomenclatures M14 et M57 classent certains services différemment.",
+  },
+  "groupe-entreprises": {
+    term: "Groupe d'entreprises",
+    theme: "organisations",
+    definition:
+      "Ensemble constitué d'une société mère et des sociétés qu'elle contrôle. Chaque société conserve son propre SIREN. Un périmètre partiel et daté ne représente pas nécessairement toutes les sociétés du groupe aujourd'hui.",
+  },
   "million-milliard": {
     term: "Million et milliard d’euros",
     theme: "lecture",

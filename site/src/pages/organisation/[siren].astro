@@ -2,6 +2,7 @@
 import ProcurementCompetition from "../../components/ProcurementCompetition.astro";
 import ProcurementOpportunities from "../../components/ProcurementOpportunities.astro";
 import OrganisationLobbying from "../../components/OrganisationLobbying.astro";
+import OrganisationGroup from "../../components/OrganisationGroup.astro";
 import Answer from "../../components/Answer.astro";
 import Icon from "../../components/Icon.astro";
 import BarList from "../../components/BarList.astro";
@@ -16,6 +17,7 @@ import Base from "../../layouts/Base.astro";
 import {
   getProcurementCompetition,
   getOrganisation,
+  getOrganisationGroup,
   getOrganisationLobbying,
   getProcurementOpportunities,
 } from "../../lib/data";
@@ -24,6 +26,7 @@ import { NBSP, formatEuros, formatSiren, plural } from "../../lib/format";
 
 const siren = Astro.params.siren ?? "";
 const org = /^\d{9}$/.test(siren) ? await getOrganisation(siren) : null;
+const group = org ? await getOrganisationGroup(siren) : null;
 if (!org) Astro.response.status = 404;
 const lobbying = org ? await getOrganisationLobbying(siren) : null;
 const hasLobbying = lobbying && (lobbying.french.length > 0 || lobbying.european.length > 0);
@@ -94,6 +97,7 @@ const flows = org
   : [];
 const toc: { href: string; label: string; icon: IconName }[] = [
   { href: "#en-bref", label: "En bref", icon: "info" },
+  ...(group ? [{ href: "#groupe", label: group.name, icon: "group" as const }] : []),
   ...(org?.grants
     ? [{ href: "#subventions", label: "Versements de l’État", icon: "grant" as const }]
     : []),
@@ -178,8 +182,20 @@ const description = answer ?? "Aucune donnée publique pour ce SIREN.";
               </span>
             )}
           </p>
+          {group && (
+            <p class="group-scope">
+              <Icon name="group" size={18} />
+              <span>
+                Chiffres de cette société uniquement.{" "}
+                <a href="#groupe">Voir les entités du {group.name}</a>
+              </span>
+            </p>
+          )}
           {answer && <Answer text={answer} />}
-          <KeyFigures figures={figures} />
+          {!answer && group && (
+            <p class="lead">Aucun marché ni versement recensé pour ce SIREN dans nos données.</p>
+          )}
+          {figures.length > 0 && <KeyFigures figures={figures} />}
           {org.commune && (
             <p class="commune-link">
               <Icon name="town" size={16} />
@@ -192,6 +208,7 @@ const description = answer ?? "Aucune donnée publique pour ce SIREN.";
       <Toc items={toc} />
 
       <div class="container">
+        {group && <OrganisationGroup group={group} siren={siren} />}
         {org.grants && (
           <section class="section" id="subventions" aria-labelledby="titre-subventions">
             <div class="section-head">
@@ -300,6 +317,21 @@ const description = answer ?? "Aucune donnée publique pour ce SIREN.";
 </Base>
 
 <style>
+  .group-scope {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-top: 1.25rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--navy-50);
+  }
+
+  .group-scope :global(svg) {
+    flex-shrink: 0;
+  }
+
   .badge.closed {
     background: #fdecea;
     color: #8a1c13;

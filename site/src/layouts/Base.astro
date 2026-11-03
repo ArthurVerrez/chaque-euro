@@ -14,66 +14,66 @@ interface Props {
 const { title, description, noindex = false } = Astro.props;
 const fullTitle = title === "Chaque Euro" ? title : `${title} · Chaque Euro`;
 const path = Astro.url.pathname.replace(/(.)\/$/, "$1");
-const groups: { title: string; items: { href: string; label: string; icon: IconName }[] }[] = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: IconName;
+}
+const groups: { title: string; items: NavItem[] }[] = [
   {
-    title: "Explorer",
+    title: "Où va l’argent ?",
     items: [
       { href: "/", label: "Accueil", icon: "home" },
-      { href: "/marches-publics", label: "Marchés publics", icon: "contract" },
-      { href: "/organisations", label: "Organisations", icon: "building" },
-      { href: "/communes", label: "Communes", icon: "town" },
-      { href: "/regions", label: "Régions", icon: "region" },
-      { href: "/intercommunalites", label: "Intercommunalités", icon: "intercommunalite" },
-    ],
-  },
-  {
-    title: "Argent public",
-    items: [
       { href: "/argent-public", label: "Tout l'argent public", icon: "euro" },
       { href: "/budget-etat", label: "Budget de l'État", icon: "state" },
-      { href: "/argent-public/operateurs", label: "Opérateurs de l'État", icon: "building" },
-      { href: "/argent-public/collectivites", label: "Collectivités locales", icon: "town" },
       {
         href: "/argent-public/securite-sociale",
         label: "Sécurité sociale",
         icon: "socialSecurity",
       },
+      { href: "/analyses", label: "Analyses", icon: "analysis" },
     ],
   },
   {
-    title: "Démocratie",
+    title: "Près de vous",
     items: [
-      { href: "/elus", label: "Élus", icon: "elected" },
-      { href: "/votes", label: "Votes", icon: "vote" },
-      { href: "/campagnes", label: "Campagnes", icon: "campaign" },
-      { href: "/alertes", label: "Alertes", icon: "alert" },
-      { href: "/train-de-vie", label: "Moyens publics", icon: "spending" },
-      { href: "/lobbying", label: "Lobbying", icon: "lobbying" },
-      { href: "/financement-politique", label: "Financement politique", icon: "politicalFinance" },
-      { href: "/journal-officiel", label: "Journal officiel", icon: "journal" },
-      { href: "/documents/dossiers", label: "Dossiers législatifs", icon: "legislation" },
-      { href: "/administrations", label: "Administrations", icon: "administration" },
+      { href: "/communes", label: "Communes", icon: "town" },
+      { href: "/regions", label: "Régions", icon: "region" },
     ],
   },
   {
-    title: "Analyses",
+    title: "Qui reçoit l’argent ?",
     items: [
-      ...ANALYSES.map((article) => ({
-        href: `/analyses/${article.slug}`,
-        label: article.short,
-        icon: article.icon,
-      })),
-      { href: "/analyses", label: "Toutes les analyses", icon: "analysis" },
+      { href: "/organisations", label: "Organisations", icon: "building" },
+      { href: "/marches-publics", label: "Marchés publics", icon: "contract" },
     ],
   },
   {
-    title: "Données",
-    items: [
-      { href: "/lexique", label: "Lexique", icon: "book" },
-      { href: "/methodologie", label: "Méthode et sources", icon: "method" },
-      { href: "/telechargements", label: "Télécharger", icon: "download" },
-    ],
+    title: "Vos représentants",
+    items: [{ href: "/elus", label: "Élus", icon: "elected" }],
   },
+];
+const secondary: NavItem[] = [
+  { href: "/argent-public/operateurs", label: "Opérateurs de l'État", icon: "building" },
+  { href: "/argent-public/collectivites", label: "Collectivités locales", icon: "town" },
+  { href: "/intercommunalites", label: "Intercommunalités", icon: "intercommunalite" },
+  { href: "/votes", label: "Votes", icon: "vote" },
+  { href: "/campagnes", label: "Campagnes", icon: "campaign" },
+  { href: "/alertes", label: "Alertes", icon: "alert" },
+  { href: "/train-de-vie", label: "Moyens publics", icon: "spending" },
+  { href: "/lobbying", label: "Lobbying", icon: "lobbying" },
+  { href: "/financement-politique", label: "Financement politique", icon: "politicalFinance" },
+  { href: "/journal-officiel", label: "Journal officiel", icon: "journal" },
+  { href: "/documents/dossiers", label: "Dossiers législatifs", icon: "legislation" },
+  { href: "/administrations", label: "Administrations", icon: "administration" },
+  ...ANALYSES.map((article) => ({
+    href: `/analyses/${article.slug}`,
+    label: article.short,
+    icon: article.icon,
+  })),
+  { href: "/lexique", label: "Lexique", icon: "book" },
+  { href: "/methodologie", label: "Méthode et sources", icon: "method" },
+  { href: "/telechargements", label: "Télécharger les données", icon: "download" },
 ];
 const exact = new Set(["/", "/analyses"]);
 const current = (href: string) =>
@@ -165,6 +165,22 @@ const current = (href: string) =>
               </ul>
             </div>
           ))}
+          <details class="group secondary" open={secondary.some((item) => current(item.href))}>
+            <summary>
+              <Icon name="list" size={17} />
+              Tout le site
+            </summary>
+            <ul>
+              {secondary.map((item) => (
+                <li>
+                  <a href={item.href} aria-current={current(item.href)}>
+                    <Icon name={item.icon} size={17} />
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </details>
         </nav>
       </aside>
       <div class="page">
@@ -451,6 +467,37 @@ const current = (href: string) =>
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--text-muted);
+  }
+
+  .secondary {
+    margin-top: 1.375rem;
+    border-top: 1px solid var(--border);
+    padding-top: 0.75rem;
+  }
+
+  .secondary summary {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 0.75rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 650;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .secondary summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .secondary summary::after {
+    content: "+";
+    margin-left: auto;
+  }
+
+  .secondary[open] summary::after {
+    content: "−";
   }
 
   .group ul {

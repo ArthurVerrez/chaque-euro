@@ -4,7 +4,6 @@ import Icon from "../components/Icon.astro";
 import SearchForm from "../components/SearchForm.astro";
 import Base from "../layouts/Base.astro";
 import { search } from "../lib/data";
-import { kindIcon } from "../lib/icons";
 import { NBSP } from "../lib/format";
 
 const query = (Astro.url.searchParams.get("q") ?? "").trim();
@@ -15,15 +14,19 @@ if (/^[0-9][0-9AB][0-9]{3}$/i.test(compact)) {
   return Astro.redirect(`/commune/${compact.toUpperCase()}`);
 }
 const results = query.length >= 2 ? await search(query) : [];
+const groups = [...new Set(results.map((result) => result.group))].map((name) => ({
+  name,
+  results: results.filter((result) => result.group === name),
+}));
 const summary =
   results.length === 0
-    ? `Aucune fiche pour «${NBSP}${query}${NBSP}».`
-    : `${results.length === 20 ? "Les 20 premiers résultats" : `${results.length} résultat${results.length > 1 ? "s" : ""}`} pour «${NBSP}${query}${NBSP}».`;
+    ? `Aucun résultat pour «${NBSP}${query}${NBSP}».`
+    : `${results.length} résultat${results.length > 1 ? "s" : ""} pour «${NBSP}${query}${NBSP}».`;
 ---
 
 <Base
   title={query ? `Recherche : ${query}` : "Rechercher"}
-  description="Cherchez une entreprise, une association, un acheteur public ou une commune."
+  description="Cherchez un thème, un élu, une commune ou une organisation."
   noindex
 >
   <header class="page-head">
@@ -33,7 +36,7 @@ const summary =
         <Icon name="search" />
         <h1>Rechercher</h1>
       </div>
-      <p class="lead">Cherchez une entreprise, association ou commune par nom.</p>
+      <p class="lead">Un sujet, un élu, une commune ou une organisation.</p>
       <SearchForm query={query} autofocus={!query} />
     </div>
   </header>
@@ -41,25 +44,33 @@ const summary =
     {query && (
       <section class="section" aria-live="polite">
         <p class="muted">{summary}</p>
-        <ul class="results">
-          {results.map((result) => (
-            <li class="card result">
-              <span class="result-icon">
-                <Icon name={kindIcon(result.kind)} size={22} />
-              </span>
-              <span class="result-body">
-                <a href={result.href}>{result.name}</a>
-                <span class="muted small">
-                  {result.kind}
-                  {result.detail && ` · ${result.detail}`}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
+        {groups.map((group) => (
+          <section class="result-group" aria-label={group.name}>
+            <h2>
+              <Icon name={group.results[0]!.icon} />
+              {group.name}
+            </h2>
+            <ul class="results">
+              {group.results.map((result) => (
+                <li class="card result">
+                  <span class="result-icon">
+                    <Icon name={result.icon} size={22} />
+                  </span>
+                  <span class="result-body">
+                    <a href={result.href}>{result.name}</a>
+                    <span class="muted small">
+                      {result.kind}
+                      {result.detail && ` · ${result.detail}`}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
         {results.length === 0 && (
           <p>
-            Essayez un autre nom, ou consultez l’
+            Essayez un autre mot, ou consultez l’
             <a href="/argent-public">
               <Icon name="euro" size={15} />
               argent public
@@ -83,6 +94,17 @@ const summary =
 </Base>
 
 <style>
+  .result-group {
+    margin-top: 2rem;
+  }
+
+  .result-group h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-bottom: 1rem;
+  }
+
   .results {
     list-style: none;
     margin: 0;
