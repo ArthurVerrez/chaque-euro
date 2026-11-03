@@ -1,0 +1,60 @@
+---
+import Icon from "./Icon.astro";
+import type { EuropeanLobbying } from "../lib/data";
+import { declaredCosts, exercisePeriod } from "../lib/democracy";
+interface Props {
+  rows: EuropeanLobbying[];
+}
+const { rows } = Astro.props;
+---
+
+<table>
+  <thead>
+    <tr>
+      <th scope="col">Organisation</th>
+      <th scope="col">Coûts annuels déclarés</th>
+    </tr>
+  </thead>
+  <tbody>
+    {rows.map((row) => (
+      <tr>
+        <td>
+          <Icon name="building" size={15} />{" "}
+          {row.siren ? <a href={`/organisation/${row.siren}`}>{row.name}</a> : row.name}
+          {row.areas ? (
+            <details class="small muted">
+              <summary>
+                <Icon name="layers" size={13} /> {row.areas.split(" · ").length} domaines d’intérêt
+              </summary>
+              <p>{row.areas}</p>
+            </details>
+          ) : (
+            <span class="small muted block">Domaine non précisé</span>
+          )}
+          <a class="small block" href={row.provenance.citations[0]!.recordUrl!}>
+            <Icon name="source" size={13} /> Fiche UE
+          </a>
+        </td>
+        <td>
+          {declaredCosts(row)}
+          <span class="small muted block">{exercisePeriod(row.starts_on, row.ends_on)}</span>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+<style>
+  .block {
+    display: block;
+  }
+  table {
+    table-layout: fixed;
+  }
+  th:first-child {
+    width: 60%;
+  }
+  td {
+    overflow-wrap: anywhere;
+    vertical-align: top;
+  }
+</style>

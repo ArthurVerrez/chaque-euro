@@ -1,0 +1,119 @@
+---
+import type { IconName } from "../lib/icons";
+import Icon from "./Icon.astro";
+
+interface Props {
+  items: { href: string; label: string; icon: IconName }[];
+}
+
+const { items } = Astro.props;
+---
+
+<nav class="toc" aria-label="Sur cette page">
+  <div class="container">
+    <ul>
+      {items.map((item) => (
+        <li>
+          <a href={item.href}>
+            <Icon name={item.icon} size={15} />
+            {item.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</nav>
+
+<script>
+  const list = document.querySelector<HTMLUListElement>(".toc ul");
+  const links = [...document.querySelectorAll<HTMLAnchorElement>(".toc a")];
+  const sections = links.flatMap((link) => {
+    const target = document.querySelector(link.hash);
+    return target ? [{ link, target }] : [];
+  });
+  const update = () => {
+    const line = window.innerHeight * 0.3;
+    const current = sections
+      .filter(({ target }) => target.getBoundingClientRect().top < line)
+      .at(-1);
+    if (current && !current.link.hasAttribute("aria-current") && list) {
+      const left = current.link.offsetLeft - (list.clientWidth - current.link.offsetWidth) / 2;
+      list.scrollTo({ left, behavior: "smooth" });
+    }
+    for (const { link } of sections) {
+      if (link === current?.link) link.setAttribute("aria-current", "true");
+      else link.removeAttribute("aria-current");
+    }
+  };
+  const fade = () => {
+    if (!list) return;
+    list.classList.toggle("more-start", list.scrollLeft > 1);
+    list.classList.toggle("more-end", list.scrollLeft + list.clientWidth < list.scrollWidth - 1);
+  };
+  addEventListener("scroll", update, { passive: true });
+  list?.addEventListener("scroll", fade, { passive: true });
+  addEventListener("resize", fade);
+  update();
+  fade();
+</script>
+
+<style>
+  .toc {
+    position: sticky;
+    top: var(--sticky-top);
+    z-index: 5;
+    background: rgb(255 255 255 / 92%);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  ul {
+    display: flex;
+    gap: 0.375rem;
+    list-style: none;
+    margin: 0;
+    padding: 0.625rem 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    --fade-start: 0rem;
+    --fade-end: 0rem;
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--fade-start),
+      #000 calc(100% - var(--fade-end)),
+      transparent
+    );
+  }
+
+  ul.more-start {
+    --fade-start: 3rem;
+  }
+
+  ul.more-end {
+    --fade-end: 3rem;
+  }
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+    padding: 0.4375rem 0.875rem;
+    border-radius: 999px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-decoration: none;
+  }
+
+  a:hover {
+    background: var(--navy-50);
+    color: var(--navy-900);
+  }
+
+  a[aria-current="true"] {
+    background: var(--navy-900);
+    color: #fff;
+  }
+</style>

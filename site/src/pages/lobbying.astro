@@ -1,0 +1,367 @@
+---
+import Answer from "../components/Answer.astro";
+import BarList from "../components/BarList.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import ColumnChart from "../components/ColumnChart.astro";
+import EuropeanLobbyingTable from "../components/EuropeanLobbyingTable.astro";
+import Explainer from "../components/Explainer.astro";
+import Icon from "../components/Icon.astro";
+import KeyFigures from "../components/KeyFigures.astro";
+import Provenance from "../components/Provenance.astro";
+import Term from "../components/Term.astro";
+import Toc from "../components/Toc.astro";
+import Base from "../layouts/Base.astro";
+import { getLobbying } from "../lib/data";
+import { exercisePeriod } from "../lib/democracy";
+import { formatDate, formatEuros, formatNumber } from "../lib/format";
+const query = (Astro.url.searchParams.get("organisation") ?? "").slice(0, 100);
+const data = await getLobbying(query);
+const sections = [
+  { href: "#institutions", label: "Institutions", icon: "state" as const },
+  { href: "#organisations", label: "Organisations", icon: "building" as const },
+  { href: "#publications", label: "Trimestres", icon: "calendar" as const },
+  { href: "#budgets", label: "Budgets", icon: "euro" as const },
+  { href: "#defauts", label: "Défauts", icon: "info" as const },
+  { href: "#croisements", label: "Argent public", icon: "compare" as const },
+  { href: "#europe", label: "Registre UE", icon: "europe" as const },
+];
+const bars = (rows: { label: string; count: number }[]) =>
+  rows.map((r) => ({
+    label: r.label,
+    value: r.count,
+    display: formatNumber(r.count),
+    icon: "state" as const,
+  }));
+---
+
+<Base
+  title="Lobbying et argent public"
+  description="Organisations inscrites aux registres HATVP et UE, activités déclarées et rapprochements avec l’argent public."
+>
+  <header class="page-head">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Lobbying" }]} />
+      <div class="entity">
+        <Icon name="lobbying" />
+        <h1>Lobbying et argent public</h1>
+      </div>
+      <Answer
+        text={`${formatNumber(data.totals.activities)} fiches d’activité ont été publiées en 12 mois par les organisations retenues du répertoire HATVP, au ${formatDate(data.asOf)}.`}
+      />
+      <KeyFigures
+        figures={[
+          {
+            icon: "building",
+            label: "Organisations HATVP",
+            value: formatNumber(data.totals.organisations),
+            note: "Personnes morales vérifiées, radiées incluses",
+          },
+          {
+            icon: "lobbying",
+            label: "Fiches publiées",
+            value: formatNumber(data.totals.activities),
+            note: "12 mois avant la récupération",
+            term: "lobbying",
+          },
+          {
+            icon: "info",
+            label: "En défaut de déclaration",
+            value: formatNumber(data.totals.defaults),
+            note: "Liste officielle, personnes morales retenues",
+          },
+          {
+            icon: "europe",
+            label: "Organisations françaises UE",
+            value: formatNumber(data.totals.european),
+            note: "Siège en France, formes juridiques retenues",
+          },
+        ]}
+      />
+      <Provenance provenance={data.provenance} />
+      <Provenance provenance={data.defaultsProvenance} />
+      <Provenance provenance={data.europeanProvenance} />
+    </div>
+  </header>
+  <Toc items={sections} />
+  <div class="container">
+    <section class="section" id="institutions">
+      <div class="section-head">
+        <h2>
+          <Icon name="state" /> Les institutions ciblées
+        </h2>
+        <p>Fiches publiées sur les 12 derniers mois, plusieurs cibles possibles.</p>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <BarList caption="Catégories d’institutions" items={bars(data.targets)} />
+        </div>
+        <div class="card">
+          <BarList
+            caption="Principaux ministères déclarés, libellés HATVP"
+            items={bars(data.ministries)}
+          />
+        </div>
+      </div>
+      <Provenance provenance={data.provenance} />
+    </section>
+    <section class="section" id="organisations">
+      <div class="section-head">
+        <h2>
+          <Icon name="building" /> Les organisations les plus actives à publier
+        </h2>
+        <p>10 résultats, classés par nombre de fiches publiées sur 12 mois.</p>
+      </div>
+      <form method="get" class="search-form">
+        <label for="organisation">
+          Rechercher une organisation dans les deux registres et les défauts
+        </label>
+        <div class="search-controls">
+          <input
+            id="organisation"
+            name="organisation"
+            value={query}
+            maxlength="100"
+            type="search"
+          />
+          <button class="button" type="submit">
+            Rechercher
+          </button>
+        </div>
+      </form>
+      <div class="card">
+        <table class="organisations">
+          <thead>
+            <tr>
+              <th scope="col">Organisation</th>
+              <th scope="col">Fiches</th>
+              <th scope="col">Dépenses déclarées</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.organisations.map((row) => (
+              <tr>
+                <td>
+                  {row.siren ? <a href={`/organisation/${row.siren}`}>{row.name}</a> : row.name}
+                  <a class="small block" href={row.provenance.citations[0]!.recordUrl!}>
+                    <Icon name="source" size={13} /> Fiche HATVP
+                  </a>
+                </td>
+                <td class="num">{formatNumber(row.activities)}</td>
+                <td>
+                  {row.budget_label ?? "Non déclarées"}
+                  <span class="small muted block">
+                    {exercisePeriod(row.starts_on, row.ends_on)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {data.organisations.length === 0 && <p>Aucun résultat pour cette recherche.</p>}
+      </div>
+      <Provenance provenance={data.provenance} />
+    </section>
+    <section class="section" id="publications">
+      <div class="section-head">
+        <h2>
+          <Icon name="calendar" /> Les publications par trimestre
+        </h2>
+        <p>La date de publication est connue, celle des actions ne l’est pas.</p>
+      </div>
+      <div class="card">
+        <ColumnChart
+          caption="Fiches publiées, huit derniers trimestres observés"
+          unit="Fiches"
+          columns={data.quarters.map((row) => ({
+            label: `T${row.quarter} ${row.year}`,
+            value: row.activities,
+            display: formatNumber(row.activities),
+            detail: `${formatNumber(row.activities)} fiches publiées`,
+          }))}
+        />
+      </div>
+      <Explainer title="Pourquoi ces trimestres ne décrivent pas l’activité réelle">
+        <p>
+          Les activités sont déclarées par exercice, le plus souvent annuel. Le dépôt du printemps
+          concerne généralement l’année précédente. Les dates de publication ne permettent pas de
+          mesurer les actions réalisées dans un trimestre ni dans les 12 derniers mois. Le trimestre
+          en cours est arrêté au {formatDate(data.asOf)}.
+        </p>
+      </Explainer>
+      <Provenance provenance={data.provenance} />
+    </section>
+    <section class="section" id="budgets">
+      <div class="section-head">
+        <h2>
+          <Icon name="euro" /> Les fourchettes de dépenses
+        </h2>
+        <p>Dernier exercice clos et publié de chaque organisation, années variables.</p>
+      </div>
+      <div class="card">
+        <BarList
+          caption="Nombre d’organisations par fourchette, sans addition des budgets"
+          items={data.budgets.map((r) => ({
+            label: r.label,
+            value: r.count,
+            display: formatNumber(r.count),
+            icon: "euro",
+          }))}
+        />
+      </div>
+      <Provenance provenance={data.provenance} />
+    </section>
+    <section class="section" id="defauts">
+      <div class="section-head">
+        <h2>
+          <Icon name="info" /> Les défauts de déclaration publiés par la HATVP
+        </h2>
+        <p>Un état déclaratif officiel, pas une condamnation.</p>
+      </div>
+      <div class="card">
+        <p>
+          <a href={data.defaultsUrl}>Consulter la liste officielle actualisée</a>
+        </p>
+        <details>
+          <summary>
+            Voir les {formatNumber(data.defaults.length)} organisations retenues
+            {query && " pour cette recherche"}
+          </summary>
+          <ul class="defaults">
+            {data.defaults.map((r) => (
+              <li>
+                <strong>{r.name}</strong>
+                <span class="small block">
+                  {r.period} · {r.missing}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      </div>
+      <Provenance provenance={data.defaultsProvenance} />
+    </section>
+    <section class="section" id="croisements">
+      <div class="section-head">
+        <h2>
+          <Icon name="compare" /> Des organisations présentes dans plusieurs jeux de données
+        </h2>
+        <p>
+          {formatNumber(data.totals.crossrefs)} SIREN communs. Cette coïncidence ne prouve aucun
+          lien.
+        </p>
+      </div>
+      <div class="card">
+        <table class="crosses">
+          <thead>
+            <tr>
+              <th scope="col">Organisation</th>
+              <th scope="col">Marchés depuis 2019</th>
+              <th scope="col">Versements de l’État 2025</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.crosses.map((r) => (
+              <tr>
+                <td>
+                  <a href={`/organisation/${r.siren}`}>{r.name}</a>
+                </td>
+                <td>
+                  {formatNumber(r.contracts)}
+                  <span class="small muted block">{formatEuros(r.contract_amount)}</span>
+                </td>
+                <td>
+                  {formatNumber(r.payments)}
+                  <span class="small muted block">{formatEuros(r.payment_amount)}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Explainer title="Comment lire ces montants">
+        <p>
+          Les marchés sont des montants contractuels, pas des sommes payées. Les versements aux
+          associations incluent subventions et prestations. Les périodes ne coïncident pas avec
+          celles des déclarations de <Term id="lobbying">représentation d’intérêts</Term>.
+        </p>
+      </Explainer>
+      <Provenance provenance={data.crossProvenance} />
+    </section>
+    <section class="section" id="europe">
+      <div class="section-head">
+        <h2>
+          <Icon name="europe" /> Le registre de transparence de l’Union européenne
+        </h2>
+        <p>Siège en France, dernier exercice déclaré. Les périmètres HATVP et UE sont distincts.</p>
+      </div>
+      <div class="card">
+        <BarList caption="Principaux domaines, libellés officiels UE" items={bars(data.areas)} />
+      </div>
+      <div class="card">
+        <h3>
+          <Icon name="euro" /> Coûts annuels déclarés
+        </h3>
+        <p class="small muted">
+          10 résultats, classés par borne basse connue ou montant exact. Ce classement ne compare
+          pas des dépenses exactes.
+        </p>
+        <EuropeanLobbyingTable rows={data.european} />
+        {data.european.length === 0 && <p>Aucun résultat pour cette recherche.</p>}
+      </div>
+      <Provenance provenance={data.europeanProvenance} />
+    </section>
+  </div>
+</Base>
+<style>
+  #publications :global(.labels span) {
+    white-space: normal;
+  }
+  .block {
+    display: block;
+  }
+  table {
+    table-layout: fixed;
+  }
+  td {
+    overflow-wrap: anywhere;
+    vertical-align: top;
+  }
+  .organisations th:first-child,
+  .crosses th:first-child {
+    width: 45%;
+  }
+  .organisations th:nth-child(2) {
+    width: 15%;
+  }
+  .search-form {
+    margin-bottom: 1rem;
+  }
+  .search-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  .search-controls {
+    display: flex;
+    gap: 0.5rem;
+  }
+  input {
+    min-width: 0;
+    flex: 1;
+  }
+  .defaults li {
+    margin-bottom: 0.75rem;
+    overflow-wrap: anywhere;
+  }
+  .card + .card {
+    margin-top: 1rem;
+  }
+  @media (max-width: 500px) {
+    .search-controls {
+      flex-wrap: wrap;
+    }
+    th,
+    td {
+      padding: 0.75rem 0.4rem;
+    }
+  }
+</style>

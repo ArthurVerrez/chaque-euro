@@ -1,0 +1,124 @@
+---
+import type { IconName } from "../lib/icons";
+import Icon from "./Icon.astro";
+
+export interface BarItem {
+  icon?: IconName;
+  label: string;
+  value: number;
+  display: string;
+  href?: string | null;
+  note?: string | undefined;
+  muted?: boolean;
+  strong?: boolean;
+  offset?: number;
+}
+
+interface Props {
+  items: BarItem[];
+  caption: string;
+}
+
+const { items, caption } = Astro.props;
+const max = Math.max(...items.map((item) => (item.offset ?? 0) + item.value), 0);
+const percent = (value: number) => (max > 0 ? (value / max) * 100 : 0);
+const width = (value: number) => Math.max(percent(value), value > 0 ? 0.5 : 0);
+---
+
+<figure class="bar-list">
+  <figcaption>
+    <Icon name="bars" size={18} />
+    {caption}
+  </figcaption>
+  <ol>
+    {items.map((item) => (
+      <li title={`${item.label} : ${item.display}`}>
+        <span class="label">
+          {item.icon && <Icon name={item.icon} size={16} />}
+          {item.href ? <a href={item.href}>{item.label}</a> : item.label}
+          {item.note && <span class="note">{item.note}</span>}
+        </span>
+        <span class="value num">{item.display}</span>
+        <span class="track" aria-hidden="true">
+          <span
+            class:list={["fill", { muted: item.muted, strong: item.strong }]}
+            style={`margin-left: ${percent(item.offset ?? 0)}%; width: ${width(item.value)}%`}
+          />
+        </span>
+      </li>
+    ))}
+  </ol>
+</figure>
+
+<style>
+  .bar-list {
+    margin: 0;
+  }
+
+  figcaption {
+    margin-bottom: 1.125rem;
+  }
+
+  ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.875rem;
+  }
+
+  li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.375rem 1rem;
+    align-items: baseline;
+  }
+
+  .label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-weight: 500;
+  }
+
+  .label :global(svg) {
+    margin-right: 0.375rem;
+    vertical-align: -0.2em;
+    color: var(--navy-800);
+  }
+
+  .note {
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-left: 0.5rem;
+    overflow-wrap: normal;
+  }
+
+  .value {
+    font-weight: 750;
+    color: var(--navy-900);
+  }
+
+  .track {
+    grid-column: 1 / -1;
+    height: 10px;
+    background: var(--bar-track);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .fill {
+    display: block;
+    height: 100%;
+    background: var(--bar);
+    border-radius: 999px;
+  }
+
+  .fill.muted {
+    background: var(--series-other);
+  }
+
+  .fill.strong {
+    background: var(--navy-900);
+  }
+</style>

@@ -1,0 +1,63 @@
+---
+import type { CommuneLocation } from "../lib/data";
+
+interface Props {
+  location: CommuneLocation;
+  label: string;
+  href: string;
+}
+
+const { location, label, href } = Astro.props;
+const [, , width = 0, height = 0] = location.viewBox.split(" ").map(Number);
+const radius = Math.max(width, height) * 0.035;
+---
+
+<a class="locator" href={href} aria-label={label} title={label}>
+  <svg viewBox={location.viewBox} aria-hidden="true">
+    <path d={location.outline}></path>
+    <circle cx={location.x} cy={location.y} r={radius}></circle>
+  </svg>
+</a>
+
+<style>
+  .locator {
+    display: block;
+    width: 7.5rem;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+
+  .locator:hover {
+    border-color: var(--link);
+  }
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  path {
+    fill: var(--navy-100);
+    stroke: var(--navy-800);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+  }
+
+  circle {
+    fill: var(--series-2);
+    stroke: var(--surface);
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+  }
+
+  @media (max-width: 40rem) {
+    .locator {
+      width: 5rem;
+      padding: 0.375rem;
+    }
+  }
+</style>

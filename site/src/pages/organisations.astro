@@ -1,0 +1,166 @@
+---
+import Icon from "../components/Icon.astro";
+import BarList from "../components/BarList.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import Explainer from "../components/Explainer.astro";
+import KeyFigures from "../components/KeyFigures.astro";
+import Provenance from "../components/Provenance.astro";
+import SearchForm from "../components/SearchForm.astro";
+import Toc from "../components/Toc.astro";
+import Base from "../layouts/Base.astro";
+import { getOrganisationsIndex, type RankedOrganisation } from "../lib/data";
+import { kindIcon } from "../lib/icons";
+import { formatEuros, formatNumber, plural } from "../lib/format";
+
+const index = await getOrganisationsIndex();
+const items = (orgs: RankedOrganisation[], unit: [string, string], withKind = false) =>
+  orgs.map((org) => ({
+    icon: kindIcon(org.kind),
+    label: org.name,
+    value: org.amount,
+    display: formatEuros(org.amount),
+    href: `/organisation/${org.siren}`,
+    note: [withKind && org.kind, plural(org.count, ...unit)].filter(Boolean).join(" · "),
+  }));
+const { orgs_with_contracts: holders, buyers, grants_associations: grantees } = index.facts;
+const figures = [
+  holders && {
+    icon: "award" as const,
+    label: "Titulaires de marchés publics",
+    value: formatNumber(holders.value),
+    note: "organisations identifiées depuis 2019",
+  },
+  buyers && {
+    icon: "buyer" as const,
+    label: "Acheteurs publics",
+    value: formatNumber(buyers.value),
+    note: "ministères, collectivités, hôpitaux…",
+  },
+  grantees && {
+    icon: "grant" as const,
+    label: "Organismes recevant des crédits de l'État",
+    value: formatNumber(grantees.value),
+    note: `en ${grantees.period}`,
+  },
+].filter((figure) => figure !== undefined);
+---
+
+<Base
+  title="Entreprises, associations et acheteurs publics"
+  description="Qui reçoit l'argent public ? Les entreprises qui remportent le plus de marchés publics, les associations recevant le plus de crédits de l'État et les principaux acheteurs publics."
+>
+  <header class="page-head">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Organisations" }]} />
+      <div class="entity">
+        <Icon name="building" />
+        <h1>Entreprises, associations et acheteurs publics</h1>
+      </div>
+      <p class="lead">Entreprise, association ou organisme public, par nom ou SIREN.</p>
+      <SearchForm />
+      <div class="figures">
+        <KeyFigures figures={figures} />
+      </div>
+    </div>
+  </header>
+  <Toc
+    items={[
+      { href: "#entreprises", label: "Entreprises", icon: "company" },
+      { href: "#associations", label: "Associations", icon: "association" },
+      { href: "#acheteurs", label: "Acheteurs publics", icon: "buyer" },
+    ]}
+  />
+
+  <div class="container">
+    <section class="section" id="entreprises" aria-labelledby="titre-entreprises">
+      <div class="section-head">
+        <h2 id="titre-entreprises">
+          <Icon name="company" />
+          Les entreprises qui remportent le plus de marchés
+        </h2>
+        <p>Marchés remportés depuis 2019.</p>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <BarList
+            caption="Dix premières sociétés commerciales"
+            items={items(index.companies, ["marché", "marchés"])}
+          />
+        </div>
+        <Explainer title="Pourquoi ces montants sont si élevés">
+          <p>
+            Beaucoup de marchés sont des accords-cadres : le montant publié est un plafond sur
+            plusieurs années, pas la somme réellement payée.
+          </p>
+          <p>
+            Un SIREN désigne une société, pas un groupe : les filiales d'un même groupe apparaissent
+            séparément.
+          </p>
+        </Explainer>
+      </div>
+      <Provenance provenance={index.contractsProvenance} />
+    </section>
+
+    <section class="section" id="associations" aria-labelledby="titre-associations">
+      <div class="section-head">
+        <h2 id="titre-associations">
+          <Icon name="grant" />
+          Les associations recevant le plus de crédits de l'État
+        </h2>
+        <p>
+          Versements en {index.facts.grants_amount?.period ?? "2025"}, tous types de crédits
+          confondus.
+        </p>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <BarList
+            caption="Dix premières associations"
+            items={items(index.associations, ["versement", "versements"])}
+          />
+        </div>
+        <Explainer title="D'où vient cette liste">
+          <p>
+            Chaque année, le projet de loi de finances publie en annexe (le « jaune associations »)
+            la liste des versements de l'État aux associations, y compris les prestations de
+            services et les autres crédits.
+          </p>
+          <p>Les subventions des communes, départements et régions n'y figurent pas.</p>
+        </Explainer>
+      </div>
+      <Provenance provenance={index.grantsProvenance} />
+    </section>
+
+    <section class="section" id="acheteurs" aria-labelledby="titre-acheteurs">
+      <div class="section-head">
+        <h2 id="titre-acheteurs">
+          <Icon name="buyer" />
+          Les principaux acheteurs publics
+        </h2>
+        <p>Marchés attribués depuis 2019.</p>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <BarList
+            caption="Dix premiers acheteurs"
+            items={items(index.buyers, ["marché", "marchés"], true)}
+          />
+        </div>
+        <Explainer title="Qui achète">
+          <p>
+            Les acheteurs publics sont l'État et ses établissements, les collectivités, les
+            hôpitaux, les bailleurs sociaux et les centrales d'achat, qui achètent pour le compte
+            d'autres organismes.
+          </p>
+        </Explainer>
+      </div>
+      <Provenance provenance={index.contractsProvenance} />
+    </section>
+  </div>
+</Base>
+
+<style>
+  .figures {
+    margin-top: 1.75rem;
+  }
+</style>

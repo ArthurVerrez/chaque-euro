@@ -1,0 +1,31 @@
+---
+import { formatNumber } from "../lib/format";
+interface Props {
+  page: number;
+  total: number;
+}
+const { page, total } = Astro.props;
+const pages = Math.max(1, Math.ceil(total / 40));
+const link = (value: number) => {
+  const url = new URL(Astro.url);
+  url.searchParams.set("page", String(value));
+  return `${url.pathname}${url.search}`;
+};
+---
+
+<nav class="pagination" aria-label="Pagination">
+  {page > 1 && <a href={link(page - 1)}>Précédent</a>}
+  <span>
+    Page {formatNumber(page)} sur {formatNumber(pages)}
+  </span>
+  {page < pages && <a href={link(page + 1)}>Suivant</a>}
+</nav>
+<style>
+  .pagination {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+  }
+</style>

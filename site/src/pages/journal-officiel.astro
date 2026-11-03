@@ -1,0 +1,267 @@
+---
+import Base from "../layouts/Base.astro";
+import Answer from "../components/Answer.astro";
+import BarList from "../components/BarList.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import LineChart from "../components/LineChart.astro";
+import DocumentPagination from "../components/DocumentPagination.astro";
+import Explainer from "../components/Explainer.astro";
+import Icon from "../components/Icon.astro";
+import KeyFigures from "../components/KeyFigures.astro";
+import Provenance from "../components/Provenance.astro";
+import Term from "../components/Term.astro";
+import Toc from "../components/Toc.astro";
+import { getOfficialJournal } from "../lib/data";
+import { formatDate, formatDayMonth, formatNumber } from "../lib/format";
+import DocumentContent from "../components/DocumentContent.astro";
+const data = await getOfficialJournal(Astro.url.searchParams);
+const latest = data.journals[0];
+const total = data.journals.reduce((sum, journal) => sum + journal.public_text_count, 0);
+const nominations = data.appointments.reduce((sum, row) => sum + row.count, 0);
+const params = Astro.url.searchParams;
+const bars = (rows: { label: string; count: number }[]) =>
+  rows.map((row) => ({ label: row.label, value: row.count, display: formatNumber(row.count) }));
+---
+
+<Base
+  title="Journal officiel"
+  description="Les textes du Journal officiel et les nominations, avec leurs sources."
+>
+  <DocumentContent>
+    <header class="page-head">
+      <div class="container">
+        <Breadcrumbs items={[{ label: "Journal officiel" }]} />
+        <div class="entity">
+          <Icon name="journal" />
+          <h1>Journal officiel</h1>
+        </div>
+        <Answer
+          text={`Vous consultez ${formatNumber(total)} textes publiables dans ${formatNumber(data.journals.length)} éditions récentes.`}
+        />
+        <KeyFigures
+          figures={[
+            {
+              icon: "journal",
+              label: "Textes sur la fenêtre",
+              value: formatNumber(total),
+              note: "Après exclusions et références manquantes",
+            },
+            {
+              icon: "calendar",
+              label: "Textes du dernier JO",
+              value: formatNumber(latest?.public_text_count ?? 0),
+              note: formatDate(latest?.publication_date ?? null),
+            },
+            {
+              icon: "staff",
+              label: "Textes de nomination",
+              value: formatNumber(nominations),
+              note: "Sur la même fenêtre, pas des personnes",
+            },
+            {
+              icon: "staff",
+              label: "Nominations du dernier JO",
+              value: formatNumber(data.latestAppointments),
+              note: "Même règle de classification",
+            },
+          ]}
+        />
+        <Provenance provenance={data.provenance} />
+      </div>
+    </header>
+    <Toc
+      items={[
+        { href: "#flux", label: "Publications", icon: "journal" },
+        { href: "#repartition", label: "Répartition", icon: "bars" },
+        { href: "#couverture", label: "Couverture", icon: "source" },
+      ]}
+    />
+    <section class="section" id="flux">
+      <div class="container">
+        <div class="section-head">
+          <h2>
+            <Icon name="journal" />
+            Les publications
+          </h2>
+        </div>
+        <p>
+          Le <Term id="journal-officiel">Journal officiel</Term> publie des actes de nature
+          différente. Les textes initiaux ne décrivent pas toujours le droit actuellement
+          applicable.
+        </p>
+        <form class="document-filters" method="get">
+          <label>
+            Date
+            <select name="date">
+              <option value="">Toutes les éditions</option>
+              {data.journals.map((journal) => (
+                <option
+                  value={journal.publication_date}
+                  selected={params.get("date") === journal.publication_date}
+                >
+                  {formatDate(journal.publication_date)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Nature
+            <select name="nature">
+              <option value="">Toutes</option>
+              {data.natures.map((row) => (
+                <option value={row.label} selected={params.get("nature") === row.label}>
+                  {row.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Ministère
+            <select name="ministere">
+              <option value="">Tous</option>
+              {data.ministries.map((row) => (
+                <option value={row.label} selected={params.get("ministere") === row.label}>
+                  {row.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Classe
+            <select name="classe">
+              <option value="">Toutes</option>
+              {[
+                "nomination",
+                "désignation",
+                "renouvellement",
+                "cessation",
+                "retraite",
+                "autre",
+              ].map((value) => (
+                <option value={value} selected={params.get("classe") === value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit">Filtrer</button>
+          <a href="/journal-officiel">Réinitialiser</a>
+        </form>
+        <p>{formatNumber(data.total)} textes correspondent à vos filtres.</p>
+        <ol class="document-results">
+          {data.texts.map((row) => (
+            <li>
+              <p class="document-meta">
+                <Icon name="calendar" size={15} />
+                {formatDate(row.publication_date)} · {row.nature}
+                {row.appointment_class !== "autre" && ` · ${row.appointment_class}`}
+              </p>
+              <h3>
+                <a href={row.record_url}>{row.title_public}</a>
+              </h3>
+              <p>
+                {row.ministry_label}
+                {row.authority_label && ` · ${row.authority_label}`}
+              </p>
+              {row.nor && <p class="document-meta">NOR : {row.nor}</p>}
+              <a href={row.record_url}>
+                <Icon name="external" size={14} />
+                Voir la source
+              </a>
+            </li>
+          ))}
+        </ol>
+        {data.texts.length === 0 && <p>Aucun texte dans ce périmètre.</p>}
+        <DocumentPagination page={data.page} total={data.total} />
+      </div>
+    </section>
+    <section class="section" id="repartition">
+      <div class="container">
+        <div class="section-head">
+          <h2>
+            <Icon name="bars" />
+            Sur toute la fenêtre
+          </h2>
+        </div>
+        <LineChart
+          caption="Textes publiables par édition"
+          labels={data.days.map((row) => formatDayMonth(row.label))}
+          series={[{ label: "Textes publiables", values: data.days.map((row) => row.count) }]}
+          format={formatNumber}
+        />
+        <BarList items={bars(data.natures)} caption="Textes publiables par nature" />
+        <BarList items={bars(data.appointments)} caption="Textes de nomination par ministère" />
+        <details>
+          <summary>Voir les tableaux de répartition</summary>
+          <ul>
+            {data.natures.map((row) => (
+              <li>
+                {row.label} : {formatNumber(row.count)}
+              </li>
+            ))}
+          </ul>
+          <ul>
+            {data.appointments.map((row) => (
+              <li>
+                {row.label} : {formatNumber(row.count)}
+              </li>
+            ))}
+          </ul>
+        </details>
+        <div class="daily-publications">
+          <h3>
+            <Icon name="calendar" size={18} />
+            Publications par édition
+          </h3>
+          <ul>
+            {data.days.map((row) => (
+              <li>
+                <a href={`?date=${row.label}#flux`}>{formatDayMonth(row.label)}</a> :{" "}
+                {formatNumber(row.count)}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <Provenance provenance={data.provenance} />
+      </div>
+    </section>
+    <section class="section" id="couverture">
+      <div class="container">
+        <div class="section-head">
+          <h2>
+            <Icon name="source" />
+            Le périmètre publié
+          </h2>
+        </div>
+        <Explainer title="Exclusions et couverture">
+          <p>
+            Les actes protégés par le CRPA sont exclus, y compris des téléchargements :
+            naturalisations, changements de nom et autres catégories protégées. Les nominations
+            comptent des textes dont le titre annonce une nomination. Le nom d'une personne n'est
+            repris que dans le titre de sa nomination à une fonction publique.
+          </p>
+          <p>
+            Le stock historique DILA n'est pas reconstitué. Les sommaires sont rapprochés des XML
+            présents dans les 50 derniers jours de livraisons. Une référence manquante reste hors
+            des compteurs.
+          </p>
+        </Explainer>
+        <ul class="document-results">
+          {data.journals.map((journal) => (
+            <li>
+              <h3>
+                {formatDate(journal.publication_date)} · n° {journal.issue_number}
+              </h3>
+              <p>
+                {formatNumber(journal.source_reference_count)} références source,{" "}
+                {formatNumber(journal.excluded_reference_count)} exclues,{" "}
+                {formatNumber(journal.missing_reference_count)} sans texte disponible,{" "}
+                {formatNumber(journal.public_text_count)} publiées.
+              </p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  </DocumentContent>
+</Base>

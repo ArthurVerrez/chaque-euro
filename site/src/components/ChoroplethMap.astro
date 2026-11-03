@@ -1,0 +1,226 @@
+---
+import Icon from "./Icon.astro";
+export interface MapArea {
+  id: string;
+  name: string;
+  path: string | null;
+  value: number | null;
+  display: string;
+  href: string;
+  label?: { text: string; x: number; y: number } | undefined;
+}
+
+export interface MapClass {
+  label: string;
+  color: string;
+  below: number;
+}
+
+interface Props {
+  caption: string;
+  viewBox: string;
+  areas: MapArea[];
+  classes: MapClass[];
+  labelSize: number;
+}
+
+const { caption, viewBox, areas, classes, labelSize } = Astro.props;
+const fill = (value: number | null) =>
+  value === null
+    ? "var(--map-empty)"
+    : (classes.find((entry) => value < entry.below) ?? classes.at(-1))?.color;
+const empty = areas.some((area) => area.value === null);
+---
+
+<figure class="choropleth">
+  <figcaption>
+    <Icon name="map" size={18} />
+    {caption}
+  </figcaption>
+  <ul class="legend" aria-label="Légende">
+    {classes.map((entry) => (
+      <li>
+        <span class="swatch" style={`background: ${entry.color}`} />
+        {entry.label}
+      </li>
+    ))}
+    {empty && (
+      <li>
+        <span class="swatch" style="background: var(--map-empty)" />
+        Pas de données
+      </li>
+    )}
+  </ul>
+  <div class="canvas">
+    <svg viewBox={viewBox} role="group" aria-label={caption} style={`--label-size: ${labelSize}px`}>
+      {areas.map(
+        (area) =>
+          area.path && (
+            <a href={area.href} aria-label={`${area.name} : ${area.display}`}>
+              <path d={area.path} fill={fill(area.value)} />
+            </a>
+          ),
+      )}
+      <g class="labels" aria-hidden="true">
+        {areas.map(
+          (area) =>
+            area.label && (
+              <text x={area.label.x} y={area.label.y}>
+                {area.label.text}
+              </text>
+            ),
+        )}
+      </g>
+    </svg>
+    <p class="tip" hidden></p>
+  </div>
+  <slot />
+</figure>
+
+<script>
+  for (const map of document.querySelectorAll<HTMLElement>(".choropleth .canvas")) {
+    const tip = map.querySelector<HTMLElement>(".tip");
+    if (!tip) continue;
+    let pointer = "mouse";
+    let armed: Element | null = null;
+    const areaOf = (event: Event) => (event.target as Element).closest("a");
+    const show = (area: Element, x: number, y: number, hint = "") => {
+      const box = map.getBoundingClientRect();
+      tip.textContent = `${area.getAttribute("aria-label") ?? ""}${hint}`;
+      tip.hidden = false;
+      const half = tip.offsetWidth / 2;
+      tip.style.left = `${Math.min(Math.max(x - box.left, half), box.width - half)}px`;
+      tip.style.top = `${y - box.top}px`;
+    };
+    const showCentred = (area: Element, hint = "") => {
+      const box = area.getBoundingClientRect();
+      show(area, box.left + box.width / 2, box.top + box.height / 2, hint);
+    };
+    map.addEventListener("pointerdown", (event) => {
+      pointer = event.pointerType;
+    });
+    map.addEventListener("pointermove", (event) => {
+      if (event.pointerType !== "mouse") return;
+      const area = areaOf(event);
+      if (area) show(area, event.clientX, event.clientY);
+      else tip.hidden = true;
+    });
+    map.addEventListener("pointerleave", () => {
+      tip.hidden = true;
+    });
+    map.addEventListener("focusin", (event) => {
+      const area = areaOf(event);
+      if (area) showCentred(area);
+    });
+    map.addEventListener("focusout", () => {
+      tip.hidden = true;
+    });
+    map.addEventListener("click", (event) => {
+      const area = areaOf(event);
+      if (!area || pointer === "mouse" || area === armed) return;
+      event.preventDefault();
+      armed = area;
+      showCentred(area, "\nTouchez à nouveau pour ouvrir la page.");
+    });
+  }
+</script>
+
+<style is:global>
+  .choropleth {
+    margin: 0;
+  }
+
+  .choropleth figcaption {
+    font-weight: 650;
+    margin-bottom: 0.5rem;
+  }
+
+  .choropleth .legend {
+    list-style: none;
+    margin: 0 0 1rem;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+  }
+
+  .choropleth .legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .choropleth .swatch {
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 8%);
+  }
+
+  .choropleth .canvas > svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 42rem;
+  }
+
+  .choropleth .canvas path {
+    stroke: var(--surface);
+    stroke-width: 1;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .choropleth .canvas a:hover path,
+  .choropleth .canvas a:focus-visible path {
+    stroke: var(--navy-950);
+    stroke-width: 2;
+  }
+
+  .choropleth .canvas a:focus-visible {
+    outline: none;
+  }
+
+  .choropleth .canvas {
+    position: relative;
+  }
+
+  .choropleth .labels text {
+    font-size: var(--label-size);
+    font-weight: 650;
+    fill: var(--text);
+    text-anchor: middle;
+    dominant-baseline: central;
+    paint-order: stroke;
+    stroke: rgb(255 255 255 / 85%);
+    stroke-width: calc(var(--label-size) * 0.25);
+    stroke-linejoin: round;
+    pointer-events: none;
+  }
+
+  .choropleth .tip {
+    position: absolute;
+    z-index: 2;
+    margin: 0;
+    width: max-content;
+    max-width: min(16rem, 85vw);
+    padding: 0.375rem 0.625rem;
+    transform: translate(-50%, calc(-100% - 0.75rem));
+    border-radius: 6px;
+    background: var(--navy-950);
+    color: #fff;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    white-space: pre-line;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgb(7 22 49 / 25%);
+  }
+
+  @media (max-width: 40rem) {
+    .choropleth .labels {
+      display: none;
+    }
+  }
+</style>

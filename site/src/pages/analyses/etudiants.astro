@@ -1,0 +1,190 @@
+---
+import Analysis from "../../layouts/Analysis.astro";
+import Section from "../../components/AnalysisSection.astro";
+import LineChart from "../../components/LineChart.astro";
+import BarList from "../../components/BarList.astro";
+import ColumnChart from "../../components/ColumnChart.astro";
+import Provenance from "../../components/Provenance.astro";
+import Term from "../../components/Term.astro";
+import { analysis } from "../../lib/analyses";
+import { getStudentAnalysis } from "../../lib/data";
+import { formatBillions, formatEuro, formatNumber, formatPercent } from "../../lib/format";
+const data = await getStudentAnalysis();
+const scholarship = data.scholarships.at(-1)!;
+const spent = (programme: string) =>
+  data.budget.find((row) => row.programme === programme && row.stage === "executed")!.amount;
+const stage = { executed: "Exécuté", voted: "Voté", proposed: "Proposé" };
+const figures = [
+  {
+    icon: "school" as const,
+    label: "Universités et recherche",
+    value: formatBillions(spent("150")),
+    note: "Programme 150, exécuté 2025",
+  },
+  {
+    icon: "solidarity" as const,
+    label: "Vie étudiante",
+    value: formatBillions(spent("231")),
+    note: "Programme 231, exécuté 2025",
+  },
+  {
+    icon: "people" as const,
+    label: "Boursiers MESR",
+    value: formatNumber(scholarship.recipients),
+    note: `Rentrée ${scholarship.year}, périmètre SIES`,
+  },
+];
+const sections = [
+  { id: "demandes", label: "Les demandes", icon: "people" as const },
+  { id: "universites", label: "Les universités", icon: "school" as const },
+  { id: "bourses", label: "Les boursiers", icon: "solidarity" as const },
+  { id: "etudiant", label: "Par étudiant", icon: "person" as const },
+];
+---
+
+<Analysis
+  article={analysis("etudiants")}
+  answer={`En 2025, l’État exécute ${formatBillions(spent("150"))} pour le programme Universités et recherche, et ${formatBillions(spent("231"))} pour la Vie étudiante. Le repas à 1 € est généralisé depuis mai 2026\u202f; l’indexation des bourses annoncée en octobre concerne la rentrée 2027.`}
+  figures={figures}
+  provenance={[data.budgetProvenance, data.scholarshipProvenance]}
+  sections={sections}
+>
+  <Section
+    id="demandes"
+    title="Des demandes distinctes, des réponses à plusieurs échéances"
+    icon="people"
+    provenance={data.responseProvenance}
+  >
+    <p>
+      Les demandes de moyens pour les universités se retrouvent dans la mobilisation du 10 mars
+      2026. Le 12 mai, une motion au CNESER demande le retrait du durcissement des droits
+      différenciés pour les étudiants hors UE. Le décret du 19 mai modifie les exonérations, avec
+      une application progressive, sans créer le principe des droits différenciés.
+    </p>
+    <p>
+      Le 26 octobre 2026, le Gouvernement annonce l’indexation des bourses pour 2027 et une refonte
+      de Parcoursup pour 2028. Il confirme le repas à 1 € depuis le 4 mai et un objectif de
+      logements supplémentaires. Un chantier lancé n’est pas une place livrée. L’annonce ne décrit
+      pas de réforme équivalente de Mon Master.
+    </p>
+    <BarList
+      slot="chart"
+      caption="Vie étudiante, programme 231 : CP et stade budgétaire"
+      items={data.budget
+        .filter((row) => row.programme === "231")
+        .map((row) => ({
+          icon: "solidarity",
+          label: `${row.year} · ${stage[row.stage]}`,
+          value: row.amount,
+          display: formatBillions(row.amount),
+          muted: row.stage !== "executed",
+        }))}
+    />
+  </Section>
+  <Provenance provenance={data.budgetProvenance} />
+  <Section
+    id="universites"
+    title="Les crédits ne sont pas tous des dépenses déjà réalisées"
+    icon="school"
+    provenance={data.budgetProvenance}
+  >
+    <p>
+      Le <Term id="programme">programme</Term> 150 finance les formations supérieures et la
+      recherche universitaire. Le 231 finance la vie étudiante, dont les bourses et une partie des
+      moyens des Crous. Ces deux enveloppes ne couvrent pas tout l’enseignement supérieur ni toutes
+      les aides aux étudiants.
+    </p>
+    <p>
+      Vous comparez ici des <Term id="credits-paiement">crédits de paiement</Term> : consommés en
+      2025, votés pour 2026 et proposés pour 2027. Le PLF 2027 reste un projet au 2 novembre 2026.
+      Les transferts de périmètre entre programmes empêchent d’interpréter chaque variation comme
+      une hausse ou une baisse à service inchangé.
+    </p>
+    <BarList
+      slot="chart"
+      caption="Universités et recherche, programme 150 : CP"
+      items={data.budget
+        .filter((row) => row.programme === "150")
+        .map((row) => ({
+          icon: "school",
+          label: `${row.year} · ${stage[row.stage]}`,
+          value: row.amount,
+          display: formatBillions(row.amount),
+          muted: row.stage !== "executed",
+        }))}
+    />
+  </Section>
+  <Section
+    id="bourses"
+    title="Moins de boursiers sur le périmètre statistique du SIES"
+    icon="solidarity"
+    provenance={data.scholarshipProvenance}
+  >
+    <p>
+      À la rentrée {scholarship.year}, le SIES dénombre {formatNumber(scholarship.recipients)}{" "}
+      boursiers sur critères sociaux dans les formations éligibles au MESR. Cela représente{" "}
+      {formatPercent(scholarship.share, 1)} des étudiants de ce champ. Ce dénominateur exclut les
+      formations qui n’ouvrent pas droit à ces bourses.
+    </p>
+    <p>
+      La série suit les rentrées universitaires, alors que le budget suit l’année civile. Les
+      comptes administratifs des Crous peuvent aussi compter d’autres bénéficiaires ou périodes.
+      Diviser leurs paiements par cet effectif ne donnerait donc pas automatiquement une bourse
+      moyenne comparable.
+    </p>
+    <LineChart
+      slot="chart"
+      caption="Boursiers sur critères sociaux, rentrée de chaque année"
+      labels={data.scholarships.map((row) => String(row.year))}
+      series={[
+        {
+          label: "Boursiers, périmètre MESR-SIES",
+          values: data.scholarships.map((row) => row.recipients),
+        },
+      ]}
+      format={formatNumber}
+    />
+  </Section>
+  <Section
+    id="etudiant"
+    title="La dépense par étudiant répond à une autre question"
+    icon="person"
+    provenance={data.costProvenance}
+  >
+    <p>
+      Le compte de l’éducation mesure la dépense de tous les financeurs, apprentissage inclus. En
+      2024, la DEPP l’estime à {formatEuro(data.cost.find((row) => row.metric === "all")!.amount)}{" "}
+      par étudiant dans le supérieur et{" "}
+      {formatEuro(data.cost.find((row) => row.metric === "university")!.amount)} à l’université.
+    </p>
+    <p>
+      Ces moyennes financent des établissements et des services. Elles ne sont pas un montant reçu
+      par chaque étudiant. Elles ne se reproduisent pas en divisant le programme 150 par les
+      inscriptions : celui-ci finance aussi la recherche, et le compte de l’éducation suit un autre
+      périmètre.
+    </p>
+    <ColumnChart
+      slot="chart"
+      caption="Dépense moyenne par étudiant en 2024, tous financeurs"
+      unit="Euros par an, données provisoires"
+      columns={data.cost.map((row) => ({
+        label: row.metric === "all" ? "Supérieur" : "Université",
+        value: row.amount,
+        display: formatEuro(row.amount),
+        detail: `${formatEuro(row.amount)} par étudiant et par an`,
+      }))}
+    />
+  </Section>
+  <div slot="method">
+    <p>
+      Les revendications des organisations ne sont pas toutes identiques. Les sources syndicales
+      servent à identifier et dater des demandes&#8239;; les textes officiels décrivent les
+      réponses. L’indexation annoncée pour 2027 ne constitue pas une hausse reçue en 2026.
+    </p>
+    <p>
+      Les aides au logement, des dépenses fiscales et les financements d’autres ministères ou
+      collectivités dépassent le programme 231. Les additionner sans consolidation créerait des
+      doubles comptes. Les chiffres SIES et DEPP portent sur des populations différentes.
+    </p>
+  </div>
+</Analysis>

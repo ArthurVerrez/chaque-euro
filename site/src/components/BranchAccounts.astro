@@ -1,0 +1,136 @@
+---
+import type { SocialBranch } from "../lib/data";
+import { formatBillions } from "../lib/format";
+import Icon from "./Icon.astro";
+
+interface Props {
+  rows: SocialBranch[];
+  caption: string;
+}
+const { rows, caption } = Astro.props;
+const max = Math.max(...rows.map((row) => row.spending));
+---
+
+<table class="branch-accounts">
+  <caption>
+    <Icon name="socialSecurity" size={18} />
+    {caption}
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Branche</th>
+      <th scope="col">
+        <Icon name="revenue" size={16} /> Recettes
+      </th>
+      <th scope="col">
+        <Icon name="spending" size={16} /> Dépenses
+      </th>
+      <th scope="col">
+        <Icon name="scale" size={16} /> Solde
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    {rows.map((row) => (
+      <tr class:list={{ total: row.branch === "total" || row.branch === "total_fsv" }}>
+        <th scope="row">{row.label}</th>
+        <td data-label="Recettes" class="num">
+          {formatBillions(row.revenue)}
+        </td>
+        <td data-label="Dépenses" class="num">
+          {formatBillions(row.spending)}
+          <span class="track" aria-hidden="true">
+            <span style={`width: ${(row.spending / max) * 100}%`} />
+          </span>
+        </td>
+        <td data-label="Solde" class="num">
+          {row.balance < 0 ? "−" : "+"}
+          {formatBillions(Math.abs(row.balance))}
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
+<style>
+  .branch-accounts {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  caption {
+    text-align: left;
+    font-weight: 650;
+    margin-bottom: 1rem;
+  }
+  caption :global(svg) {
+    margin-right: 0.35rem;
+    vertical-align: -0.15em;
+  }
+  th,
+  td {
+    padding: 0.875rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    vertical-align: top;
+  }
+  th:first-child {
+    text-align: left;
+  }
+  tbody th {
+    font-weight: 550;
+  }
+  .total {
+    background: var(--navy-50);
+    font-weight: 650;
+  }
+  .track {
+    display: block;
+    height: 0.3rem;
+    background: var(--border);
+    margin-top: 0.5rem;
+    border-radius: 1rem;
+  }
+  .track span {
+    display: block;
+    height: 100%;
+    background: var(--link);
+    border-radius: inherit;
+  }
+  @media (max-width: 640px) {
+    thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+    tbody,
+    tr,
+    th,
+    td {
+      display: block;
+    }
+    tr {
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    th,
+    td {
+      padding: 0.35rem 0.5rem;
+      border: 0;
+    }
+    td {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0 0.5rem;
+    }
+    td::before {
+      content: attr(data-label);
+      text-align: left;
+      font-weight: 400;
+    }
+    .track {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

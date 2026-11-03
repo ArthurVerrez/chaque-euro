@@ -1,0 +1,321 @@
+---
+import SocialAccounts from "../../components/SocialAccounts.astro";
+import BudgetLegislation from "../../components/BudgetLegislation.astro";
+import Answer from "../../components/Answer.astro";
+import BarList, { type BarItem } from "../../components/BarList.astro";
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import Explainer from "../../components/Explainer.astro";
+import FlowChart from "../../components/FlowChart.astro";
+import Icon from "../../components/Icon.astro";
+import KeyFigures, { type Figure } from "../../components/KeyFigures.astro";
+import LineChart from "../../components/LineChart.astro";
+import Provenance from "../../components/Provenance.astro";
+import Term from "../../components/Term.astro";
+import Toc from "../../components/Toc.astro";
+import Base from "../../layouts/Base.astro";
+import { getPublicFamily, getSocialProtection, getSocialAccounts } from "../../lib/data";
+import { familyFlow, PUBLIC_FUNCTIONS, PUBLIC_MEMBERS, PUBLIC_SECTORS } from "../../lib/flows";
+import { formatEuro, formatEuros, formatBillions } from "../../lib/format";
+
+const sector = PUBLIC_SECTORS.find((entry) => entry.slug === Astro.params.famille);
+const family = sector ? await getPublicFamily(sector.code) : null;
+if (!sector || !family) Astro.response.status = 404;
+const protection = sector?.code === "S1314" ? await getSocialProtection() : null;
+const socialAccounts = sector?.code === "S1314" ? await getSocialAccounts() : null;
+const balance = family ? family.revenue - family.spending : 0;
+const answer =
+  family && sector
+    ? `En ${family.year}, cette famille a dépensé ${formatEuros(family.spending)}, soit ${formatEuro(family.spending / family.households)} par ménage.`
+    : "Cette famille d’administrations publiques n’existe pas.";
+const figures: Figure[] = family
+  ? [
+      {
+        icon: "spending",
+        label: "Dépenses",
+        value: formatEuros(family.spending),
+        note: `en ${family.year}`,
+      },
+      {
+        icon: "revenue",
+        label: "Recettes",
+        value: formatEuros(family.revenue),
+        note: `en ${family.year}`,
+      },
+      {
+        icon: balance < 0 ? "debt" : "savings",
+        label: "Solde",
+        term: "deficit",
+        value: `${balance < 0 ? "−" : "+"}${formatEuros(Math.abs(balance))}`,
+        note: balance < 0 ? "déficit" : "excédent",
+      },
+      {
+        icon: "people",
+        label: "Par ménage",
+        term: "menage",
+        value: formatEuro(family.spending / family.households),
+        note: "un repère, pas votre contribution",
+      },
+    ]
+  : [];
+const functions: BarItem[] = (family?.functions.divisions ?? [])
+  .filter((entry) => entry.spending > 0)
+  .map((entry) => ({
+    icon: PUBLIC_FUNCTIONS[entry.code]?.icon ?? "other",
+    label: PUBLIC_FUNCTIONS[entry.code]?.label ?? entry.name,
+    value: entry.spending,
+    display: formatEuros(entry.spending),
+  }));
+const detailed = (family?.functions.divisions ?? [])
+  .slice(0, 3)
+  .map((division) => ({
+    ...division,
+    groups: (family?.functions.groups ?? [])
+      .filter((group) => group.code.startsWith(division.code) && group.spending > 0)
+      .slice(0, 4),
+  }))
+  .filter((division) => division.groups.length > 0);
+const members: BarItem[] = (family?.members ?? []).map((member) => ({
+  icon: PUBLIC_MEMBERS[member.sector]?.icon ?? "building",
+  label: PUBLIC_MEMBERS[member.sector]?.name ?? member.sector,
+  value: member.spending,
+  display: formatEuros(member.spending),
+}));
+const history = family?.history.filter((entry) => entry.year >= 2000) ?? [];
+---
+
+<Base title={sector?.name ?? "Famille introuvable"} description={answer}>
+  <header class="page-head" id="en-bref">
+    <div class="container">
+      <Breadcrumbs
+        items={[
+          { label: "Tout l'argent public", href: "/argent-public" },
+          { label: sector?.name ?? "Famille introuvable" },
+        ]}
+      />
+      <div class="entity">
+        <Icon name={sector?.icon ?? "building"} />
+        <h1>{sector?.name ?? "Famille introuvable"}</h1>
+      </div>
+      <Answer text={answer} />
+      {family && sector && (
+        <>
+          <p class="lead">{sector.description}</p>
+          {sector.code === "S13112" && (
+            <p class="small">
+              Périmètre Insee :{" "}
+              <Term id="odac">organismes divers d'administration centrale (ODAC)</Term>.
+            </p>
+          )}
+          <KeyFigures figures={figures} />
+          <Provenance provenance={family.summaryProvenance} />
+        </>
+      )}
+    </div>
+  </header>
+  {family && sector && (
+    <>
+      <Toc
+        items={[
+          { href: "#en-bref", label: "En bref", icon: "info" },
+          { href: "#flux", label: "Recettes et dépenses", icon: "flow" },
+          ...(socialAccounts
+            ? [
+                { href: "#branches", label: "Les cinq branches", icon: "socialSecurity" as const },
+                { href: "#sante", label: "Santé", icon: "health" as const },
+                { href: "#retraites", label: "Retraites", icon: "people" as const },
+                {
+                  href: "#famille",
+                  label: "Prestations des caisses",
+                  icon: "socialSecurity" as const,
+                },
+                { href: "#chomage", label: "Assurance chômage", icon: "unemployment" as const },
+              ]
+            : []),
+          { href: "#usages", label: "À quoi il sert", icon: "bars" },
+          ...(members.length || sector.code === "S13111"
+            ? [{ href: "#composition", label: "Qui la compose", icon: "building" as const }]
+            : []),
+          ...(protection
+            ? [
+                {
+                  href: "#protection",
+                  label: "Prestations par risque",
+                  icon: "socialSecurity" as const,
+                },
+              ]
+            : []),
+          { href: "#evolution", label: "Année par année", icon: "trend" },
+        ]}
+      />
+      <div class="container">
+        {socialAccounts && <SocialAccounts accounts={socialAccounts} />}
+        <section class="section" id="flux" aria-labelledby="titre-flux">
+          <div class="section-head">
+            <h2 id="titre-flux">
+              <Icon name="flow" />
+              Recettes et dépenses
+            </h2>
+            <p>
+              Impôts et <Term id="cotisations-sociales">cotisations sociales</Term> financent les
+              services et les <Term id="prestations-sociales">prestations sociales</Term>.
+            </p>
+          </div>
+          <div class="card">
+            <FlowChart
+              caption={`D'où vient l'argent et où il va, en ${family.year}`}
+              flow={familyFlow(family)}
+            />
+          </div>
+          <div class="explain">
+            <Explainer title="Comment lire ces flux">
+              <p>
+                Les transferts fiscaux sont inclus dans les impôts. Les subventions et autres
+                transferts comprennent aussi les autres frais, dont les impôts acquittés. Le{" "}
+                <Term id="deficit">déficit</Term> représente le besoin de financement&#8239;; le
+                schéma ne mesure pas les emprunts effectivement souscrits.
+              </p>
+            </Explainer>
+          </div>
+          <Provenance provenance={family.provenance} />
+        </section>
+        <section class="section" id="usages" aria-labelledby="titre-usages">
+          <div class="section-head">
+            <h2 id="titre-usages">
+              <Icon name="bars" />À quoi il sert
+            </h2>
+            <p>
+              <Term id="depenses-consolidees">Dépenses consolidées</Term> par usage, dernière année
+              détaillée : {family.functions.year}.
+            </p>
+          </div>
+          <div class="card">
+            <BarList
+              caption={`Dépenses par fonction en ${family.functions.year}`}
+              items={functions}
+            />
+          </div>
+          <div class="explain">
+            <Explainer title="Les principaux postes dans ces fonctions">
+              {detailed.map((division) => (
+                <div class="detail">
+                  <BarList
+                    caption={PUBLIC_FUNCTIONS[division.code]?.label ?? division.name}
+                    items={division.groups.map((group) => ({
+                      icon: PUBLIC_FUNCTIONS[division.code]?.icon ?? "other",
+                      label: group.name,
+                      value: group.spending,
+                      display: formatEuros(group.spending),
+                    }))}
+                  />
+                </div>
+              ))}
+              <p>
+                Les groupes détaillent les fonctions ci-dessus : ils ne s'y ajoutent pas. Les
+                montants versés à d'autres administrations sont comptés chez celle qui les dépense.
+              </p>
+            </Explainer>
+          </div>
+          <Provenance provenance={family.functions.provenance} />
+        </section>
+        {(members.length > 0 || sector.code === "S13111") && (
+          <section class="section" id="composition" aria-labelledby="titre-composition">
+            <div class="section-head">
+              <h2 id="titre-composition">
+                <Icon name="building" />
+                Qui la compose
+              </h2>
+              {members.length > 0 && (
+                <p>
+                  Ces organismes se versent de l'argent : leur somme dépasse le total de la famille.
+                </p>
+              )}
+            </div>
+            {members.length > 0 ? (
+              <div class="card">
+                <BarList
+                  caption={`Dépenses des composantes en ${family.year}, non additionnables`}
+                  items={members}
+                />
+              </div>
+            ) : (
+              <p>
+                <a href="/budget-etat">
+                  <Icon name="state" size={18} />
+                  Le budget de l'État, mission par mission
+                </a>
+              </p>
+            )}
+            <Provenance provenance={family.provenance} />
+          </section>
+        )}
+        {protection && (
+          <section class="section" id="protection" aria-labelledby="titre-protection">
+            <div class="section-head">
+              <h2 id="titre-protection">
+                <Icon name="socialSecurity" />
+                Les prestations par risque
+              </h2>
+              <p>
+                Protection sociale au sens large, {protection.rows[0]?.year}, données
+                semi-définitives.
+              </p>
+            </div>
+            <div class="card">
+              <BarList
+                caption={`Prestations de protection sociale en ${protection.rows[0]?.year}`}
+                items={protection.rows
+                  .filter((row) => row.label !== "TOTAL")
+                  .map((row) => ({
+                    label: row.label,
+                    value: row.amount,
+                    display: formatBillions(row.amount),
+                  }))}
+              />
+            </div>
+            <Explainer title="Un périmètre plus large que la Sécurité sociale">
+              <p>
+                Le total de{" "}
+                {formatBillions(protection.rows.find((row) => row.label === "TOTAL")?.amount ?? 0)}{" "}
+                couvre les régimes de Sécurité sociale, l'État, les collectivités, les organismes
+                privés et les employeurs. Il ne s'ajoute pas aux dépenses de la famille Sécurité
+                sociale présentées plus haut. Le fichier DREES annonce une prochaine édition en
+                décembre 2026.
+              </p>
+            </Explainer>
+            <Provenance provenance={protection.provenance} />
+          </section>
+        )}
+        <section class="section" id="evolution" aria-labelledby="titre-evolution">
+          <div class="section-head">
+            <h2 id="titre-evolution">
+              <Icon name="trend" />
+              D'une année à l'autre
+            </h2>
+          </div>
+          <div class="card chart">
+            <LineChart
+              caption="Dépenses et recettes depuis 2000, en euros courants"
+              labels={history.map((entry) => String(entry.year))}
+              series={[
+                { label: "Dépenses", values: history.map((entry) => entry.spending) },
+                { label: "Recettes", values: history.map((entry) => entry.revenue) },
+              ]}
+              format={formatEuros}
+            />
+          </div>
+          <Provenance provenance={family.provenance} />
+        </section>
+      </div>
+    </>
+  )}
+  {Astro.params.famille === "securite-sociale" && <BudgetLegislation family="Sécurité sociale" />}
+</Base>
+
+<style>
+  .explain {
+    margin-top: 1rem;
+  }
+  .detail + .detail {
+    margin-top: 1.5rem;
+  }
+</style>

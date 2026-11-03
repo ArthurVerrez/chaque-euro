@@ -1,0 +1,250 @@
+---
+import Base from "./Base.astro";
+import AnalysisCard from "../components/AnalysisCard.astro";
+import Answer from "../components/Answer.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import KeyFigures, { type Figure } from "../components/KeyFigures.astro";
+import Provenance from "../components/Provenance.astro";
+import Toc from "../components/Toc.astro";
+import Explainer from "../components/Explainer.astro";
+import Icon from "../components/Icon.astro";
+import { ANALYSES, type Analysis } from "../lib/analyses";
+import type { Provenance as ProvenanceData } from "../lib/data";
+import type { IconName } from "../lib/icons";
+import { formatDate } from "../lib/format";
+
+interface Props {
+  article: Analysis;
+  answer: string;
+  figures: Figure[];
+  provenance: ProvenanceData[];
+  sections: { id: string; label: string; icon: IconName }[];
+}
+const { article, answer, figures, provenance, sections } = Astro.props;
+const others = ANALYSES.filter((entry) => entry.slug !== article.slug).slice(0, 3);
+---
+
+<Base title={article.title} description={answer}>
+  <div class="analysis" style={`--accent: ${article.accent}`}>
+    <header class="hero" id="en-bref">
+      <div class="container">
+        <Breadcrumbs items={[{ label: "Analyses", href: "/analyses" }, { label: article.short }]} />
+        <p class="kicker">
+          <span class="tag">
+            <Icon name="analysis" size={14} />
+            Analyse
+          </span>
+          <Icon name="calendar" size={14} />
+          <time datetime={article.published}>{formatDate(article.published)}</time>
+        </p>
+        <div class="title">
+          <span class="badge" aria-hidden="true">
+            <Icon name={article.icon} size={30} />
+          </span>
+          <h1>{article.title}</h1>
+        </div>
+        <p class="dek">{article.summary}</p>
+        <div class="short">
+          <p class="short-label">
+            <Icon name="answer" size={16} />
+            En bref
+          </p>
+          <Answer text={answer} />
+        </div>
+        <KeyFigures figures={figures} />
+        {provenance.map((entry) => (
+          <Provenance provenance={entry} />
+        ))}
+      </div>
+    </header>
+    <Toc
+      items={[
+        { href: "#en-bref", label: "En bref", icon: "info" },
+        ...sections.map(({ id, ...entry }) => ({ href: `#${id}`, ...entry })),
+        { href: "#methode", label: "Méthode", icon: "method" },
+      ]}
+    />
+    <article class="container body" aria-label={article.question}>
+      <slot />
+      <section class="method" id="methode" aria-labelledby="titre-methode">
+        <h2 id="titre-methode">
+          <Icon name="method" size={22} />
+          Méthode et précautions
+        </h2>
+        <Explainer title="Comment lire ces chiffres et leurs limites">
+          <slot name="method" />
+        </Explainer>
+      </section>
+    </article>
+    <aside class="container more" aria-labelledby="titre-autres">
+      <h2 id="titre-autres">
+        <Icon name="analysis" size={22} />À lire aussi
+      </h2>
+      <div class="cards">
+        {others.map((entry) => (
+          <AnalysisCard article={entry} />
+        ))}
+      </div>
+      <p class="all">
+        <a href="/analyses">Toutes les analyses</a>
+      </p>
+    </aside>
+  </div>
+</Base>
+
+<style>
+  .hero {
+    padding: 1.5rem 0 3rem;
+    border-bottom: 1px solid var(--border);
+    background:
+      radial-gradient(
+        56rem 26rem at 95% -15%,
+        color-mix(in srgb, var(--accent) 16%, transparent),
+        transparent 70%
+      ),
+      linear-gradient(180deg, color-mix(in srgb, var(--accent) 5%, white), var(--surface));
+  }
+
+  .kicker {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1.5rem 0 1.25rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-right: 0.25rem;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 14%, white);
+    color: color-mix(in srgb, var(--accent) 70%, var(--navy-950));
+    font-size: 0.75rem;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .title {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .badge {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    margin-top: 0.35rem;
+    border-radius: 16px;
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 12px 28px -12px var(--accent);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(2.25rem, 1.4rem + 3vw, 3.75rem);
+    line-height: 1.04;
+    letter-spacing: -0.035em;
+  }
+
+  .dek {
+    margin: 1.25rem 0 0;
+    font-size: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
+    line-height: 1.5;
+    color: var(--text-secondary);
+    text-wrap: pretty;
+  }
+
+  .short {
+    margin: 2rem 0;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .short-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 0 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--accent) 70%, var(--navy-950));
+  }
+
+  .short :global(.answer) {
+    max-width: none;
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: normal;
+  }
+
+  .method {
+    margin: 1rem 0 0;
+    padding: 1.75rem;
+    border-radius: var(--radius);
+    background: var(--surface-alt);
+  }
+
+  .method h2,
+  .more h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.375rem;
+  }
+
+  .more {
+    margin-top: 4rem;
+  }
+
+  .cards {
+    display: grid;
+    gap: 1.25rem;
+    margin-top: 1.25rem;
+  }
+
+  .all {
+    margin: 1.5rem 0 0;
+    font-weight: 650;
+  }
+
+  @media (min-width: 48rem) {
+    .cards {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 40rem) {
+    .title {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .badge {
+      width: 3rem;
+      height: 3rem;
+      margin: 0;
+    }
+
+    .short {
+      padding: 1rem 1.125rem;
+    }
+  }
+</style>

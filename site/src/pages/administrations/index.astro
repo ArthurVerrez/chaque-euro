@@ -1,0 +1,87 @@
+---
+import Base from "../../layouts/Base.astro";
+import Answer from "../../components/Answer.astro";
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import DocumentPagination from "../../components/DocumentPagination.astro";
+import Icon from "../../components/Icon.astro";
+import KeyFigures from "../../components/KeyFigures.astro";
+import Provenance from "../../components/Provenance.astro";
+import { getAdministrations } from "../../lib/data";
+import { formatNumber } from "../../lib/format";
+import DocumentContent from "../../components/DocumentContent.astro";
+const data = await getAdministrations(Astro.url.searchParams);
+const params = Astro.url.searchParams;
+---
+
+<Base
+  title="Les administrations de l'État"
+  description="Ministères, directions et services territoriaux, sans annuaire de personnes."
+>
+  <DocumentContent>
+    <header class="page-head">
+      <div class="container">
+        <Breadcrumbs items={[{ label: "Administrations" }]} />
+        <div class="entity">
+          <Icon name="administration" />
+          <h1>Les administrations de l'État</h1>
+        </div>
+        <Answer text="Vous pouvez retrouver un ministère, une direction ou une préfecture et consulter ses rattachements officiels." />
+        <KeyFigures
+          figures={data.categories.map((row) => ({
+            icon: "administration",
+            label: row.label,
+            value: formatNumber(row.count),
+            note: "Structures diffusables dans les sources intégrées",
+          }))}
+        />
+        <Provenance provenance={data.provenance} />
+      </div>
+    </header>
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>
+            <Icon name="search" />
+            Chercher une structure
+          </h2>
+        </div>
+        <form class="document-filters" method="get">
+          <label>
+            Nom
+            <input type="search" name="q" value={params.get("q") ?? ""} />
+          </label>
+          <label>
+            Catégorie
+            <select name="categorie">
+              <option value="">Toutes</option>
+              {data.categories.map((row) => (
+                <option value={row.label} selected={params.get("categorie") === row.label}>
+                  {row.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit">Filtrer</button>
+          <a href="/administrations">Réinitialiser</a>
+        </form>
+        <p>{formatNumber(data.total)} structures correspondent à vos filtres.</p>
+        <ol class="document-results">
+          {data.rows.map((row) => (
+            <li>
+              <p class="document-meta">
+                <Icon name="administration" size={15} />
+                {row.category}
+                {row.acronym && ` · ${row.acronym}`}
+              </p>
+              <h3>
+                <a href={`/administrations/${row.id}`}>{row.name_public}</a>
+              </h3>
+            </li>
+          ))}
+        </ol>
+        {data.rows.length === 0 && <p>Aucune structure dans ce périmètre.</p>}
+        <DocumentPagination page={data.page} total={data.total} />
+      </div>
+    </section>
+  </DocumentContent>
+</Base>

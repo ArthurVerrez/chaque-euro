@@ -1,0 +1,115 @@
+---
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import Icon from "../components/Icon.astro";
+import SearchForm from "../components/SearchForm.astro";
+import Base from "../layouts/Base.astro";
+import { search } from "../lib/data";
+import { kindIcon } from "../lib/icons";
+import { NBSP } from "../lib/format";
+
+const query = (Astro.url.searchParams.get("q") ?? "").trim();
+const compact = query.replace(/\s/g, "");
+if (/^\d{9}$/.test(compact)) return Astro.redirect(`/organisation/${compact}`);
+if (/^\d{14}$/.test(compact)) return Astro.redirect(`/organisation/${compact.slice(0, 9)}`);
+if (/^[0-9][0-9AB][0-9]{3}$/i.test(compact)) {
+  return Astro.redirect(`/commune/${compact.toUpperCase()}`);
+}
+const results = query.length >= 2 ? await search(query) : [];
+const summary =
+  results.length === 0
+    ? `Aucun résultat pour «${NBSP}${query}${NBSP}».`
+    : `${results.length === 20 ? "Les 20 premiers résultats" : `${results.length} résultat${results.length > 1 ? "s" : ""}`} pour «${NBSP}${query}${NBSP}».`;
+---
+
+<Base
+  title={query ? `Recherche&nbsp;: ${query}` : "Rechercher"}
+  description="Cherchez une entreprise, une association, un acheteur public ou une commune."
+  noindex
+>
+  <header class="page-head">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Rechercher" }]} />
+      <div class="entity">
+        <Icon name="search" />
+        <h1>Rechercher</h1>
+      </div>
+      <p class="lead">Une organisation (nom ou SIREN) ou une commune.</p>
+      <SearchForm query={query} autofocus={!query} />
+    </div>
+  </header>
+  <div class="container">
+    {query && (
+      <section class="section" aria-live="polite">
+        <p class="muted">{summary}</p>
+        <ul class="results">
+          {results.map((result) => (
+            <li class="card result">
+              <span class="result-icon">
+                <Icon name={kindIcon(result.kind)} size={22} />
+              </span>
+              <span class="result-body">
+                <a href={result.href}>{result.name}</a>
+                <span class="muted small">
+                  {result.kind}
+                  {result.detail && ` · ${result.detail}`}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        {results.length === 0 && (
+          <p>
+            Essayez un autre mot du nom, ou parcourez les <a href="/organisations">organisations</a>{" "}
+            et les <a href="/communes">communes</a>.
+          </p>
+        )}
+      </section>
+    )}
+  </div>
+</Base>
+
+<style>
+  .results {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .result {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem 1.25rem;
+  }
+
+  .result-icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 8px;
+    background: var(--navy-100);
+    color: var(--navy-900);
+  }
+
+  .result-body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .result-body a {
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: var(--navy-900);
+    text-decoration-color: rgb(29 79 174 / 35%);
+  }
+
+  .result-body a:hover {
+    color: var(--link);
+    text-decoration-color: currentcolor;
+  }
+</style>

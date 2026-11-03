@@ -1,0 +1,255 @@
+---
+import CommuneDgfHistory from "../components/CommuneDgfHistory.astro";
+import Icon from "../components/Icon.astro";
+import BarList from "../components/BarList.astro";
+import ChoroplethMap from "../components/ChoroplethMap.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import Explainer from "../components/Explainer.astro";
+import Provenance from "../components/Provenance.astro";
+import SearchForm from "../components/SearchForm.astro";
+import Term from "../components/Term.astro";
+import Base from "../layouts/Base.astro";
+import { getCommunesIndex } from "../lib/data";
+import { formatEuro, formatGap, formatNumber, medianGap, plural } from "../lib/format";
+
+const index = await getCommunesIndex();
+const strata = index.strata.map((stratum) => ({
+  icon: "people" as const,
+  label: stratum.label,
+  value: stratum.median,
+  display: formatEuro(stratum.median),
+  note: plural(stratum.communes, "commune", "communes"),
+}));
+const values = index.departements.map((departement) => departement.perCapita).sort((a, b) => a - b);
+const breaks = [0.2, 0.4, 0.6, 0.8].map(
+  (share) => Math.round((values[Math.floor(share * (values.length - 1))] ?? 0) / 50) * 50,
+);
+const mapClasses = [...breaks, Infinity].map((below, rank) => ({
+  label:
+    rank === 0
+      ? `Moins de ${formatEuro(below)}`
+      : below === Infinity
+        ? `${formatEuro(breaks[rank - 1] ?? 0)} ou plus`
+        : `${formatEuro(breaks[rank - 1] ?? 0)} à ${formatEuro(below)}`,
+  color: `var(--seq-${rank + 1})`,
+  below,
+}));
+const mapAreas = index.departements.map((departement) => ({
+  id: departement.code,
+  name: `${departement.name} (${departement.code})`,
+  path: departement.path,
+  value: departement.perCapita,
+  display: `${formatEuro(departement.perCapita)} par habitant`,
+  href: `/departement/${departement.code}`,
+  label:
+    departement.labelSize > 50
+      ? { text: departement.code, x: departement.labelX, y: departement.labelY }
+      : undefined,
+}));
+const sorted = [...index.strata].sort((a, b) => a.median - b.median);
+const lowest = sorted[0];
+const highest = sorted.at(-1);
+---
+
+<Base
+  title="Les communes : budget et dépenses par habitant"
+  description="Combien dépense votre commune par habitant, et pour quoi ? Comparez-la aux communes de même taille."
+>
+  <header class="page-head">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Communes" }]} />
+      <div class="entity">
+        <Icon name="town" />
+        <h1>Combien dépense votre commune&nbsp;?</h1>
+      </div>
+      <p class="lead">Les comptes de {formatNumber(index.count)} communes, par habitant.</p>
+      <SearchForm />
+    </div>
+  </header>
+
+  <div class="container">
+    <CommuneDgfHistory />
+    <section class="section" aria-labelledby="carte">
+      <div class="section-head">
+        <h2 id="carte">
+          <Icon name="map" />
+          La carte des départements
+        </h2>
+        <p>Dépenses par habitant en {index.year}. Cliquez sur un département.</p>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <ChoroplethMap
+            caption={`Dépenses des communes par habitant en ${index.year}`}
+            viewBox={index.franceViewBox}
+            areas={mapAreas}
+            classes={mapClasses}
+            labelSize={34}
+          >
+            <details class="map-table">
+              <summary>Voir le tableau des départements</summary>
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Département</th>
+                    <th scope="col" class="num hide-small">
+                      Communes
+                    </th>
+                    <th scope="col" class="num">
+                      Par habitant
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {index.departements.map((departement) => (
+                    <tr>
+                      <th scope="row">
+                        <Icon name="map" size={15} />
+                        <a href={`/departement/${departement.code}`}>
+                          {departement.name} ({departement.code})
+                        </a>
+                      </th>
+                      <td class="num hide-small">{formatNumber(departement.communes)}</td>
+                      <td class="num">{formatEuro(departement.perCapita)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
+          </ChoroplethMap>
+        </div>
+        <Explainer title="Comment lire cette carte">
+          <p>
+            Les communes touristiques et de montagne accueillent bien plus de monde que leurs seuls
+            habitants : leur dépense par habitant est souvent plus élevée.
+          </p>
+          <p>
+            Paris est à la fois une commune et un département : ses comptes incluent les dépenses
+            départementales.
+          </p>
+          <p>
+            Les dépenses de l'<Term id="intercommunalite">intercommunalité</Term> ne sont pas
+            comptées.
+          </p>
+          <p>
+            Chaque département porte son numéro. Les départements d'outre-mer sont dessinés en
+            médaillon, à gauche.
+          </p>
+        </Explainer>
+      </div>
+      <Provenance provenance={index.mapProvenance} />
+    </section>
+
+    <section class="section" aria-labelledby="taille">
+      <div class="section-head">
+        <h2 id="taille">
+          <Icon name="scale" />
+          La taille change tout
+        </h2>
+        {lowest && highest && (
+          <p>
+            De {formatEuro(lowest.median)} à {formatEuro(highest.median)} par habitant selon la
+            taille.
+          </p>
+        )}
+      </div>
+      <div class="grid">
+        <div class="card">
+          <BarList
+            caption={`Dépenses totales par habitant en ${index.year}, médiane par taille`}
+            items={strata}
+          />
+        </div>
+        <Explainer title={"Qu'appelle-t-on la strate\u00a0?"}>
+          <p>
+            Les communes sont classées en onze <Term id="strate">strates</Term> selon leur
+            population, de moins de 100 à plus de 100&nbsp;000 habitants. Nous comparons chaque
+            commune à la <Term id="mediane">médiane</Term> de sa strate : la moitié des communes de
+            la strate dépense moins, l'autre moitié plus.
+          </p>
+          <p>
+            Les dépenses de l'<Term id="intercommunalite">intercommunalité</Term> ne sont pas
+            comptées : une commune qui lui a confié beaucoup de compétences paraît dépenser moins.
+          </p>
+        </Explainer>
+      </div>
+      <Provenance provenance={index.provenance} />
+    </section>
+
+    <section class="section" aria-labelledby="grandes">
+      <div class="section-head">
+        <h2 id="grandes">
+          <Icon name="list" />
+          Les 15 plus grandes communes
+        </h2>
+        <p>Dépenses par habitant en {index.year}.</p>
+      </div>
+      <div class="card table-card">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Commune</th>
+              <th scope="col" class="num hide-small">
+                Habitants
+              </th>
+              <th scope="col" class="num">
+                Dépense par habitant
+              </th>
+              <th scope="col" class="num hide-small">
+                Médiane de la strate
+              </th>
+              <th scope="col" class="num">
+                Écart
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {index.largest.map((commune) => (
+              <tr>
+                <td>
+                  <Icon name="town" size={15} />
+                  <a href={`/commune/${commune.insee}`}>{commune.name}</a>
+                  <span class="muted small"> ({commune.departmentCode})</span>
+                </td>
+                <td class="num hide-small">
+                  {commune.population ? formatNumber(commune.population) : "n.d."}
+                </td>
+                <td class="num">
+                  <strong>
+                    {commune.perCapita === null ? "n.d." : formatEuro(commune.perCapita)}
+                  </strong>
+                </td>
+                <td class="num hide-small">
+                  {commune.median === null ? "n.d." : formatEuro(commune.median)}
+                </td>
+                <td class="num">{formatGap(medianGap(commune.perCapita, commune.median))}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="footnote small muted">Paris inclut aussi ses dépenses de département.</p>
+      <Provenance provenance={index.provenance} />
+    </section>
+  </div>
+</Base>
+
+<style>
+  .map-table {
+    margin-top: 1rem;
+    font-size: 0.875rem;
+  }
+
+  .map-table summary {
+    font-weight: 600;
+    color: var(--link);
+  }
+
+  .table-card {
+    overflow-x: auto;
+  }
+
+  .footnote {
+    margin: 0.75rem 0 0;
+  }
+</style>

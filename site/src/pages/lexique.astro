@@ -1,0 +1,117 @@
+---
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import Icon from "../components/Icon.astro";
+import Toc from "../components/Toc.astro";
+import Base from "../layouts/Base.astro";
+import { GLOSSARY, GLOSSARY_THEMES } from "../lib/glossary";
+import type { IconName } from "../lib/icons";
+
+const THEME_ICONS: Record<keyof typeof GLOSSARY_THEMES, IconName> = {
+  marches: "contract",
+  etat: "state",
+  communes: "town",
+  organisations: "building",
+  lecture: "book",
+};
+const themes = (Object.keys(GLOSSARY_THEMES) as (keyof typeof GLOSSARY_THEMES)[]).map((theme) => ({
+  theme,
+  label: GLOSSARY_THEMES[theme],
+  entries: Object.entries(GLOSSARY)
+    .filter(([, entry]) => entry.theme === theme)
+    .map(([id, entry]) => ({ id, ...entry }))
+    .sort((a, b) => a.term.localeCompare(b.term, "fr")),
+}));
+---
+
+<Base
+  title="Lexique"
+  description="Les mots de l'argent public expliqués simplement : marché public, subvention, strate, médiane, épargne brute…"
+>
+  <header class="page-head">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Lexique" }]} />
+      <div class="entity">
+        <Icon name="book" />
+        <h1>Lexique</h1>
+      </div>
+      <p class="lead">
+        Les mots de l'argent public, expliqués en une ou deux phrases. Sur le site, un mot souligné
+        en pointillés et suivi d'une loupe renvoie ici.
+      </p>
+    </div>
+  </header>
+  <Toc
+    items={themes.map(({ theme, label }) => ({
+      href: `#theme-${theme}`,
+      label,
+      icon: THEME_ICONS[theme],
+    }))}
+  />
+
+  <div class="container">
+    {themes.map(({ theme, label, entries }) => (
+      <section class="section" id={`theme-${theme}`} aria-labelledby={`titre-${theme}`}>
+        <h2 id={`titre-${theme}`}>
+          <Icon name={THEME_ICONS[theme]} />
+          {label}
+        </h2>
+        <dl class="entries">
+          {entries.map((entry) => (
+            <div class="entry" id={entry.id}>
+              <dt>
+                <Icon name={THEME_ICONS[entry.theme]} size={16} />
+                {entry.term}
+              </dt>
+              <dd>{entry.definition}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+    ))}
+  </div>
+</Base>
+
+<style>
+  .entries {
+    display: grid;
+    gap: 0 2.5rem;
+    margin: 1.25rem 0 0;
+  }
+
+  @media (min-width: 60rem) {
+    .entries {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .entry {
+    padding: 1rem 1rem 1rem 0;
+    border-top: 1px solid var(--border);
+    scroll-margin-top: 8rem;
+  }
+
+  .entry:target {
+    padding-left: 1rem;
+    background: var(--navy-50);
+    border-top-color: var(--navy-800);
+    box-shadow: inset 3px 0 0 var(--navy-800);
+  }
+
+  dt {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+
+  dd {
+    margin: 0;
+    color: var(--text-secondary);
+  }
+
+  dt :global(svg) {
+    flex: none;
+    color: var(--navy-800);
+  }
+</style>

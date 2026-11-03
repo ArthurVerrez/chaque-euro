@@ -1,0 +1,106 @@
+---
+import Democracy from "../../layouts/Democracy.astro";
+import Icon from "../../components/Icon.astro";
+import PublicTable from "../../components/PublicTable.astro";
+import Provenance from "../../components/Provenance.astro";
+import { getPublicBallot } from "../../lib/data";
+import { formatDate, formatNumber } from "../../lib/format";
+import { positionLabels } from "../../lib/democracy";
+const data = await getPublicBallot(Astro.params.id ?? "");
+if (!data) return Astro.redirect("/404");
+const { ballot, votes, groups, corrections } = data;
+---
+
+<Democracy
+  title={`Scrutin ${ballot.number} · ${ballot.chamber === "AN" ? "Assemblée nationale" : "Sénat"}`}
+  description={ballot.title}
+  icon="vote"
+  answer={`${formatDate(ballot.voted_on)}. ${ballot.title}${ballot.result ? ` · ${ballot.result}` : ""}`}
+  figures={[
+    ["Pour", ballot.for_count],
+    ["Contre", ballot.against_count],
+    ["Abstentions", ballot.abstention_count],
+  ].map(([label, count]) => ({
+    icon: "vote",
+    label: String(label),
+    value: typeof count === "number" ? formatNumber(count) : "Non renseigné",
+  }))}
+  provenance={data.provenance}
+  sections={[
+    { id: "groupes", label: "Par groupe", icon: "people" },
+    { id: "positions", label: "Positions", icon: "vote" },
+    { id: "corrections", label: "Corrections", icon: "info" },
+  ]}
+>
+  <section id="groupes" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="people" />
+        Positions par groupe au jour du vote
+      </h2>
+    </div>
+    <PublicTable
+      caption="Décompte des entrées nominatives"
+      columns={["Groupe", "Position", "Entrées"]}
+      rows={groups.map((g) => [
+        { text: g.group_label },
+        { text: positionLabels[g.position] ?? g.position },
+        { text: formatNumber(g.count) },
+      ])}
+    />
+    <Provenance provenance={data.provenance} />
+  </section>
+  <section id="positions" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="vote" />
+        Positions nominatives
+      </h2>
+    </div>
+    <PublicTable
+      caption="Votes comptabilisés et statuts publiés"
+      columns={["Parlementaire", "Position", "Modalité"]}
+      rows={votes.map((v) => [
+        { text: v.display_name, href: `/elus/${v.person_id}` },
+        { text: positionLabels[v.position] ?? v.position },
+        {
+          text: v.delegated
+            ? `Délégation · ${v.source_status ?? ""}`
+            : (v.source_status ?? "Non renseigné"),
+        },
+      ])}
+    />
+    <Provenance provenance={data.provenance} />
+  </section>
+  <section id="corrections" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="info" />
+        Corrections et intentions
+      </h2>
+    </div>
+    {ballot.announced_for !== null && ballot.announced_against !== null && (
+      <p>
+        Totaux annoncés en séance : {formatNumber(ballot.announced_for)} pour,{" "}
+        {formatNumber(ballot.announced_against)} contre. Les chiffres en tête reprennent les totaux
+        du fichier officiel après mise à jour.
+      </p>
+    )}
+    {corrections.length ? (
+      <PublicTable
+        caption="Corrections distinctes du vote comptabilisé"
+        columns={["Référence", "Information"]}
+        rows={corrections.map((c) => [
+          {
+            text: c.person_id ?? `Rectification ${c.ordinal}`,
+            href: c.person_id ? `/elus/${c.person_id}` : null,
+          },
+          { text: positionLabels[c.intended_position] ?? c.intended_position },
+        ])}
+      />
+    ) : (
+      <p>Aucune correction structurée dans le fichier importé pour ce scrutin.</p>
+    )}
+    <Provenance provenance={data.provenance} />
+  </section>
+</Democracy>

@@ -1,0 +1,593 @@
+---
+import BarList from "../components/BarList.astro";
+import ColumnChart from "../components/ColumnChart.astro";
+import Icon from "../components/Icon.astro";
+import Provenance from "../components/Provenance.astro";
+import SearchForm from "../components/SearchForm.astro";
+import ShareBar from "../components/ShareBar.astro";
+import Term from "../components/Term.astro";
+import { ANALYSES } from "../lib/analyses";
+import { kindIcon } from "../lib/icons";
+import Base from "../layouts/Base.astro";
+import { getHome, getOrganisationsIndex, getStateBudget } from "../lib/data";
+import { formatCompact, formatEuro, formatEuros, formatNumber, plural } from "../lib/format";
+
+const [home, budget, organisations] = await Promise.all([
+  getHome(),
+  getStateBudget(),
+  getOrganisationsIndex(),
+]);
+const { facts } = home;
+const currentYear = new Date().getFullYear();
+
+const budgetParts = [
+  ...budget.missions.slice(0, 6).map((mission) => ({ label: mission.name, value: mission.spent })),
+  {
+    label: "Autres missions",
+    value: budget.missions.slice(6).reduce((sum, mission) => sum + mission.spent, 0),
+    other: true,
+  },
+];
+const contractColumns = home.contractsByYear.map((row) => ({
+  label: String(row.year),
+  value: row.count,
+  display: formatCompact(row.count),
+  detail: `${plural(row.count, "marché", "marchés")}, ${formatEuros(row.amount)}`,
+  partial: row.year === currentYear,
+}));
+const strata = home.strata.map((stratum) => ({
+  icon: "people" as const,
+  label: stratum.label,
+  value: stratum.median,
+  display: formatEuro(stratum.median),
+  note: plural(stratum.communes, "commune", "communes"),
+}));
+const associations = organisations.associations.slice(0, 5).map((org) => ({
+  icon: kindIcon(org.kind),
+  label: org.name,
+  value: org.amount,
+  display: formatEuros(org.amount),
+  href: `/organisation/${org.siren}`,
+}));
+const keyFigures = [
+  {
+    value: formatEuros(budget.spent),
+    label: `dépensés par l'État en ${budget.year} (budget général)`,
+    source: "PLRG 2025",
+  },
+  facts.contracts_count && {
+    value: formatNumber(facts.contracts_count.value),
+    label: `marchés publics notifiés en ${facts.contracts_count.period}`,
+    source: "DECP",
+  },
+  facts.grants_amount && {
+    value: formatEuros(facts.grants_amount.value),
+    label: `versés par l'État aux associations en ${facts.grants_amount.period}`,
+    source: "Jaune associations",
+  },
+  facts.communes_median_spending_per_capita && {
+    value: formatEuro(facts.communes_median_spending_per_capita.value),
+    label: `dépensés par habitant par la commune médiane en ${facts.communes_median_spending_per_capita.period}`,
+    source: "OFGL",
+  },
+].filter((figure): figure is { value: string; label: string; source: string } => Boolean(figure));
+const doors = [
+  {
+    icon: "building" as const,
+    title: "Entreprises et associations",
+    text: "Combien d'argent public a-t-elle reçu\u00a0?",
+    href: "/organisations",
+    cta: "Explorer les organisations",
+    examples: [
+      { label: "Croix-Rouge française", href: "/organisation/775672272" },
+      { label: "Colas France", href: "/organisation/329338883" },
+    ],
+  },
+  {
+    icon: "town" as const,
+    title: "Votre commune",
+    text: "Combien dépense-t-elle par habitant\u00a0?",
+    href: "/communes",
+    cta: "Explorer les communes",
+    examples: [
+      { label: "Lyon", href: "/commune/69123" },
+      { label: "Paris", href: "/commune/75056" },
+    ],
+  },
+  {
+    icon: "state" as const,
+    title: "Le budget de l'État",
+    text: `Où sont allés les ${formatEuros(budget.spent)}\u00a0?`,
+    href: "/budget-etat",
+    cta: "Voir le budget",
+    examples: [
+      { label: "Éducation, défense, dette…", href: "/budget-etat#missions" },
+      { label: "Tout l'argent public", href: "/argent-public" },
+    ],
+  },
+];
+---
+
+<Base
+  title="Chaque Euro"
+  description="Où va l'argent public ? Marchés publics, subventions, budgets des communes et de l'État, expliqués simplement, chaque chiffre relié à sa source officielle."
+>
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <p class="hero-kicker">Données publiques ouvertes, expliquées</p>
+        <h1>Où va l'argent public&nbsp;?</h1>
+        <p class="hero-lead">
+          Marchés publics, subventions, budgets&nbsp;: chaque chiffre avec sa source officielle.
+        </p>
+        <SearchForm variant="hero" />
+        <ul class="chips" aria-label="Exemples de recherche">
+          <li>
+            <a href="/organisation/775672272">
+              <Icon name="association" size={15} />
+              Croix-Rouge française
+            </a>
+          </li>
+          <li>
+            <a href="/organisation/329338883">
+              <Icon name="company" size={15} />
+              Colas France
+            </a>
+          </li>
+          <li>
+            <a href="/commune/69123">
+              <Icon name="town" size={15} />
+              Lyon
+            </a>
+          </li>
+          <li>
+            <a href="/commune/13055">
+              <Icon name="town" size={15} />
+              Marseille
+            </a>
+          </li>
+          <li>
+            <a href="/budget-etat">
+              <Icon name="state" size={15} />
+              Budget de l'État
+            </a>
+          </li>
+        </ul>
+      </div>
+      <aside class="hero-panel" aria-label="Chiffres clés">
+        <p class="panel-title">Les chiffres clés</p>
+        <dl>
+          {keyFigures.map((figure) => (
+            <div>
+              <dt>{figure.label}</dt>
+              <dd>{figure.value}</dd>
+              <dd class="panel-source">Source : {figure.source}</dd>
+            </div>
+          ))}
+        </dl>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="portes">
+    <div class="container">
+      <div class="section-head">
+        <h2 id="portes">
+          <Icon name="search" />
+          Que voulez-vous savoir&nbsp;?
+        </h2>
+      </div>
+      <ul class="doors">
+        {doors.map((door) => (
+          <li class="card door">
+            <span class="door-icon">
+              <Icon name={door.icon} size={28} />
+            </span>
+            <h3>{door.title}</h3>
+            <p>{door.text}</p>
+            <p class="door-examples small">
+              Exemples&nbsp;:{" "}
+              {door.examples.map((example, index) => (
+                <>
+                  {index > 0 && ", "}
+                  <a href={example.href}>{example.label}</a>
+                </>
+              ))}
+            </p>
+            <a class="more door-cta" href={door.href}>
+              {door.cta}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="essentiel">
+    <div class="container">
+      <div class="section-head">
+        <h2 id="essentiel">
+          <Icon name="trend" />
+          L'essentiel en chiffres
+        </h2>
+      </div>
+      <div class="grid two">
+        <article class="card">
+          <h3>
+            <Icon name="state" />
+            Le budget de l'État en {budget.year}
+          </h3>
+          <p class="card-sub">
+            <strong>{formatEuros(budget.spent)}</strong> dépensés sur le budget général, soit{" "}
+            <strong>{formatEuro(budget.perHousehold)} par ménage</strong>.
+          </p>
+          <ShareBar
+            caption="Sur 100 € dépensés par l'État"
+            whole="dépenses du budget général"
+            parts={budgetParts}
+          />
+          <p>
+            <a class="more" href="/budget-etat">
+              Toutes les missions
+            </a>
+          </p>
+          <Provenance provenance={budget.provenance} />
+        </article>
+
+        <article class="card">
+          <h3>
+            <Icon name="contract" />
+            Les marchés publics publiés chaque année
+          </h3>
+          <p class="card-sub">
+            {facts.contracts_count && facts.contracts_amount && (
+              <>
+                En {facts.contracts_count.period},{" "}
+                <strong>{formatNumber(facts.contracts_count.value)} marchés</strong> ont été
+                publiés, pour <strong>{formatEuros(facts.contracts_amount.value)}</strong> prévus
+                aux contrats.
+              </>
+            )}
+          </p>
+          <ColumnChart
+            caption="Nombre de marchés notifiés"
+            unit="par année"
+            columns={contractColumns}
+          />
+          <p>
+            <a class="more" href="/organisations">
+              Qui remporte ces marchés
+            </a>
+          </p>
+          <Provenance provenance={home.contractsProvenance} />
+        </article>
+
+        <article class="card">
+          <h3>
+            <Icon name="town" />
+            Ce que dépensent les communes, selon leur taille
+          </h3>
+          <p class="card-sub">
+            Dépense médiane par habitant en {facts.communes_median_spending_per_capita?.period}, par
+            strate de population.
+          </p>
+          <BarList caption="Dépenses totales par habitant (médiane)" items={strata} />
+          <p>
+            <a class="more" href="/communes">
+              Comparer votre commune
+            </a>
+          </p>
+          <Provenance provenance={home.strataProvenance} />
+        </article>
+
+        <article class="card">
+          <h3>
+            <Icon name="grant" />
+            Les versements de l'État aux associations
+          </h3>
+          <p class="card-sub">
+            {facts.grants_amount && facts.grants_associations && (
+              <>
+                En {facts.grants_amount.period}, l'État a versé{" "}
+                <strong>{formatEuros(facts.grants_amount.value)}</strong> à{" "}
+                <strong>{formatNumber(facts.grants_associations.value)} organismes</strong>{" "}
+                identifiés.
+              </>
+            )}
+          </p>
+          <BarList
+            caption="Les cinq associations recevant le plus de crédits"
+            items={associations}
+          />
+          <p>
+            <a class="more" href="/organisations#associations">
+              Voir le classement
+            </a>
+          </p>
+          <Provenance provenance={organisations.grantsProvenance} />
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="lire">
+    <div class="container">
+      <div class="section-head">
+        <h2 id="lire">
+          <Icon name="book" />
+          Comment lire ces chiffres
+        </h2>
+      </div>
+      <ol class="rules">
+        <li class="card">
+          <h3>
+            <Icon name="contract" />
+            Un marché n'est pas un paiement
+          </h3>
+          <p>
+            Le <Term id="montant-marche">montant d'un marché</Term> est un plafond prévu au contrat,
+            pas la somme payée.
+          </p>
+        </li>
+        <li class="card">
+          <h3>
+            <Icon name="person" />
+            Comparer par habitant
+          </h3>
+          <p>
+            Chaque commune est comparée aux <Term id="strate">communes de même taille</Term>,{" "}
+            <Term id="par-habitant">par habitant</Term>.
+          </p>
+        </li>
+        <li class="card">
+          <h3>
+            <Icon name="source" />
+            Chaque chiffre a une source
+          </h3>
+          <p>
+            «&nbsp;Voir la source&nbsp;» ouvre le fichier officiel, «&nbsp;Voir le calcul&nbsp;» le
+            code.
+          </p>
+        </li>
+      </ol>
+      <p>
+        <a class="more" href="/methodologie">
+          Méthode, sources et limites
+        </a>{" "}
+        ·{" "}
+        <a class="more" href="/telechargements">
+          Télécharger les données
+        </a>
+      </p>
+    </div>
+  </section>
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <h2>
+          <Icon name="book" /> Analyses
+        </h2>
+        <p>Des questions concrètes, des graphiques et leurs sources.</p>
+      </div>
+      <div class="analysis-links">
+        {ANALYSES.map((article) => (
+          <a class="card" href={`/analyses/${article.slug}`}>
+            <Icon name={article.icon} size={22} />
+            <span>
+              <strong>{article.title}</strong>
+              <span class="small">{article.summary}</span>
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</Base>
+<style>
+  .analysis-links {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .analysis-links > a {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .analysis-links > a > :global(svg) {
+    flex: none;
+    color: var(--series-1);
+    margin-top: 0.25rem;
+  }
+  .analysis-links .small {
+    display: block;
+    margin-top: 0.25rem;
+  }
+  .analysis-links a:hover strong {
+    text-decoration: underline;
+  }
+  @media (min-width: 60rem) {
+    .analysis-links {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>
+
+<style>
+  .hero {
+    background: linear-gradient(160deg, var(--navy-950), var(--navy-800));
+    color: #fff;
+    padding: 3.5rem 0;
+  }
+
+  .hero-grid {
+    display: grid;
+    gap: 2.5rem;
+    align-items: center;
+  }
+
+  @media (min-width: 64rem) {
+    .hero-grid {
+      grid-template-columns: 1fr 22rem;
+    }
+  }
+
+  .hero-panel {
+    background: rgb(255 255 255 / 6%);
+    border: 1px solid rgb(255 255 255 / 18%);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    backdrop-filter: blur(4px);
+  }
+
+  .panel-title {
+    font-size: 0.8125rem;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #a9c4ee;
+    margin: 0 0 0.5rem;
+  }
+
+  .hero-panel dl {
+    margin: 0;
+    display: grid;
+  }
+
+  .hero-panel dl > div {
+    display: flex;
+    flex-direction: column;
+    padding: 0.875rem 0;
+    border-top: 1px solid rgb(255 255 255 / 12%);
+  }
+
+  .hero-panel dl > div:first-child {
+    border-top: 0;
+  }
+
+  .hero-panel dt {
+    order: 2;
+    color: #d7e1f3;
+    font-size: 0.9375rem;
+  }
+
+  .hero-panel dd {
+    margin: 0;
+    order: 1;
+    font-size: 1.75rem;
+    font-weight: 750;
+    line-height: 1.15;
+    color: #fff;
+  }
+
+  .hero-panel .panel-source {
+    order: 3;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: #a9c4ee;
+    margin-top: 0.125rem;
+  }
+
+  .hero h1 {
+    color: #fff;
+    font-size: clamp(2.25rem, 1.6rem + 2.4vw, 3.5rem);
+  }
+
+  .hero-kicker {
+    color: #a9c4ee;
+    font-size: 0.8125rem;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 0 0 0.75rem;
+  }
+
+  .hero-lead {
+    color: #d7e1f3;
+    font-size: clamp(1.0625rem, 1rem + 0.4vw, 1.3rem);
+    margin-bottom: 1.75rem;
+  }
+
+  .hero .chips a {
+    background: rgb(255 255 255 / 8%);
+    border-color: rgb(255 255 255 / 25%);
+    color: #fff;
+  }
+
+  .hero .chips a:hover {
+    background: rgb(255 255 255 / 16%);
+    color: #fff;
+  }
+
+  .doors,
+  .rules {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  @media (min-width: 56rem) {
+    .doors,
+    .rules {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .door {
+    display: flex;
+    flex-direction: column;
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .door:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -12px rgb(15 23 42 / 25%);
+  }
+
+  .door-icon {
+    display: grid;
+    place-items: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 14px;
+    background: var(--navy-900);
+    color: #fff;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 8px 20px -8px rgb(13 33 73 / 45%);
+  }
+
+  .door p {
+    color: var(--text-secondary);
+  }
+
+  .door-examples {
+    margin-top: auto;
+  }
+
+  .door h3 {
+    font-size: 1.1875rem;
+  }
+
+  .door-cta {
+    align-self: flex-start;
+    margin-top: 0.75rem;
+  }
+
+  .card > p:last-of-type:has(.more) {
+    margin: 1rem 0 0;
+  }
+
+  .rules p {
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  .rules + p {
+    margin-top: 1.5rem;
+  }
+</style>

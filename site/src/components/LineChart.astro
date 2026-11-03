@@ -1,0 +1,407 @@
+---
+import Icon from "./Icon.astro";
+export interface LineSeries {
+  label: string;
+  values: (number | null)[];
+  muted?: boolean;
+}
+
+export interface PeriodBand {
+  label: string;
+  start: number;
+  end: number;
+}
+
+interface Props {
+  caption: string;
+  labels: string[];
+  maxLabels?: number;
+  series: LineSeries[];
+  format: (value: number) => string;
+  bands?: PeriodBand[];
+  events?: PeriodBand[];
+}
+
+const { caption, labels, series, format, bands = [], events = [], maxLabels = 6 } = Astro.props;
+const values = series.flatMap((entry) => entry.values.filter((value) => value !== null));
+const min = Math.min(...values, 0);
+const observedMax = Math.max(...values, 0);
+const max = observedMax === min ? min + 1 : observedMax;
+const magnitude = 10 ** Math.floor(Math.log10((max - min) / 3));
+const step =
+  [1, 2, 2.5, 5, 10].map((factor) => factor * magnitude).find((s) => s >= (max - min) / 3) ?? max;
+const bottom = Math.floor(min / step) * step;
+const top = Math.ceil(max / step) * step;
+const ticks = Array.from(
+  { length: Math.round((top - bottom) / step) + 1 },
+  (_, index) => bottom + index * step,
+);
+const x = (index: number) => ((index + 0.5) / labels.length) * 100;
+const y = (value: number) => 100 - ((value - bottom) / (top - bottom)) * 100;
+const first = Number(labels[0]);
+const position = (value: number) =>
+  Math.max(0, Math.min(100, ((value - first) / labels.length) * 100));
+const periods = bands.filter((band) => position(band.end) > position(band.start));
+const path = (values: (number | null)[]) =>
+  values
+    .map((value, index) =>
+      value === null
+        ? ""
+        : `${index > 0 && values[index - 1] !== null ? "L" : "M"}${x(index)} ${y(value)}`,
+    )
+    .join(" ");
+const labelCount = Math.min(labels.length, maxLabels);
+const labelIndexes = new Set(
+  Array.from({ length: labelCount }, (_, index) =>
+    Math.round((index * (labels.length - 1)) / Math.max(labelCount - 1, 1)),
+  ),
+);
+const tickWidth = Math.max(4, ...ticks.map((tick) => format(tick).length * 0.5));
+const color = (entry: LineSeries, index: number) =>
+  `--color: ${entry.muted ? "var(--text-muted)" : `var(--series-${index + 1})`}`;
+const readout = (index: number) =>
+  `${labels[index]} : ${series
+    .map((entry) => {
+      const value = entry.values[index];
+      return `${entry.label} ${value === null || value === undefined ? "n.d." : format(value)}`;
+    })
+    .join(" · ")}`;
+---
+
+<figure class:list={["line-chart", { dense: labels.length > 12 }]}>
+  <figcaption>
+    <Icon name="trend" size={18} />
+    {caption}
+  </figcaption>
+  <p class="legend small" aria-hidden="true">
+    {series.map((entry, index) => (
+      <span class="legend-item">
+        <span class="key" style={color(entry, index)} />
+        {entry.label}
+      </span>
+    ))}
+  </p>
+  <div class="chart" aria-hidden="true" style={`--tick-width: ${tickWidth}rem`}>
+    <div class="ticks">
+      {ticks.map((tick) => (
+        <span style={`bottom: ${100 - y(tick)}%`}>{format(tick)}</span>
+      ))}
+    </div>
+    <div class="plot">
+      {periods.map((band, index) => (
+        <span
+          class:list={["period", { alternate: index % 2 === 1 }]}
+          style={`left: ${position(band.start)}%; width: ${position(band.end) - position(band.start)}%`}
+          title={`${band.label} : ${band.start} à ${band.end}`}
+        >
+          <span class="period-name">{band.label.split(" ").at(-1)}</span>
+        </span>
+      ))}
+      {events.map((event, index) => (
+        <span
+          class="event"
+          style={`left: ${position(event.start + 0.5)}%; --event-top: ${index % 2 === 0 ? "-0.5rem" : "0.875rem"}`}
+          title={`${event.start} : ${event.label}`}
+        >
+          <span>{index + 1}</span>
+        </span>
+      ))}
+      {ticks.map((tick) => (
+        <span
+          class:list={["grid", { zero: tick === 0 && min < 0 }]}
+          style={`bottom: ${100 - y(tick)}%`}
+        />
+      ))}
+      {labels.map((_, index) => (
+        <span
+          class="hit"
+          style={`left: ${(index / labels.length) * 100}%; width: ${100 / labels.length}%`}
+          title={readout(index)}
+        />
+      ))}
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+        {series.map((entry, index) => (
+          <path
+            class="line"
+            style={color(entry, index)}
+            d={path(entry.values)}
+            vector-effect="non-scaling-stroke"
+          />
+        ))}
+      </svg>
+      {series.map((entry, position) =>
+        entry.values.map(
+          (value, index) =>
+            value !== null && (
+              <span
+                class="point"
+                style={`${color(entry, position)}; left: ${x(index)}%; top: ${y(value)}%`}
+              />
+            ),
+        ),
+      )}
+    </div>
+    <div class="labels">
+      {labels.map((label, index) => (
+        <span
+          class:list={{ minor: !labelIndexes.has(index) }}
+          style={`left: ${index === 0 ? 0 : index === labels.length - 1 ? 100 : x(index)}%`}
+        >
+          {label}
+        </span>
+      ))}
+    </div>
+  </div>
+  {periods.length > 0 && (
+    <details class="annotations">
+      <summary>Présidences, repères annuels</summary>
+      <ul>
+        {periods.map((band) => (
+          <li>
+            {band.start} à {band.end} : {band.label}
+          </li>
+        ))}
+      </ul>
+    </details>
+  )}
+  {events.length > 0 && (
+    <ol class="events">
+      {events.map((event) => (
+        <li>
+          {event.start}
+          {event.end > event.start && ` à ${event.end}`} : {event.label}
+        </li>
+      ))}
+    </ol>
+  )}
+  <div class="visually-hidden">
+    <table>
+      <caption>{caption}</caption>
+      <thead>
+        <tr>
+          <th scope="col">Année</th>
+          {series.map((entry) => (
+            <th scope="col">{entry.label}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {labels.map((label, index) => (
+          <tr>
+            <th scope="row">{label}</th>
+            {series.map((entry) => {
+              const value = entry.values[index];
+              return <td>{value === null || value === undefined ? "n.d." : format(value)}</td>;
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</figure>
+
+<style>
+  .period {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: var(--navy-50);
+    border-left: 1px solid var(--border-strong);
+  }
+  .period-name {
+    display: block;
+    padding: 0.25rem 0.2rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .period.alternate {
+    background: var(--navy-100);
+  }
+  .event {
+    position: absolute;
+    inset-block: 0;
+    border-left: 1px dashed var(--text-muted);
+    z-index: 1;
+    pointer-events: none;
+  }
+  .event > span {
+    position: absolute;
+    top: var(--event-top);
+    left: -0.55rem;
+    width: 1.1rem;
+    height: 1.1rem;
+    line-height: 1.1rem;
+    border-radius: 50%;
+    background: var(--navy-900);
+    color: white;
+    text-align: center;
+    font-size: 0.7rem;
+  }
+  .grid.zero {
+    background: var(--text-muted);
+  }
+  .annotations,
+  .events {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+  }
+  .annotations {
+    margin-top: 0.75rem;
+  }
+  .annotations summary {
+    cursor: pointer;
+    color: var(--link);
+    font-weight: 600;
+  }
+  .annotations ul {
+    columns: 2 14rem;
+    padding-left: 1.25rem;
+  }
+  .events {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 2rem;
+    padding-left: 1.25rem;
+    margin-bottom: 0;
+  }
+
+  .line-chart {
+    margin: 0;
+  }
+
+  figcaption {
+    font-weight: 650;
+    margin-bottom: 0.25rem;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0 0 1rem;
+    color: var(--text-secondary);
+  }
+
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .key {
+    width: 1rem;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--color);
+  }
+
+  .chart {
+    display: grid;
+    grid-template-columns: var(--tick-width) minmax(0, 1fr);
+    grid-template-rows: 15rem auto;
+    column-gap: 0.5rem;
+  }
+
+  .ticks,
+  .plot,
+  .labels {
+    position: relative;
+  }
+
+  .ticks span {
+    display: block;
+    position: absolute;
+    right: 0;
+    transform: translateY(50%);
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .grid {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--border);
+  }
+
+  svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .line {
+    fill: none;
+    stroke: var(--color);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  .point {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    margin: -4px 0 0 -4px;
+    border-radius: 50%;
+    background: var(--color);
+    box-shadow: 0 0 0 2px var(--surface);
+    pointer-events: none;
+  }
+
+  .hit {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 2;
+    border-radius: 4px;
+  }
+
+  .hit:hover {
+    background: color-mix(in srgb, var(--navy-100) 60%, transparent);
+  }
+
+  .labels {
+    grid-column: 2;
+    height: 1.75rem;
+  }
+
+  .dense .labels .minor {
+    display: none;
+  }
+
+  .labels span {
+    position: absolute;
+    top: 0.5rem;
+    transform: translateX(-50%);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  .labels span:first-child:not(:only-child) {
+    transform: none;
+  }
+
+  .labels span:last-child:not(:only-child) {
+    transform: translateX(-100%);
+  }
+
+  @media (max-width: 40rem) {
+    .period-name,
+    .labels .minor,
+    .dense .point {
+      display: none;
+    }
+  }
+</style>

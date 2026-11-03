@@ -1,0 +1,58 @@
+---
+import Democracy from "../../layouts/Democracy.astro";
+import Icon from "../../components/Icon.astro";
+import PublicTable from "../../components/PublicTable.astro";
+import PublicPagination from "../../components/PublicPagination.astro";
+import Provenance from "../../components/Provenance.astro";
+import { getPublicBallots } from "../../lib/data";
+import { formatDate, formatNumber } from "../../lib/format";
+const data = await getPublicBallots(Astro.url.searchParams);
+---
+
+<Democracy
+  title="Votes parlementaires"
+  description="Scrutins publics de l’Assemblée nationale et du Sénat, résultats et positions nominatives."
+  icon="vote"
+  answer="Consultez les scrutins publics et les positions enregistrées dans chaque chambre."
+  figures={[{ icon: "vote", label: "Scrutins trouvés", value: formatNumber(data.count) }]}
+  provenance={data.provenance}
+  sections={[{ id: "scrutins", label: "Rechercher un scrutin", icon: "search" }]}
+>
+  <section id="scrutins" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="vote" /> Les scrutins publics
+      </h2>
+    </div>
+    <form class="filters" method="get">
+      <label>
+        Texte ou numéro
+        <input name="q" type="search" value={data.query} />
+      </label>
+      <label>
+        Chambre
+        <select name="chambre">
+          <option value="">Toutes</option>
+          <option value="AN" selected={data.chamber === "AN"}>
+            Assemblée nationale
+          </option>
+          <option value="SENAT" selected={data.chamber === "SENAT"}>
+            Sénat
+          </option>
+        </select>
+      </label>
+      <button type="submit">Rechercher</button>
+    </form>
+    <PublicTable
+      caption="Scrutins publics publiés"
+      columns={["Date", "Chambre", "Scrutin"]}
+      rows={data.ballots.map((b) => [
+        { text: formatDate(b.voted_on) },
+        { text: b.chamber === "AN" ? "Assemblée nationale" : "Sénat" },
+        { text: `${b.number} · ${b.title}`, href: `/votes/${b.id}` },
+      ])}
+    />
+    <PublicPagination page={data.page} count={data.count} />
+    <Provenance provenance={data.provenance} />
+  </section>
+</Democracy>

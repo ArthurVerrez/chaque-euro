@@ -1,0 +1,74 @@
+---
+import Icon from "./Icon.astro";
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<details class="explainer">
+  <summary>
+    <Icon name="info" size={18} />
+    <span>{title}</span>
+  </summary>
+  <div class="body">
+    <slot />
+  </div>
+</details>
+
+<style>
+  .explainer {
+    border: 1px solid #d5e2f7;
+    border-radius: var(--radius);
+    background: #eef4fd;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .explainer:not([open]) {
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--navy-900);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary::after {
+    content: "+";
+    margin-left: 0.25rem;
+    color: var(--link);
+    font-weight: 700;
+  }
+
+  [open] > summary::after {
+    content: "−";
+  }
+
+  .body {
+    padding: 0 1.375rem 1.125rem;
+  }
+
+  .body :global(p) {
+    margin: 0 0 0.625rem;
+  }
+
+  .body :global(p:last-child) {
+    margin: 0;
+  }
+</style>

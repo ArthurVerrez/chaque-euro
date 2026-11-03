@@ -1,0 +1,41 @@
+---
+import Term from "./Term.astro";
+import Icon from "./Icon.astro";
+import { getBudgetLegislation, documentPublisher } from "../lib/data";
+import { formatYear } from "../lib/format";
+interface Props {
+  family: string;
+}
+const files = await getBudgetLegislation(Astro.props.family);
+---
+
+<section class="section" id="textes-financiers">
+  <div class="container">
+    <div class="section-head">
+      <h2>
+        <Icon name="scale" />
+        Les textes financiers
+      </h2>
+    </div>
+    <p>
+      Vous pouvez suivre le{" "}
+      <Term id={Astro.props.family === "État" ? "plf" : "plfss"}>
+        {Astro.props.family === "État"
+          ? "projet de loi de finances"
+          : "projet de financement de la sécurité sociale"}
+      </Term>
+      . Un texte adopté ne prouve pas une dépense réalisée.
+    </p>
+    <ul>
+      {files.map((file) => (
+        <li>
+          <a href={`/documents/dossiers/${file.id}`}>
+            {file.law_kind} {formatYear(`${file.fiscal_year}-01-01`)}
+          </a>{" "}
+          · {documentPublisher(file.source_id)} · {file.status}
+        </li>
+      ))}
+    </ul>
+    <a href="/documents/dossiers?finances=1">Tous les dossiers financiers</a>
+  </div>
+</section>

@@ -1,0 +1,122 @@
+---
+import type { TermId } from "../lib/glossary";
+import type { IconName } from "../lib/icons";
+import Icon from "./Icon.astro";
+import Term from "./Term.astro";
+
+export interface Figure {
+  icon: IconName;
+  label: string;
+  value: string;
+  note?: string | undefined;
+  term?: TermId;
+}
+
+interface Props {
+  figures: Figure[];
+}
+
+const { figures } = Astro.props;
+---
+
+<div class="key-figures">
+  <dl class="figures" style={`--columns: ${Math.min(figures.length, 4)}`}>
+    {figures.map((figure) => (
+      <div class="figure">
+        <dt>
+          <Icon name={figure.icon} size={16} />
+          {figure.term ? <Term id={figure.term}>{figure.label}</Term> : figure.label}
+        </dt>
+        <dd class:list={["value num", { long: figure.value.length > 10 }]}>{figure.value}</dd>
+        {figure.note && <dd class="note">{figure.note}</dd>}
+      </div>
+    ))}
+  </dl>
+</div>
+
+<style>
+  .key-figures {
+    container-type: inline-size;
+  }
+
+  .figures {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .figure {
+    display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    align-content: start;
+    min-width: 0;
+    margin: -1px 0 0 -1px;
+    padding: 1.25rem 1.5rem 1.375rem;
+    border-left: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+  }
+
+  dt {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  dt > :global(svg) {
+    flex: none;
+    margin-top: 0.2em;
+    color: var(--series-1);
+  }
+
+  dd {
+    margin: 0;
+  }
+
+  .value {
+    margin-top: 0.375rem;
+    font-size: clamp(1.75rem, 1.3rem + 1.4vw, 2.5rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: var(--navy-900);
+    white-space: normal;
+  }
+
+  .value.long {
+    font-size: clamp(1.375rem, 1.1rem + 1.25vw, 2.1rem);
+  }
+
+  .note {
+    margin-top: 0.375rem;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+  }
+
+  @container (min-width: 50rem) {
+    .figures {
+      grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+    }
+  }
+
+  @container (max-width: 49.99rem) {
+    .figure:last-child:nth-child(odd) {
+      grid-column: span 2;
+    }
+  }
+
+  @media (max-width: 30rem) {
+    .figure {
+      padding: 1rem;
+    }
+  }
+</style>

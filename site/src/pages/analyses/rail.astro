@@ -1,0 +1,210 @@
+---
+import Analysis from "../../layouts/Analysis.astro";
+import Section from "../../components/AnalysisSection.astro";
+import LineChart from "../../components/LineChart.astro";
+import BarList from "../../components/BarList.astro";
+import ShareBar from "../../components/ShareBar.astro";
+import Term from "../../components/Term.astro";
+import { analysis } from "../../lib/analyses";
+import { getRailAnalysis } from "../../lib/data";
+import { formatBillions, formatPercent } from "../../lib/format";
+const data = await getRailAnalysis();
+const latest = data.transfers.at(-1)!;
+const network = data.network.at(-1)!;
+const ter = data.revenue.find((row) => row.year === latest.year && row.service === "TER")!;
+const takeover = data.context.filter((row) => row.metric === "debt");
+const reinvestment = data.context.find((row) => row.metric === "reinvestment")!;
+const figures = [
+  {
+    icon: "transport" as const,
+    label: "Vers SNCF Voyageurs",
+    value: formatBillions(latest.total),
+    note: `${latest.year}, transferts hors retraites`,
+  },
+  {
+    icon: "works" as const,
+    label: "Vers SNCF Réseau",
+    value: formatBillions(network.total),
+    note: `${network.year}, subventions d’investissement`,
+  },
+  {
+    icon: "person" as const,
+    label: "Part commerciale TER",
+    value: formatPercent(ter.commercial / ter.total, 1),
+    note: `${ter.year}, part des revenus du service`,
+  },
+];
+const sections = [
+  { id: "transferts", label: "Les transferts", icon: "trend" as const },
+  { id: "reseau", label: "Le réseau", icon: "works" as const },
+  { id: "billets", label: "Les billets", icon: "person" as const },
+  { id: "dette", label: "La dette", icon: "debt" as const },
+  { id: "benefices", label: "Les bénéfices", icon: "revenue" as const },
+];
+---
+
+<Analysis
+  article={analysis("rail")}
+  answer={`En ${latest.year}, les transferts publics vers SNCF Voyageurs atteignent ${formatBillions(latest.total)}, hors retraites. SNCF Réseau reçoit séparément ${formatBillions(network.total)} de subventions d’investissement. Les billets et les concours publics financent des services aux modèles différents\u202f; ces flux ne forment pas un coût public unique à additionner.`}
+  figures={figures}
+  provenance={[data.transferProvenance, data.revenueProvenance]}
+  sections={sections}
+>
+  <Section
+    id="transferts"
+    title="Des transferts annuels pour les services voyageurs"
+    icon="trend"
+    provenance={data.transferProvenance}
+  >
+    <p>
+      L’État, les régions et Île-de-France Mobilités financent des services conventionnés et du
+      matériel. Le SDES distingue les contributions à l’exploitation et les subventions
+      d’investissement versées à l’opérateur.
+    </p>
+    <p>
+      En {latest.year}, ces flux représentent {formatBillions(latest.operating)} pour l’exploitation
+      et {formatBillions(latest.investment)} pour l’investissement. La série retrace des euros
+      courants et un périmètre d’entreprise qui a évolué. Elle exclut les caisses de retraite et ne
+      couvre pas toutes les dépenses publiques liées au rail.
+    </p>
+    <LineChart
+      slot="chart"
+      caption="Transferts publics vers l’opérateur voyageurs, en Md€ courants"
+      labels={data.transfers.map((row) => String(row.year))}
+      series={[
+        { label: "Total hors retraites", values: data.transfers.map((row) => row.total) },
+        {
+          label: "Exploitation et autres concours courants",
+          values: data.transfers.map((row) => row.operating),
+        },
+        { label: "Investissement", values: data.transfers.map((row) => row.investment) },
+      ]}
+      format={formatBillions}
+    />
+  </Section>
+  <Section
+    id="reseau"
+    title="L’infrastructure a ses propres financeurs"
+    icon="works"
+    provenance={data.transferProvenance}
+  >
+    <p>
+      SNCF Réseau gère l’infrastructure. Ses subventions d’investissement proviennent de l’État et
+      de son agence de financement, des collectivités et autres financeurs, ainsi que de l’Union
+      européenne.
+    </p>
+    <p>
+      Ces subventions ne sont pas la totalité de ses investissements : d’autres ressources, dont les
+      péages payés par les opérateurs, interviennent. Le graphique vous permet de suivre ce flux de
+      financement sans le confondre avec les dépenses de construction ou de renouvellement réalisées
+      dans l’année.
+    </p>
+    <LineChart
+      slot="chart"
+      caption="Subventions d’investissement à SNCF Réseau, en Md€"
+      labels={data.network.map((row) => String(row.year))}
+      series={[
+        { label: "Toutes origines", values: data.network.map((row) => row.total) },
+        { label: "État et AFITF", values: data.network.map((row) => row.state) },
+        { label: "Collectivités et autres", values: data.network.map((row) => row.local_other) },
+        { label: "Union européenne", values: data.network.map((row) => row.eu) },
+      ]}
+      format={formatBillions}
+    />
+  </Section>
+  <Section
+    id="billets"
+    title="Pour les TER, environ un tiers des revenus est commercial"
+    icon="person"
+    provenance={data.revenueProvenance}
+  >
+    <p>
+      L’ART mesure les recettes commerciales et les concours publics par service. Pour les TER en{" "}
+      {ter.year}, les premières représentent {formatBillions(ter.commercial)} sur{" "}
+      {formatBillions(ter.total)} de revenus, soit {formatPercent(ter.commercial / ter.total, 1)}.
+    </p>
+    <p>
+      Cette part ne signifie pas que les voyageurs couvrent la même fraction de tous les coûts
+      ferroviaires. Elle décrit les revenus du service sur le réseau ferré national. Les trains
+      commerciaux, les Intercités et les services franciliens suivent d’autres équilibres.
+    </p>
+    <ShareBar
+      whole="revenus TER"
+      slot="chart"
+      caption={`Revenus TER ${ter.year}, périmètre ART`}
+      parts={[
+        { label: "Recettes commerciales", value: ter.commercial },
+        { label: "Concours publics", value: ter.public },
+      ]}
+    />
+  </Section>
+  <Section
+    id="dette"
+    title="Une reprise de dette, en deux étapes"
+    icon="debt"
+    provenance={data.contextProvenance}
+  >
+    <p>
+      L’État a repris {formatBillions(takeover.reduce((sum, row) => sum + row.amount, 0))} de dette
+      de SNCF Réseau : une première tranche en 2020, puis une seconde en 2022. Il s’agit d’un
+      transfert de dette, distinct d’une subvention annuelle à l’exploitation.
+    </p>
+    <p>
+      Cette opération allège la dette portée par l’entreprise et transfère son service à l’État.
+      SNCF Réseau étant déjà dans le périmètre public, ce déplacement interne ne doit pas être
+      présenté comme une création équivalente de dette publique consolidée.
+    </p>
+    <BarList
+      slot="chart"
+      caption="Dette SNCF Réseau reprise par l’État"
+      items={takeover.map((row) => ({
+        icon: "debt",
+        label: String(row.year),
+        value: row.amount,
+        display: formatBillions(row.amount),
+      }))}
+    />
+  </Section>
+  <Section
+    id="benefices"
+    title="Les bénéfices réinvestis suivent un circuit particulier"
+    icon="revenue"
+    provenance={data.contextProvenance}
+  >
+    <p>
+      En {reinvestment.year}, {formatBillions(reinvestment.amount)} provenant de SNCF sont versés au
+      programme 203 par un <Term id="fonds-de-concours">fonds de concours</Term>. Ce mécanisme
+      affecte une ressource au financement du réseau.
+    </p>
+    <p>
+      Ce n’est pas une recette librement disponible pour toutes les politiques publiques. Compter la
+      même somme comme un dividende disponible puis comme une subvention indépendante produirait un
+      double compte. Ce flux reste donc séparé des autres séries.
+    </p>
+    <BarList
+      slot="chart"
+      caption="Ressource SNCF affectée au programme 203, CP exécutés 2025"
+      items={[
+        {
+          icon: "revenue",
+          label: "Fonds de concours SNCF",
+          value: reinvestment.amount,
+          display: formatBillions(reinvestment.amount),
+        },
+      ]}
+    />
+  </Section>
+  <div slot="method">
+    <p>
+      SDES : transferts en euros courants et hors retraites. ART : revenus en euros constants 2024.
+      Les deux sources ont des périmètres différents&#8239;; elles ne se réconcilient pas
+      directement entre elles. La part des billets est calculée au sein d’une même table ART.
+    </p>
+    <p>
+      Un coût public complet demanderait de consolider tous les financeurs, les opérateurs et les
+      transferts internes. Aucun total de ce type n’est inventé ici. Les subventions
+      d’investissement au réseau, les péages et les fonds affectés ne s’additionnent pas
+      mécaniquement.
+    </p>
+  </div>
+</Analysis>

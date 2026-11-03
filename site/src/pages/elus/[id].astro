@@ -1,0 +1,178 @@
+---
+import Democracy from "../../layouts/Democracy.astro";
+import Icon from "../../components/Icon.astro";
+import Explainer from "../../components/Explainer.astro";
+import PublicTable from "../../components/PublicTable.astro";
+import Provenance from "../../components/Provenance.astro";
+import Term from "../../components/Term.astro";
+import { getElectedPerson } from "../../lib/data";
+import { formatDate, formatNumber, formatPercent } from "../../lib/format";
+import { roleLabels, positionLabels } from "../../lib/democracy";
+const data = await getElectedPerson(Astro.params.id ?? "");
+if (!data) return Astro.redirect("/404");
+const { person, mandates, metrics, votes, interests } = data;
+const minister = person.role_kind === "minister";
+const currentOffice = mandates.find((m) => m.kind === "MINISTERE" && !m.ends_on);
+const publicRole = minister
+  ? (currentOffice?.organ_label ?? roleLabels[person.role_kind])
+  : roleLabels[person.role_kind];
+
+const committees = mandates.filter((m) => ["COMPER", "COMNL"].includes(m.kind));
+const offices = mandates.filter((m) => !["COMPER", "COMNL"].includes(m.kind));
+const mandateRows = (items: typeof mandates) =>
+  items.map((m) => [
+    {
+      text: [m.role_label, m.organ_label ?? m.kind, m.territory_label].filter(Boolean).join(" · "),
+    },
+    {
+      text:
+        m.date_precision === "year" ? (m.starts_on ?? "Non renseigné") : formatDate(m.starts_on),
+    },
+    {
+      text: m.ends_on
+        ? m.date_precision === "year"
+          ? m.ends_on
+          : formatDate(m.ends_on)
+        : "Fin non renseignée",
+    },
+  ]);
+---
+
+<Democracy
+  title={person.display_name}
+  description={`Mandats et votes publics de ${person.display_name}, avec leurs sources officielles.`}
+  icon="person"
+  answer={`${publicRole ?? person.role_kind}${!minister && person.territory_label ? ` · ${person.territory_label}` : ""}. ${person.active ? "Fonction en cours dans le répertoire importé." : "Mandat terminé dans le répertoire importé."}`}
+  figures={metrics.map((m) => ({
+    icon: "vote",
+    label:
+      m.window_kind === "12-months"
+        ? "Participation sur 12 mois"
+        : "Participation depuis juillet 2024",
+    value: formatPercent(m.value, 1),
+    term: "participation-scrutins",
+    note: `${minister ? "Mandat de député. " : ""}${formatNumber(m.numerator)} / ${formatNumber(m.denominator)} scrutins du ${formatDate(m.window_start)} au ${formatDate(m.window_end)}`,
+  }))}
+  provenance={data.provenance}
+  sections={[
+    { id: "mandats", label: "Mandats", icon: "elected" },
+    { id: "votes", label: "Votes", icon: "vote" },
+    { id: "interets", label: "Intérêts déclarés", icon: "declaration" },
+  ]}
+>
+  <section id="mandats" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="elected" />
+        Mandats et organes
+      </h2>
+    </div>
+    <PublicTable
+      caption="Mandats, fonctions et appartenances datées"
+      columns={["Fonction et organe", "Début", "Fin"]}
+      rows={mandateRows(offices)}
+    />
+    {committees.length > 0 && (
+      <details>
+        <summary>Commissions et autres fonctions ({formatNumber(committees.length)})</summary>
+        <PublicTable
+          caption="Historique des commissions"
+          columns={["Fonction et organe", "Début", "Fin"]}
+          rows={mandateRows(committees)}
+        />
+      </details>
+    )}
+    <Provenance provenance={data.provenance} />
+  </section>
+  <section id="votes" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="vote" />
+        Votes publics récents
+      </h2>
+    </div>
+    <Explainer title="Comment la participation est-elle calculée ?">
+      <p>
+        Vous voyez les votes pour, contre et les abstentions, divisés par les scrutins publics
+        publiés pendant les dates exactes du mandat. Les périodes hors mandat sont exclues. Au
+        Sénat, le dénominateur vient du registre nominatif de chaque scrutin. Un vote par délégation
+        compte comme vote enregistré. Un non-votant ne compte pas au numérateur.
+      </p>
+      <p>
+        Une absence d’entrée nominative ne prouve pas une absence physique. Ce taux ne mesure ni le
+        travail en commission ni l’activité dans la circonscription. Les fenêtres couvrent les
+        données importées depuis juillet 2024 et les douze mois précédant le relevé.
+      </p>
+    </Explainer>
+    <PublicTable
+      caption="Vingt dernières positions enregistrées"
+      columns={["Date et scrutin", "Position"]}
+      rows={votes.map((v) => [
+        { text: `${formatDate(v.voted_on)} · ${v.title}`, href: `/votes/${v.id}` },
+        {
+          text: `${positionLabels[v.position] ?? v.position}${v.delegated ? " par délégation" : ""}`,
+        },
+      ])}
+    />
+    <Provenance provenance={data.voteProvenance} />
+  </section>
+  <section id="interets" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="declaration" />
+        <Term id="declaration-interets">Intérêts et activités déclarés</Term>
+      </h2>
+    </div>
+    {minister ? (
+      <p>
+        {data.hatvpUrl ? (
+          <a href={data.hatvpUrl}>Consulter la page officielle HATVP</a>
+        ) : (
+          "Page nominative HATVP non rapprochée. Consultez le répertoire officiel depuis la source."
+        )}{" "}
+        Aucune déclaration de patrimoine n’est republiée ici.
+      </p>
+    ) : interests.length === 0 ? (
+      <p>
+        Publication d’intérêts non disponible ou identité non rapprochée. Cela ne signifie pas que
+        la déclaration n’a pas été déposée.
+      </p>
+    ) : (
+      <div class="reference-grid">
+        {interests.map((d) => (
+          <article class="card">
+            <h3>
+              <Icon name="declaration" />
+              {d.type}
+              {d.modifying ? " modificative" : ""}
+            </h3>
+            <p>
+              Dépôt : {formatDate(d.filed_on)}. Publication : {formatDate(d.published_on)}.
+            </p>
+            {d.sections.length > 0 ? (
+              <ul>
+                {d.sections.map((s) => (
+                  <li>
+                    {s.section} :{" "}
+                    {s.explicitly_none
+                      ? "néant déclaré"
+                      : `${formatNumber(s.item_count)} rubrique(s)`}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>Résumé structuré non rapproché de façon unique.</p>
+            )}
+            <p>{d.url && <a href={d.url}>Voir la déclaration officielle d’intérêts</a>}</p>
+          </article>
+        ))}
+      </div>
+    )}
+    <p class="small muted">
+      Seuls les types DI, DIM, DIA et DIAM disponibles sont retenus. Les détails des activités
+      restent dans le document officiel. Famille, collaborateurs, contacts, naissance et texte libre
+      sont exclus.
+    </p>
+    <Provenance provenance={data.interestProvenance} />
+  </section>
+</Democracy>

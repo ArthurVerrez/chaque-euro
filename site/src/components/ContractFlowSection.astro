@@ -1,0 +1,149 @@
+---
+import type { ContractFlow } from "../lib/data";
+import { formatCompact, formatEuros, formatNumber, formatPercent, plural } from "../lib/format";
+import BarList from "./BarList.astro";
+import ColumnChart from "./ColumnChart.astro";
+import Icon from "./Icon.astro";
+import ContractList from "./ContractList.astro";
+import Explainer from "./Explainer.astro";
+import KeyFigures from "./KeyFigures.astro";
+import Provenance from "./Provenance.astro";
+import Term from "./Term.astro";
+
+interface Props {
+  flow: ContractFlow;
+  currentYear: number;
+}
+
+const { flow, currentYear } = Astro.props;
+const won = flow.role === "titulaire";
+const firstYear = Math.min(2019, ...flow.years.map((row) => row.year));
+const columns = Array.from({ length: currentYear - firstYear + 1 }, (_, offset) => {
+  const year = firstYear + offset;
+  const row = flow.years.find((entry) => entry.year === year);
+  const amount = row?.amount ?? 0;
+  return {
+    label: String(year),
+    value: amount,
+    display: amount > 0 ? formatCompact(amount) : "",
+    detail: `${formatEuros(amount)}, ${plural(row?.count ?? 0, "marché", "marchés")}`,
+    partial: year === currentYear,
+  };
+});
+const counterparts = flow.counterparts.map((row) => ({
+  icon: "building" as const,
+  label: row.name,
+  value: row.amount,
+  display: formatEuros(row.amount),
+  href: row.siren ? `/organisation/${row.siren}` : null,
+  note: plural(row.count, "marché", "marchés"),
+}));
+const top = flow.counterparts[0];
+const figures = [
+  {
+    icon: "euro" as const,
+    label: "Montant total depuis 2019",
+    term: "montant-marche" as const,
+    value: formatEuros(flow.amount),
+    note:
+      flow.estimated > 0
+        ? `dont ${formatNumber(flow.estimated)} montants estimés par le consolidateur`
+        : won
+          ? "part estimée de l'organisation"
+          : "somme des marchés attribués",
+  },
+  {
+    icon: "count" as const,
+    label: "Nombre de marchés",
+    value: formatNumber(flow.count),
+    note:
+      flow.unpriced > 0
+        ? `dont ${formatNumber(flow.unpriced)} sans montant fiable, non comptés`
+        : "tous avec un montant publié",
+  },
+  ...(top && flow.amount > 0
+    ? [
+        {
+          icon: "percent" as const,
+          label: won ? "Premier acheteur" : "Premier titulaire",
+          value: formatPercent(top.amount / flow.amount),
+          note: `du montant : ${top.name}`,
+        },
+      ]
+    : []),
+];
+---
+
+<section class="section" id={`flux-${flow.role}`} aria-labelledby={`titre-${flow.role}`}>
+  <div class="section-head">
+    <h2 id={`titre-${flow.role}`}>
+      <Icon name={won ? "award" : "buyer"} />
+      {won ? "Les marchés remportés" : "Les marchés attribués"}
+    </h2>
+    <p>
+      {won ? "Avec des " : "En tant qu'"}
+      <Term id="acheteur-public">{won ? "acheteurs publics" : "acheteur public"}</Term>, depuis
+      2019.
+    </p>
+  </div>
+
+  <div class="figures">
+    <KeyFigures figures={figures} />
+  </div>
+
+  <div class="grid two">
+    <div class="card">
+      <ColumnChart
+        caption="Montant des marchés, par année de notification"
+        unit="en euros"
+        columns={columns}
+      />
+    </div>
+    <div class="card">
+      <BarList
+        caption={won ? "Principaux acheteurs" : "Principaux titulaires"}
+        items={counterparts}
+      />
+    </div>
+  </div>
+
+  <div class="explain">
+    <Explainer title="Comment lire ces montants">
+      <p>
+        Le <Term id="montant-marche">montant d'un marché</Term> est celui inscrit au contrat, hors
+        taxes. Pour un <Term id="accord-cadre">accord-cadre</Term>, c'est souvent un plafond : la
+        somme réellement payée peut être plus basse. Quand un marché a plusieurs{" "}
+        <Term id="titulaire">titulaires</Term>, nous partageons son montant à parts égales.
+      </p>
+      <p>
+        Seuls les marchés de 40&nbsp;000&nbsp;€ HT ou plus doivent être publiés, dans les deux mois
+        qui suivent leur <Term id="notification">notification</Term>. Les montants aberrants sont
+        remplacés par l’estimation du consolidateur quand elle est disponible. Les suspects
+        conservent leur valeur déclarée. Le détail garde les montants déclarés.
+      </p>
+    </Explainer>
+  </div>
+
+  <div class="card">
+    <ContractList
+      role={flow.role}
+      caption={won ? "Principaux marchés remportés" : "Principaux marchés attribués"}
+      contracts={flow.contracts}
+    />
+  </div>
+  <Provenance provenance={flow.provenance} />
+</section>
+
+<style>
+  .grid {
+    margin: 0 0 1.5rem;
+  }
+
+  .explain {
+    margin: 0 0 1.5rem;
+  }
+
+  .figures {
+    margin: 0 0 1.5rem;
+  }
+</style>

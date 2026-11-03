@@ -1,0 +1,13 @@
+---
+import { ICONS, type IconName } from "../lib/icons";
+
+interface Props {
+  name: IconName;
+  size?: number;
+}
+
+const { name, size = 24 } = Astro.props;
+const Glyph = ICONS[name];
+---
+
+<Glyph size={size} stroke-width={1.75} aria-hidden="true" focusable="false" />

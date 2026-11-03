@@ -1,0 +1,299 @@
+---
+import type { getCommuneLocal } from "../lib/data";
+import { formatEuro, formatEuros, formatNumber, formatPercent, plural } from "../lib/format";
+import Explainer from "./Explainer.astro";
+import Icon from "./Icon.astro";
+import KeyFigures from "./KeyFigures.astro";
+import Provenance from "./Provenance.astro";
+import Term from "./Term.astro";
+import TurnoutSection from "./TurnoutSection.astro";
+
+interface Props {
+  data: Awaited<ReturnType<typeof getCommuneLocal>>;
+}
+const { data } = Astro.props;
+const taxes = [
+  { id: "tfb", label: "Taxe foncière sur le bâti" },
+  { id: "tfnb", label: "Taxe foncière sur le non-bâti" },
+  { id: "cfe", label: "Cotisation foncière des entreprises" },
+  { id: "teom", label: "Enlèvement des ordures ménagères" },
+  { id: "ths", label: "Taxe d’habitation sur les résidences secondaires" },
+];
+const recipients: Record<string, string> = {
+  commune: "Commune",
+  epci: "Intercommunalité",
+  syndicat: "Syndicat",
+};
+const rate = (value: number | null) => (value === null ? "n.d." : formatPercent(value / 100, 2));
+const income = data.income;
+const dgf = data.dgf.at(-1);
+const previousDgf = data.dgf.at(-2);
+const count = (value: number | null) => (value === null ? "n.d." : formatNumber(value));
+const euros = (value: number | null) => (value === null ? "n.d." : formatEuros(value));
+---
+
+<section class="section" id="fiscalite-locale" aria-labelledby="titre-fiscalite-locale">
+  <div class="section-head">
+    <h2 id="titre-fiscalite-locale">
+      <Icon name="localTax" />
+      Fiscalité locale 2025
+    </h2>
+    <p>
+      Taux et <Term id="base-fiscale">bases fiscales</Term>, par bénéficiaire, comparés aux communes
+      de même taille.
+    </p>
+  </div>
+  {data.taxes.length ? (
+    <div class="taxes">
+      {taxes.map((tax) => {
+        const rows = data.taxes.filter((row) => row.tax === tax.id);
+        return (
+          <div class="card tax-card">
+            <h3>
+              <Icon name="localTax" size={18} />
+              {tax.label}
+            </h3>
+            {rows.length ? (
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Bénéficiaire et base</th>
+                    <th scope="col" class="num">
+                      Taux
+                    </th>
+                    <th scope="col" class="num">
+                      Médiane
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr>
+                      <th scope="row">
+                        {recipients[row.authority] ?? row.authority}
+                        {row.zone && <span class="detail">{row.zone}</span>}
+                        {row.authorityName && <span class="detail muted">{row.authorityName}</span>}
+                        <span class="detail">Base : {euros(row.base)}</span>
+                        {row.surtaxRate !== null && row.surtaxRate > 0 && (
+                          <span class="detail">Majoration : {rate(row.surtaxRate)}</span>
+                        )}
+                      </th>
+                      <td class="num">{rate(row.rate)}</td>
+                      <td class="num">
+                        {rate(row.medianRate)}
+                        <span class="detail muted">
+                          {row.peers === null ? "" : plural(row.peers, "commune", "communes")}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p class="muted small">
+                Aucune base ou aucun taux positif renseigné pour cette taxe.
+              </p>
+            )}
+            {rows.length > 0 && (
+              <details>
+                <summary>Bases par habitant et médianes</summary>
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">Bénéficiaire</th>
+                      <th scope="col" class="num">
+                        Base / hab.
+                      </th>
+                      <th scope="col" class="num">
+                        Médiane / hab.
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => (
+                      <tr>
+                        <th scope="row">
+                          {recipients[row.authority]}
+                          {row.zone && <span class="detail">{row.zone}</span>}
+                        </th>
+                        <td class="num">
+                          {row.basePerCapita === null ? "n.d." : formatEuro(row.basePerCapita)}
+                        </td>
+                        <td class="num">
+                          {row.medianBasePerCapita === null
+                            ? "n.d."
+                            : formatEuro(row.medianBasePerCapita)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </details>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  ) : (
+    <p class="muted">Commune absente du REI 2025. Aucun taux n’est estimé.</p>
+  )}
+  <Explainer title="Ce que les taux permettent de comparer">
+    <p>
+      La <Term id="mediane">médiane</Term> porte sur la même <Term id="strate">strate</Term> de
+      population, la même taxe, le même type de bénéficiaire et la même zone, parmi les communes à
+      base positive. Elle n’est pas calculée sous 5 communes. Les bases par habitant utilisent la
+      population totale OFGL 2025.
+    </p>
+    <p>
+      La base est une valeur fiscale, pas la valeur de marché du bien. Les taux sont ceux
+      applicables, parfois différents des taux votés lors d’une fusion. Les exonérations, frais,
+      lissages et taxes annexes ne permettent pas de déduire votre avis d’imposition de ce tableau.
+    </p>
+    <p>
+      La TEOM distingue ses zones de taux. Sa part incitative éventuelle n’est pas incluse dans le
+      taux. La majoration de taxe d’habitation est affichée séparément. La CFE est ventilée entre
+      les zones fiscales ; dans le Grand Paris, son bénéficiaire peut être un établissement public
+      territorial.
+    </p>
+  </Explainer>
+  <Provenance provenance={data.taxProvenance} />
+</section>
+
+<section class="section" id="impot-revenu" aria-labelledby="titre-impot-revenu">
+  <div class="section-head">
+    <h2 id="titre-impot-revenu">
+      <Icon name="incomeTax" />
+      Impôt sur le revenu
+    </h2>
+    <p>Revenus {income?.revenueYear ?? 2024}, déclarés en 2025.</p>
+  </div>
+  {income ? (
+    <KeyFigures
+      figures={[
+        {
+          icon: "people",
+          label: "Foyers fiscaux",
+          value: count(income.households),
+          term: "foyer-fiscal",
+        },
+        { icon: "incomeTax", label: "Foyers imposés", value: count(income.taxableHouseholds) },
+        {
+          icon: "revenue",
+          label: "Revenu fiscal de référence",
+          value: euros(income.referenceIncome),
+          term: "revenu-fiscal-reference",
+        },
+        {
+          icon: "incomeTax",
+          label: "Impôt net",
+          value: euros(income.netTax),
+          note: "après crédits d’impôt",
+        },
+      ]}
+    />
+  ) : (
+    <p class="muted">Commune absente du fichier IRCOM. Aucun montant n’est estimé.</p>
+  )}
+  <Explainer title="Revenus des habitants, recette de l’État">
+    <p>
+      L’impôt sur le revenu est perçu par l’État. Il ne finance pas directement le budget communal.
+      Le revenu fiscal de référence n’est ni le salaire ni le revenu disponible.
+    </p>
+    <p>
+      Les données soumises au secret fiscal restent indiquées « n.d. ». Pour Paris, Lyon et
+      Marseille, les arrondissements sont regroupés ; une cellule secrète empêche d’afficher le
+      total correspondant. L’impôt net peut être négatif si les crédits d’impôt dépassent l’impôt
+      dû.
+    </p>
+  </Explainer>
+  <Provenance provenance={data.incomeProvenance} />
+</section>
+
+<section class="section" id="dotations" aria-labelledby="titre-dotations">
+  <div class="section-head">
+    <h2 id="titre-dotations">
+      <Icon name="grant" />
+      Dotation de l’État
+    </h2>
+    <p>
+      La <Term id="dgf">DGF</Term> comptabilisée dans le budget communal.
+    </p>
+  </div>
+  {dgf ? (
+    <KeyFigures
+      figures={[
+        { icon: "grant", label: `DGF ${dgf.year}`, value: euros(dgf.amount) },
+        {
+          icon: "person",
+          label: "Par habitant",
+          value: dgf.perCapita === null ? "n.d." : formatEuro(dgf.perCapita),
+        },
+        ...(previousDgf
+          ? [
+              {
+                icon: "calendar" as const,
+                label: `DGF ${previousDgf.year}`,
+                value: euros(previousDgf.amount),
+              },
+            ]
+          : []),
+      ]}
+    />
+  ) : (
+    <p class="muted">Montant comptabilisé non disponible.</p>
+  )}
+  <Explainer title="Pourquoi les allocations 2026 ne figurent pas ici">
+    <p>
+      Le téléchargement DGCL était indisponible lors de la vérification du 2 novembre 2026. Les
+      allocations 2026 restent donc absentes. Les comptes exécutés présentés ici sont une source
+      distincte.
+      <a href={data.allocationSource.pageUrl}>Voir la source DGCL</a>.
+    </p>
+  </Explainer>
+  <Provenance provenance={data.dgfProvenance} />
+</section>
+
+<TurnoutSection {...data.turnout} />
+
+<style>
+  .taxes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 27rem), 1fr));
+    gap: 1rem;
+  }
+  .tax-card {
+    min-width: 0;
+  }
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
+  }
+  table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  th:first-child {
+    width: 50%;
+    white-space: normal;
+  }
+  .detail {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 400;
+    margin-top: 0.3rem;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  details {
+    margin-top: 1rem;
+  }
+  summary {
+    font-size: 0.875rem;
+    color: var(--link);
+  }
+  td.num {
+    white-space: nowrap;
+  }
+</style>

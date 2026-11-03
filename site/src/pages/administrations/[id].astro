@@ -1,0 +1,103 @@
+---
+import Base from "../../layouts/Base.astro";
+import Answer from "../../components/Answer.astro";
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import Icon from "../../components/Icon.astro";
+import Provenance from "../../components/Provenance.astro";
+import { getAdministration, documentPublisher } from "../../lib/data";
+import { formatDate, formatNumber } from "../../lib/format";
+import DocumentContent from "../../components/DocumentContent.astro";
+const data = await getAdministration(Astro.params.id ?? "");
+if (!data) return Astro.redirect("/404", 302);
+const { row } = data;
+---
+
+<Base
+  title={row.name_public}
+  description="Fiche institutionnelle et rattachements officiels de cette administration."
+>
+  <DocumentContent>
+    <header class="page-head">
+      <div class="container">
+        <Breadcrumbs
+          items={[{ label: "Administrations", href: "/administrations" }, { label: "Structure" }]}
+        />
+        <div class="entity">
+          <Icon name="administration" />
+          <h1>{row.name_public}</h1>
+        </div>
+        <Answer
+          text={`${row.category}${row.acronym ? ` · ${row.acronym}` : ""}. Source : ${documentPublisher(row.source_id)}.`}
+        />
+        {row.record_url && (
+          <a href={row.record_url}>
+            <Icon name="external" size={15} />
+            Voir la source
+          </a>
+        )}
+        {row.source_modified_at && (
+          <p>Modification source : {formatDate(row.source_modified_at)}</p>
+        )}
+        <p>{row.siren ? `SIREN : ${row.siren}` : "SIREN non renseigné dans cette source."}</p>
+        <Provenance provenance={data.provenance} />
+      </div>
+    </header>
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>
+            <Icon name="layers" />
+            Les rattachements
+          </h2>
+        </div>
+        {data.parents.length ? (
+          <ul class="document-results">
+            {data.parents.map((parent) => (
+              <li>
+                <a href={`/administrations/${parent.id}`}>{parent.name_public}</a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>Aucun rattachement présent dans les sources intégrées.</p>
+        )}
+      </div>
+    </section>
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>
+            <Icon name="administration" />
+            Les services rattachés
+          </h2>
+        </div>
+        {data.children.length ? (
+          <ul class="document-results">
+            {data.children.map((child) => (
+              <li>
+                <a href={`/administrations/${child.id}`}>{child.name_public}</a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>Aucun service rattaché présent dans les sources intégrées.</p>
+        )}
+        {data.coverage.length > 0 && (
+          <details>
+            <summary>
+              {formatNumber(data.coverage.length)} communes dans la compétence préfectorale intégrée
+            </summary>
+            <ul>
+              {data.coverage.map((commune) => (
+                <li>
+                  <a href={`/commune/${commune.insee}`}>{commune.name}</a>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+        <p>Cette fiche ne décrit ni un budget propre ni la compétence géographique du service.</p>
+      </div>
+    </section>
+  </DocumentContent>
+</Base>

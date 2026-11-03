@@ -1,0 +1,505 @@
+---
+import ProcurementCompetition from "../components/ProcurementCompetition.astro";
+import Answer from "../components/Answer.astro";
+import BarList from "../components/BarList.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import ChoroplethMap from "../components/ChoroplethMap.astro";
+import ContractList from "../components/ContractList.astro";
+import Explainer from "../components/Explainer.astro";
+import Icon from "../components/Icon.astro";
+import KeyFigures from "../components/KeyFigures.astro";
+import LineChart from "../components/LineChart.astro";
+import ProcurementOpportunities from "../components/ProcurementOpportunities.astro";
+import Provenance from "../components/Provenance.astro";
+import Term from "../components/Term.astro";
+import Toc from "../components/Toc.astro";
+import Base from "../layouts/Base.astro";
+import {
+  getProcurement,
+  getProcurementCompetition,
+  getProcurementOpportunities,
+  type RankedOrganisation,
+} from "../lib/data";
+import { formatDate, formatEuros, formatNumber, formatPercent } from "../lib/format";
+
+const [data, opportunities, competition] = await Promise.all([
+  getProcurement(),
+  getProcurementOpportunities(),
+  getProcurementCompetition(),
+]);
+const months = data.breakdown.filter((row) => row.dimension === "month");
+const total = months.reduce((sum, row) => sum + row.amount, 0);
+const count = months.reduce((sum, row) => sum + row.count, 0);
+const priced = months.reduce((sum, row) => sum + row.priced, 0);
+const departments = new Map(
+  data.breakdown.filter((row) => row.dimension === "department").map((row) => [row.label, row]),
+);
+const values = [...departments.values()].map((row) => row.amount).sort((a, b) => a - b);
+const breaks = [0.2, 0.4, 0.6, 0.8].map(
+  (share) => values[Math.floor(share * (values.length - 1))] ?? 0,
+);
+const classes = [...breaks, Infinity].map((below, rank) => ({
+  below,
+  color: `var(--seq-${rank + 1})`,
+  label:
+    rank === 0
+      ? `Moins de ${formatEuros(below)}`
+      : below === Infinity
+        ? `${formatEuros(breaks[rank - 1] ?? 0)} ou plus`
+        : `${formatEuros(breaks[rank - 1] ?? 0)} à ${formatEuros(below)}`,
+}));
+const mapAreas = data.departments.map((department) => ({
+  id: department.code,
+  name: department.name,
+  path: department.path,
+  value: departments.get(department.code)?.amount ?? null,
+  display: departments.has(department.code)
+    ? formatEuros(departments.get(department.code)!.amount)
+    : "Non renseigné",
+  href: `#dep-${department.code}`,
+  label:
+    department.labelSize > 50
+      ? { text: department.code, x: department.labelX, y: department.labelY }
+      : undefined,
+}));
+const bars = (dimension: string) =>
+  data.breakdown
+    .filter((row) => row.dimension === dimension)
+    .sort((a, b) => b.amount - a.amount)
+    .map((row) => ({
+      icon: "contract" as const,
+      label: row.label,
+      value: row.amount,
+      display: formatEuros(row.amount),
+      note: `${formatNumber(row.count)} marchés`,
+    }));
+const ranked = (rows: RankedOrganisation[]) =>
+  rows.map((row) => ({
+    icon: "building" as const,
+    label: row.name,
+    value: row.amount,
+    display: formatEuros(row.amount),
+    href: `/organisation/${row.siren}`,
+    note: `${formatNumber(row.count)} marchés`,
+  }));
+const years = [...new Set(data.quality.map((row) => row.year))].map((year) => {
+  const rows = data.quality.filter((row) => row.year === year);
+  return {
+    year,
+    eligible: rows.reduce((n, row) => n + row.eligible, 0),
+    valid: rows.reduce((n, row) => n + row.valid, 0),
+    on_time: rows.reduce((n, row) => n + row.on_time, 0),
+  };
+});
+const qualityCategories = [...new Set(data.quality.map((row) => row.category))].map((category) => {
+  const rows = data.quality.filter((row) => row.category === category);
+  const valid = rows.reduce((n, row) => n + row.valid, 0);
+  const onTime = rows.reduce((n, row) => n + row.on_time, 0);
+  return {
+    icon: "building" as const,
+    label: category,
+    value: valid ? onTime / valid : 0,
+    display: valid ? formatPercent(onTime / valid) : "n.d.",
+    note: `${formatNumber(valid)} dates exploitables`,
+  };
+});
+const toc = [
+  { href: "#notifications", label: "Notifications", icon: "trend" as const },
+  { href: "#territoires", label: "Territoires", icon: "map" as const },
+  { href: "#repartition", label: "Types et procédures", icon: "layers" as const },
+  { href: "#organismes", label: "Acheteurs et titulaires", icon: "building" as const },
+  { href: "#concurrence", label: "Offre unique", icon: "compare" as const },
+  { href: "#delais", label: "Publication", icon: "calendar" as const },
+  { href: "#derniers", label: "Derniers marchés", icon: "contract" as const },
+  { href: "#appels-offres", label: "Appels d’offres", icon: "buyer" as const },
+  { href: "#projets-achats", label: "Achats annoncés", icon: "calendar" as const },
+  { href: "#sanctions", label: "Sanctions", icon: "scale" as const },
+];
+---
+
+<Base
+  title="Marchés publics : contrats, appels d'offres et achats annoncés"
+  description="Les contrats notifiés depuis 2019, leurs délais de publication et les prochaines consultations publiques."
+>
+  <header class="page-head">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Marchés publics" }]} />
+      <div class="entity">
+        <Icon name="contract" />
+        <h1>Les marchés publics</h1>
+      </div>
+      <Answer
+        text={`${formatNumber(count)} marchés notifiés depuis 2019, pour ${formatEuros(total)} de montants contractuels publiés.`}
+      />
+      <KeyFigures
+        figures={[
+          {
+            icon: "contract",
+            label: "Marchés notifiés",
+            value: formatNumber(count),
+            term: "notification",
+            note: "Depuis 2019, dernière version connue",
+          },
+          {
+            icon: "euro",
+            label: "Montants contractuels HT",
+            term: "montant-marche",
+            value: formatEuros(total),
+            note: "Hors montants signalés par le consolidateur",
+          },
+          {
+            icon: "hidden",
+            label: "Montants non comptés",
+            value: formatNumber(count - priced),
+            note: "Absents, signalés, non positifs ou hors plafond",
+          },
+        ]}
+      />
+      <Explainer title="Ce que signifie ce total">
+        <p>
+          Les <Term id="decp">DECP</Term> décrivent les contrats publiés, pas toutes les dépenses
+          publiques. Le montant d'un <Term id="accord-cadre">accord-cadre</Term> est souvent un
+          plafond sur plusieurs années. Il ne correspond pas à une facture ni à un paiement.
+        </p>
+        <p>
+          Chaque marché est compté une fois. Les montants signalés comme aberrants ou suspects par
+          le consolidateur ne sont pas comptés : pour les aberrants, son estimation est affichée à
+          titre indicatif sur la ligne du marché. Les valeurs absentes, non positives ou d’au moins
+          999 999 999 € sont aussi exclues. Les marchés sans montant restent dans le nombre de
+          contrats. Les mois récents sont incomplets.
+        </p>
+      </Explainer>
+      <Provenance provenance={data.provenance} />
+    </div>
+  </header>
+  <Toc items={toc} />
+  <div class="container">
+    <section class="section" id="notifications">
+      <div class="section-head">
+        <h2>
+          <Icon name="trend" />
+          Les notifications mois par mois
+        </h2>
+        <p>
+          Première <Term id="notification">notification</Term> connue, y compris pour les contrats
+          modifiés.
+        </p>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <LineChart
+            caption="Nombre de marchés notifiés"
+            maxLabels={4}
+            labels={months.map((row) => row.label)}
+            series={[{ label: "Marchés", values: months.map((row) => row.count) }]}
+            format={formatNumber}
+          />
+        </div>
+        <div class="card">
+          <LineChart
+            caption="Montants contractuels notifiés, hors taxes"
+            maxLabels={4}
+            labels={months.map((row) => row.label)}
+            series={[{ label: "Montant HT", values: months.map((row) => row.amount) }]}
+            format={formatEuros}
+          />
+        </div>
+      </div>
+      <Provenance provenance={data.provenance} />
+    </section>
+    <section class="section" id="territoires">
+      <div class="section-head">
+        <h2>
+          <Icon name="map" />
+          Les montants par département
+        </h2>
+        <p>Département de l'acheteur, depuis 2019.</p>
+      </div>
+      <div class="card">
+        <ChoroplethMap
+          caption="Montants contractuels selon le siège de l'acheteur"
+          areas={mapAreas}
+          classes={classes}
+          viewBox={data.viewBox}
+          labelSize={34}
+        >
+          <details>
+            <summary>Voir le tableau des départements</summary>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Département</th>
+                  <th scope="col" class="num">
+                    Montant HT
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.breakdown
+                  .filter((row) => row.dimension === "department")
+                  .sort((a, b) => b.amount - a.amount)
+                  .map((row) => (
+                    <tr id={`dep-${row.label}`}>
+                      <th scope="row">
+                        {data.departments.find((department) => department.code === row.label)
+                          ?.name ?? row.label}
+                      </th>
+                      <td class="num">{formatEuros(row.amount)}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </details>
+        </ChoroplethMap>
+      </div>
+      <Explainer title="Localiser un marché">
+        <p>
+          Le siège de l'acheteur ne désigne pas le lieu de réalisation. Les achats des
+          administrations centrales peuvent porter sur toute la France. Les départements absents et
+          les acheteurs non localisés restent dans le tableau et dans le total national.
+        </p>
+      </Explainer>
+      <Provenance provenance={data.mapProvenance} />
+    </section>
+    <section class="section" id="repartition">
+      <div class="section-head">
+        <h2>
+          <Icon name="layers" />
+          Types de contrats et procédures
+        </h2>
+        <p>Montants contractuels depuis 2019.</p>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <BarList caption="Par type de contrat" items={bars("type")} />
+        </div>
+        <div class="card">
+          <BarList caption="Par procédure" items={bars("procedure")} />
+        </div>
+      </div>
+      <Provenance provenance={data.provenance} />
+    </section>
+    <section class="section" id="organismes">
+      <div class="section-head">
+        <h2>
+          <Icon name="building" />
+          Principaux acheteurs et titulaires
+        </h2>
+        <p>Personnes morales identifiées, depuis 2019.</p>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <BarList caption="Les dix principaux acheteurs" items={ranked(data.buyers)} />
+        </div>
+        <div class="card">
+          <BarList caption="Les dix principaux titulaires" items={ranked(data.winners)} />
+        </div>
+      </div>
+      <Provenance provenance={data.provenance} />
+    </section>
+    <ProcurementCompetition data={competition} />
+    <section class="section" id="delais">
+      <div class="section-head">
+        <h2>
+          <Icon name="calendar" />
+          Les données sont-elles publiées à temps ?
+        </h2>
+        <p>Part publiée dans les deux mois, parmi les dates exploitables.</p>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <LineChart
+            caption="Publication dans les deux mois, par année de notification"
+            maxLabels={4}
+            labels={years.map((row) => String(row.year))}
+            series={[
+              {
+                label: "Part à temps",
+                values: years.map((row) => (row.valid ? row.on_time / row.valid : null)),
+              },
+            ]}
+            format={formatPercent}
+          />
+          <details>
+            <summary>Voir les effectifs par année</summary>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Année</th>
+                  <th scope="col" class="num">
+                    À temps / dates
+                  </th>
+                  <th scope="col" class="num">
+                    Non exploitables
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {years.map((row) => (
+                  <tr>
+                    <th scope="row">{row.year}</th>
+                    <td class="num">
+                      {formatNumber(row.on_time)} / {formatNumber(row.valid)}
+                    </td>
+                    <td class="num">{formatNumber(row.eligible - row.valid)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </details>
+        </div>
+        <div class="card">
+          <BarList caption="Par catégorie d'acheteur, toutes années" items={qualityCategories} />
+        </div>
+      </div>
+      <Explainer title="Méthode et limites du délai légal">
+        <p>
+          Pour les marchés d'au moins 40 000 € HT, la publication est attendue dans les deux mois
+          calendaires après notification. Nous comparons dateNotification à datePublicationDonnees,
+          que le dictionnaire du consolidateur définit comme la date de publication du marché ou de
+          sa modification sur data.gouv.fr.
+        </p>
+        <p>
+          Seules les versions initiales (modification_id = 0) sont évaluées. Les avenants et les
+          marchés dont la version initiale manque sont exclus. Le délai doit être entièrement écoulé
+          à la collecte. Les montants anormaux et les dates absentes, incohérentes ou futures sont
+          exclus du taux. Les dates non exploitables sont dénombrées ci-dessus.
+        </p>
+        <p>
+          Les catégories proviennent de Sirene. Cet indicateur repose sur les déclarations des
+          acheteurs et les seuls marchés publiés. Il ne mesure pas les marchés jamais publiés et ne
+          constitue pas un constat juridique de conformité.
+        </p>
+      </Explainer>
+      <Provenance provenance={data.qualityProvenance} />
+    </section>
+    <section class="section" id="derniers">
+      <div class="section-head">
+        <h2>
+          <Icon name="contract" />
+          Derniers marchés notifiés
+        </h2>
+        <p>Les quinze notifications les plus récentes disponibles.</p>
+      </div>
+      <div class="card">
+        <ContractList
+          contracts={data.latest}
+          role="titulaire"
+          caption="Dernières notifications"
+          intro="Marchés classés par première date de notification connue."
+        />
+      </div>
+      <Provenance provenance={data.provenance} />
+    </section>
+    <ProcurementOpportunities opportunities={opportunities} />
+    <section class="section" id="sanctions">
+      <div class="section-head">
+        <h2>
+          <Icon name="scale" />
+          Sanctions de l'Autorité de la concurrence
+        </h2>
+        <p>Toutes activités confondues, avant appels et recours.</p>
+      </div>
+      <KeyFigures
+        figures={[
+          {
+            icon: "scale",
+            label: "Décisions de sanction",
+            value: formatNumber(data.sanctionTotals.count),
+            note: `${data.sanctionTotals.first} à ${data.sanctionTotals.last}`,
+          },
+          {
+            icon: "euro",
+            label: "Sanctions initiales",
+            value: formatEuros(data.sanctionTotals.amount),
+            note: "Chaque décision comptée une fois",
+          },
+        ]}
+      />
+      <Explainer title="Ces sanctions ne sont pas un classement des marchés publics">
+        <p>
+          Ces décisions portent sur l'ensemble des pratiques sanctionnées par l'Autorité. Elles ne
+          concernent pas nécessairement un marché public. Le montant est celui prononcé
+          initialement, avant d'éventuelles annulations ou réductions en recours.
+        </p>
+        <p>
+          Les sanctions individuelles peuvent être solidaires entre plusieurs sociétés. Les
+          additionner gonflerait artificiellement le total. Nous reprenons donc le total officiel
+          une seule fois par décision. Les sociétés non rapprochées sans ambiguïté d'une personne
+          morale diffusible de Sirene sont anonymisées.
+        </p>
+      </Explainer>
+      <ol class="decisions">
+        {data.sanctions.map((decision) => (
+          <li class="card">
+            <h3>
+              <Icon name="scale" size={18} />
+              {decision.id} · {decision.year}
+            </h3>
+            <p class="num">
+              <strong>{formatEuros(decision.amount)}</strong>
+            </p>
+            <details>
+              <summary>Sociétés et sanctions individuelles (non additionnables)</summary>
+              <ul>
+                {decision.companies.map((company) => (
+                  <li>
+                    {company.siren ? (
+                      <a href={`/organisation/${company.siren}`}>{company.name}</a>
+                    ) : (
+                      company.name
+                    )}{" "}
+                    : {company.amount === null ? "n.d." : formatEuros(company.amount)}
+                  </li>
+                ))}
+              </ul>
+            </details>
+            {decision.url && <a href={decision.url}>Voir la source</a>}
+          </li>
+        ))}
+      </ol>
+      <Provenance provenance={data.sanctionsProvenance} />
+    </section>
+    <p class="small muted">
+      Avis et projets collectés le {formatDate(data.asOf)}. Les échéances dépassées sont masquées.
+    </p>
+  </div>
+</Base>
+<style>
+  details {
+    margin-top: 1rem;
+  }
+  summary {
+    color: var(--link);
+    font-weight: 600;
+  }
+  table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  th,
+  td {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  .decisions {
+    list-style: none;
+    margin: 1.25rem 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .decisions > li {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .decisions h3 {
+    margin: 0;
+  }
+  @media (max-width: 45rem) {
+    .decisions {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

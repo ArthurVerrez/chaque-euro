@@ -1,0 +1,33 @@
+---
+import { formatNumber } from "../lib/format";
+interface Props {
+  page: number;
+  count: number;
+}
+const { page, count } = Astro.props;
+const pages = Math.ceil(count / 50);
+const link = (n: number) => {
+  const query = new URLSearchParams(Astro.url.search);
+  query.set("page", String(n));
+  return `${Astro.url.pathname}?${query}`;
+};
+---
+
+<nav class="pagination" aria-label="Pages de résultats">
+  {page > 1 && <a href={link(page - 1)}>Page précédente</a>}
+  <span>
+    {formatNumber(count)} résultats
+    {pages > 0 && ` · page ${formatNumber(page)} sur ${formatNumber(pages)}`}
+  </span>
+  {page < pages && <a href={link(page + 1)}>Page suivante</a>}
+</nav>
+<style>
+  .pagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    align-items: center;
+    margin: 1.25rem 0;
+    font-size: 0.9375rem;
+  }
+</style>

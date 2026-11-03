@@ -1,0 +1,110 @@
+---
+import type { getProcurementOpportunities } from "../lib/data";
+import { formatDate, formatDateTime } from "../lib/format";
+import Icon from "./Icon.astro";
+import Explainer from "./Explainer.astro";
+import Provenance from "./Provenance.astro";
+
+interface Props {
+  opportunities: Awaited<ReturnType<typeof getProcurementOpportunities>>;
+}
+const { opportunities } = Astro.props;
+const groups = [
+  {
+    id: "appels-offres",
+    title: "Appels d'offres en cours",
+    rows: opportunities.notices,
+    provenance: opportunities.noticesProvenance,
+    future: false,
+  },
+  {
+    id: "projets-achats",
+    title: "Achats annoncés",
+    rows: opportunities.projects,
+    provenance: opportunities.projectsProvenance,
+    future: true,
+  },
+];
+---
+
+{groups.map((group) => (
+  <section class="section" id={group.id} aria-labelledby={`titre-${group.id}`}>
+    <div class="section-head">
+      <h2 id={`titre-${group.id}`}>
+        <Icon name={group.future ? "calendar" : "buyer"} />
+        {group.title}
+      </h2>
+      <p>
+        {group.future
+          ? "Projets APProch, sans engagement de l'acheteur."
+          : "Échéances BOAMP, heure de Paris."}
+      </p>
+    </div>
+    {group.rows.length ? (
+      <ol class="opportunities">
+        {group.rows.map((row) => (
+          <li class="card">
+            <h3>
+              <Icon name="contract" size={18} />
+              {row.subject ?? "Objet non renseigné"}
+            </h3>
+            <p>
+              {row.buyer_siren ? (
+                <a href={`/organisation/${row.buyer_siren}`}>{row.buyer_name}</a>
+              ) : (
+                row.buyer_name
+              )}
+            </p>
+            <p class="small muted">
+              {group.future ? "Publication prévue" : "Réponse avant le"}{" "}
+              {group.future ? formatDate(row.date) : formatDateTime(row.date)}
+              {row.procedure && ` · ${row.procedure}`}
+              {row.estimated_range && ` · Estimation : ${row.estimated_range}`}
+            </p>
+            {row.url && <a href={row.url}>Voir la source</a>}
+          </li>
+        ))}
+      </ol>
+    ) : (
+      <p>Aucun avis correspondant dans les données collectées.</p>
+    )}
+    <Explainer title="Périmètre et actualisation">
+      <p>
+        {group.future
+          ? "La publication sur APProch est volontaire. Les projets ouverts sans date future sont écartés. Une date annoncée ne garantit pas qu'un appel d'offres sera publié."
+          : "Cette liste est une photographie des avis dont la date limite n'était pas passée à la collecte. Les échéances déjà passées sont ensuite masquées. Vérifiez les modifications, annulations et conditions sur l'avis officiel avant de répondre."}
+      </p>
+      <p>
+        Vingt résultats au maximum, par prochaine date. Les coordonnées des contacts ne sont pas
+        republiées.
+      </p>
+    </Explainer>
+    <Provenance provenance={group.provenance} />
+  </section>
+))}
+<style>
+  .opportunities {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.25rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  li {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  h3 {
+    font-size: 1rem;
+    margin: 0;
+  }
+  p {
+    margin: 0.5rem 0;
+  }
+  @media (max-width: 45rem) {
+    .opportunities {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

@@ -1,0 +1,383 @@
+---
+import Explainer from "../../components/Explainer.astro";
+import Icon from "../../components/Icon.astro";
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import Toc from "../../components/Toc.astro";
+import Term from "../../components/Term.astro";
+import Provenance from "../../components/Provenance.astro";
+import Base from "../../layouts/Base.astro";
+import { calculationUrl, getManifest, getSocialProtection } from "../../lib/data";
+import { formatDate, formatNumber, formatBillions } from "../../lib/format";
+
+const manifest = await getManifest();
+const protection = await getSocialProtection();
+const benefitsTotal = protection.rows.find((row) => row.label === "TOTAL");
+const steps = [
+  { path: "pipeline/sources.toml", label: "Registre des sources (adresses, licences, limites)" },
+  { path: "pipeline/src/chaque_euro/fetch.py", label: "Téléchargement et empreintes SHA-256" },
+  { path: "pipeline/sql/10_contracts.sql", label: "Marchés publics\u00a0: sélection et montants" },
+  { path: "pipeline/sql/20_grants.sql", label: "Versements de l'État aux associations" },
+  { path: "pipeline/sql/25_budget.sql", label: "Budget de l'État par programme" },
+  { path: "pipeline/sql/30_identities.sql", label: "Noms et protection des personnes physiques" },
+  { path: "pipeline/sql/40_orgs.sql", label: "Totaux par organisation" },
+  { path: "pipeline/sql/50_communes.sql", label: "Finances des communes et médianes" },
+  {
+    path: "pipeline/src/chaque_euro/geo.py",
+    label: "Cartes : projection et simplification des contours",
+  },
+  { path: "pipeline/sql/60_departements.sql", label: "Totaux par département" },
+  { path: "pipeline/sql/70_facts.sql", label: "Chiffres clés de l'accueil" },
+];
+---
+
+<Base
+  title="Méthode et sources"
+  description="Les sources de Chaque Euro, leurs dates, leurs limites et les calculs appliqués."
+>
+  <header class="page-head">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Méthode et sources" }]} />
+      <div class="entity">
+        <Icon name="method" />
+        <h1>Méthode et sources</h1>
+      </div>
+      <p class="lead">D'où vient chaque chiffre, et comment il est calculé.</p>
+      <p class="small muted">
+        Dernière construction des données&nbsp;: {formatDate(manifest.builtAt)}.{" "}
+        <a href="/methodologie/manifest.json">Manifeste complet (JSON)</a>, avec l'adresse exacte de
+        chaque fichier récupéré et son empreinte SHA-256.
+      </p>
+      <p>
+        <a class="button" href="/telechargements">
+          <Icon name="download" size={18} />
+          Télécharger nos données
+        </a>
+      </p>
+    </div>
+  </header>
+  <Toc
+    items={[
+      { href: "#principes", label: "Principes", icon: "method" },
+      { href: "#verifier", label: "Vérifier un chiffre", icon: "search" },
+      { href: "#sources", label: "Sources", icon: "source" },
+      { href: "#calculs", label: "Calculs", icon: "code" },
+    ]}
+  />
+
+  <div class="container">
+    <section class="section" id="verifier" aria-labelledby="titre-verifier">
+      <div class="section-head">
+        <h2 id="titre-verifier">
+          <Icon name="search" />
+          Comment vérifier un chiffre
+        </h2>
+      </div>
+      <p>
+        Sous chaque chiffre, « Voir la source » vous mène au fichier officiel et « Voir le calcul »
+        au traitement utilisé. La date visible indique la période des données. « Méthode » précise
+        le périmètre, la date de récupération et les limites.
+      </p>
+      {benefitsTotal && (
+        <div class="card">
+          <h3>
+            <Icon name="socialSecurity" />
+            Un exemple : les prestations de protection sociale
+          </h3>
+          <p>
+            {formatBillions(benefitsTotal.amount)} en {benefitsTotal.year}. Dans le classeur DREES,
+            consultez l'onglet « prestations_1959_2024 », ligne « TOTAL », colonne{" "}
+            {benefitsTotal.year}. Le calcul reprend les six grands risques, vérifie leur somme
+            contre ce total et convertit les millions d'euros en euros.
+          </p>
+          <Provenance provenance={protection.provenance} />
+        </div>
+      )}
+    </section>
+    <section class="section" id="principes" aria-labelledby="titre-principes">
+      <div class="section-head">
+        <h2 id="titre-principes">
+          <Icon name="method" />
+          Nos principes
+        </h2>
+      </div>
+      <ul class="principles">
+        <li class="card">
+          <h3>
+            <Icon name="answer" />
+            La réponse d'abord
+          </h3>
+          <p>Une phrase, un chiffre, puis le détail, toujours avec sa source.</p>
+        </li>
+        <li class="card">
+          <h3>
+            <Icon name="book" />
+            Des mots précis
+          </h3>
+          <p>
+            Un <Term id="marche-public">marché public</Term> est un montant prévu au contrat, pas
+            une somme payée. Un versement de l'
+            <Term id="jaune-associations">annexe Jaune</Term> peut être une subvention, une
+            prestation de services ou un autre crédit.
+          </p>
+        </li>
+        <li class="card">
+          <h3>
+            <Icon name="hidden" />
+            Pas de personnes nommées
+          </h3>
+          <p>
+            Les <Term id="entrepreneur-individuel">entrepreneurs individuels</Term> sont des
+            personnes physiques&nbsp;: leur nom et leur numéro ne sont jamais affichés.
+          </p>
+        </li>
+        <li class="card">
+          <h3>
+            <Icon name="scale" />
+            Neutralité
+          </h3>
+          <p>
+            Un écart à la <Term id="mediane">médiane</Term> n'est ni bon ni mauvais en soi.
+          </p>
+        </li>
+      </ul>
+    </section>
+
+    <section class="section" id="sources" aria-labelledby="titre-sources">
+      <div class="section-head">
+        <h2 id="titre-sources">
+          <Icon name="source" />
+          Les sources
+        </h2>
+        <p>
+          {manifest.sources.length} jeux de données publics, avec leurs licences et leurs limites.
+        </p>
+      </div>
+      <Explainer title="Comment lire l’état d’une source">
+        <p>
+          Le statut compare les dates des données et de récupération aux seuils du registre, selon
+          la fréquence déclarée. Une récupération ancienne ou une date des données manquante appelle
+          une vérification. Une série au-delà du délai prévu attend une nouvelle édition. Ce statut
+          ne prouve pas que le producteur n’a rien publié depuis notre téléchargement.
+        </p>
+      </Explainer>
+      <div class="sources">
+        {manifest.sources.map((source) => (
+          <article class="card source" id={`source-${source.id}`}>
+            <p class="badge">
+              <Icon name="source" size={14} />
+              {source.shortName}
+            </p>
+            <h3>{source.name}</h3>
+            <p class="muted small">{source.publisher}</p>
+            <p>{source.usage}</p>
+            <dl>
+              <dt>Page du jeu de données</dt>
+              <dd>
+                <a class="url" href={source.pageUrl} title={source.pageUrl}>
+                  {source.pageUrl}
+                </a>
+              </dd>
+              {source.fileUrl && (
+                <>
+                  <dt>Fichier ou API</dt>
+                  <dd>
+                    <a class="url" href={source.fileUrl} title={source.fileUrl}>
+                      {source.fileUrl}
+                    </a>
+                  </dd>
+                </>
+              )}
+              {source.urls[0] && (
+                <>
+                  <dt>Adresse récupérée</dt>
+                  <dd>
+                    <a class="url" href={source.urls[0]} title={source.urls[0]}>
+                      {source.urls[0]}
+                    </a>
+                    {source.urls.length > 1 && (
+                      <span class="muted">
+                        {" "}
+                        et {formatNumber(source.urls.length - 1)} autres requêtes
+                      </span>
+                    )}
+                  </dd>
+                </>
+              )}
+              <dt>Licence</dt>
+              <dd>
+                <a href={source.licence.url}>{source.licence.name}</a>
+              </dd>
+              <dt>Date des données</dt>
+              <dd>{source.dataDate ? formatDate(source.dataDate) : "Non renseignée"}</dd>
+              <dt>État de la source</dt>
+              <dd>
+                <span class="badge">
+                  <Icon name="calendar" size={14} />
+                  {source.freshness}
+                </span>
+              </dd>
+              <dt>Fréquence déclarée</dt>
+              <dd>{source.frequency}</dd>
+              {source.coverage && (
+                <>
+                  <dt>Couverture</dt>
+                  <dd>{source.coverage}</dd>
+                </>
+              )}
+              {source.publishedAt && (
+                <>
+                  <dt>Publié le</dt>
+                  <dd>{formatDate(source.publishedAt)}</dd>
+                </>
+              )}
+              <dt>Récupéré le</dt>
+              <dd>
+                {source.retrievedAt
+                  ? formatDate(source.retrievedAt)
+                  : "Non téléchargé (référence du registre)"}
+              </dd>
+              {source.rows !== null && (
+                <>
+                  <dt>Lignes lues</dt>
+                  <dd class="num">{formatNumber(source.rows)}</dd>
+                </>
+              )}
+              {source.value !== null && (
+                <>
+                  <dt>Valeur utilisée</dt>
+                  <dd class="num">{formatNumber(source.value)}</dd>
+                </>
+              )}
+              {source.sha256 && (
+                <>
+                  <dt>SHA-256</dt>
+                  <dd class="hash">{source.sha256}</dd>
+                </>
+              )}
+            </dl>
+            <h4>Limites connues</h4>
+            <ul class="limits">
+              {source.limits.map((limit) => (
+                <li>{limit}</li>
+              ))}
+            </ul>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section class="section" id="calculs" aria-labelledby="titre-calculs">
+      <div class="section-head">
+        <h2 id="titre-calculs">
+          <Icon name="code" />
+          Les calculs
+        </h2>
+        <p>Python et SQL (DuckDB), étape par étape&nbsp;:</p>
+      </div>
+      <ol class="steps card">
+        {steps.map((step) => (
+          <li>
+            <Icon name="code" size={15} />
+            <a href={calculationUrl(step.path)}>{step.label}</a>
+            <span class="muted small"> · {step.path}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  </div>
+</Base>
+
+<style>
+  .principles {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 1rem;
+  }
+
+  .principles p {
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  .sources {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  @media (min-width: 64rem) {
+    .sources {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .source .badge {
+    margin: 0 0 0.75rem;
+  }
+
+  dl {
+    display: grid;
+    grid-template-columns: minmax(8rem, auto) 1fr;
+    gap: 0.25rem 1rem;
+    font-size: 0.875rem;
+    margin: 1rem 0;
+  }
+
+  dt {
+    color: var(--text-secondary);
+  }
+
+  dd {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .url {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .hash {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.75rem;
+  }
+
+  h4 {
+    margin: 0 0 0.25rem;
+  }
+
+  .limits {
+    padding-left: 1.25rem;
+    margin: 0;
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+  }
+
+  .steps {
+    margin: 0;
+    padding: 1.25rem 1.25rem 1.25rem 2.75rem;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 30rem) {
+    dl {
+      grid-template-columns: 1fr;
+    }
+
+    dd {
+      margin-bottom: 0.5rem;
+    }
+  }
+
+  .steps :global(svg) {
+    margin-right: 0.375rem;
+    vertical-align: -0.2em;
+    color: var(--navy-800);
+  }
+</style>

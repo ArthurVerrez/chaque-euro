@@ -1,0 +1,70 @@
+---
+import Icon from "./Icon.astro";
+
+interface Props {
+  query?: string;
+  variant?: "hero" | "page";
+  autofocus?: boolean;
+}
+
+const { query = "", variant = "page", autofocus = false } = Astro.props;
+---
+
+<form class:list={["search", variant]} action="/recherche" method="get" role="search">
+  <label class="visually-hidden" for={`q-${variant}`}>
+    Organisation, SIREN ou commune
+  </label>
+  <span class="field">
+    <Icon name="search" size={20} />
+    <input
+      id={`q-${variant}`}
+      name="q"
+      type="search"
+      value={query}
+      placeholder="Ex. Croix-Rouge, Lyon…"
+      autocomplete="off"
+      autofocus={autofocus}
+      required
+      minlength="2"
+    />
+  </span>
+  <button class="button" type="submit">
+    <Icon name="search" size={18} />
+    Chercher
+  </button>
+</form>
+
+<style>
+  .field {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .field :global(svg) {
+    position: absolute;
+    left: 0.875rem;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .field input {
+    width: 100%;
+    padding-left: 2.75rem;
+  }
+
+  .hero .button {
+    background: var(--series-1);
+  }
+
+  .hero .button:hover {
+    background: #1f66bd;
+  }
+
+  .hero input {
+    border-color: transparent;
+    box-shadow: 0 8px 24px rgb(7 22 49 / 35%);
+  }
+</style>

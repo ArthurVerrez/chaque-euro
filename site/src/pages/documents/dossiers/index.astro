@@ -1,0 +1,130 @@
+---
+import Base from "../../../layouts/Base.astro";
+import Answer from "../../../components/Answer.astro";
+import Breadcrumbs from "../../../components/Breadcrumbs.astro";
+import DocumentPagination from "../../../components/DocumentPagination.astro";
+import Icon from "../../../components/Icon.astro";
+import KeyFigures from "../../../components/KeyFigures.astro";
+import Provenance from "../../../components/Provenance.astro";
+import Term from "../../../components/Term.astro";
+import { getLegislativeFiles, documentPublisher, documentKind } from "../../../lib/data";
+import { formatDate, formatNumber } from "../../../lib/format";
+import DocumentContent from "../../../components/DocumentContent.astro";
+const data = await getLegislativeFiles(Astro.url.searchParams);
+const params = Astro.url.searchParams;
+---
+
+<Base
+  title="Dossiers législatifs"
+  description="Projets et propositions de loi, étapes et liens parlementaires officiels."
+>
+  <DocumentContent>
+    <header class="page-head">
+      <div class="container">
+        <Breadcrumbs items={[{ label: "Dossiers législatifs" }]} />
+        <div class="entity">
+          <Icon name="legislation" />
+          <h1>Dossiers législatifs</h1>
+        </div>
+        <Answer text="Vous pouvez suivre un texte auprès de chaque producteur. Une même loi peut avoir plusieurs notices." />
+        <KeyFigures
+          figures={data.counts.map((row) => ({
+            icon: "legislation",
+            label: documentPublisher(row.label),
+            value: formatNumber(row.count),
+            note: "Notices, sans addition entre producteurs",
+          }))}
+        />
+        <Provenance provenance={data.provenance} />
+      </div>
+    </header>
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>
+            <Icon name="search" />
+            Chercher un dossier
+          </h2>
+        </div>
+        <p>
+          La <Term id="navette">navette parlementaire</Term> peut se poursuivre dans les deux
+          chambres. Un événement annoncé n'est pas une étape réalisée.
+        </p>
+        <form class="document-filters" method="get">
+          <label>
+            Titre
+            <input name="q" value={params.get("q") ?? ""} type="search" />
+          </label>
+          <label>
+            Producteur
+            <select name="source">
+              <option value="">Tous</option>
+              {[
+                ["dole", "DILA / DOLE"],
+                ["an-dossiers", "Assemblée nationale"],
+                ["senat-dosleg", "Sénat"],
+              ].map(([value, label]) => (
+                <option value={value} selected={params.get("source") === value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Statut
+            <select name="statut">
+              <option value="">Tous</option>
+              {[
+                "En discussion",
+                "Promulgué",
+                "Rejeté",
+                "Caduc",
+                "Retiré",
+                "Fusionné",
+                "Non renseigné",
+              ].map((value) => (
+                <option value={value} selected={params.get("statut") === value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label class="document-checkbox">
+            <input
+              type="checkbox"
+              name="finances"
+              value="1"
+              checked={params.get("finances") === "1"}
+            />
+            Textes financiers
+          </label>
+          <button type="submit">Filtrer</button>
+          <a href="/documents/dossiers">Réinitialiser</a>
+        </form>
+        <p>{formatNumber(data.total)} notices correspondent à vos filtres.</p>
+        <ol class="document-results">
+          {data.rows.map((row) => (
+            <li>
+              <p class="document-meta">
+                <Icon name="legislation" size={15} />
+                {documentPublisher(row.source_id)} · {row.status}
+              </p>
+              <h3>
+                <a href={`/documents/dossiers/${row.id}`}>{row.title_public}</a>
+              </h3>
+              <p>
+                {documentKind(row.kind)}
+                {row.legislature && ` · Législature ${row.legislature}`}
+              </p>
+              {row.source_modified_at && (
+                <p>Modification source : {formatDate(row.source_modified_at)}</p>
+              )}
+            </li>
+          ))}
+        </ol>
+        {data.rows.length === 0 && <p>Aucun dossier dans ce périmètre.</p>}
+        <DocumentPagination page={data.page} total={data.total} />
+      </div>
+    </section>
+  </DocumentContent>
+</Base>

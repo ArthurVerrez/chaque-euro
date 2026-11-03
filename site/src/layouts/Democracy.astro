@@ -1,0 +1,112 @@
+---
+import Base from "./Base.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import Answer from "../components/Answer.astro";
+import Icon from "../components/Icon.astro";
+import KeyFigures, { type Figure } from "../components/KeyFigures.astro";
+import Provenance from "../components/Provenance.astro";
+import Toc from "../components/Toc.astro";
+import type { Provenance as Evidence } from "../lib/data";
+import type { IconName } from "../lib/icons";
+interface Props {
+  title: string;
+  description: string;
+  icon: IconName;
+  answer: string;
+  figures?: Figure[];
+  provenance: Evidence;
+  sections: { id: string; label: string; icon: IconName }[];
+}
+const { title, description, icon, answer, figures = [], provenance, sections } = Astro.props;
+---
+
+<Base title={title} description={description}>
+  <header class="page-head">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Démocratie", href: "/elus" }, { label: title }]} />
+      <div class="entity">
+        <Icon name={icon} />
+        <h1>{title}</h1>
+      </div>
+      <Answer text={answer} />
+      {figures.length > 0 && <KeyFigures figures={figures} />}
+      <Provenance provenance={provenance} />
+    </div>
+  </header>
+  {sections.length > 1 && (
+    <Toc items={sections.map((s) => ({ href: `#${s.id}`, label: s.label, icon: s.icon }))} />
+  )}
+  <div class="container democracy">
+    <slot />
+  </div>
+</Base>
+<style>
+  .democracy :global(.filters) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: end;
+    margin-bottom: 1.25rem;
+  }
+  .democracy :global(.filters label) {
+    display: grid;
+    gap: 0.35rem;
+    font-weight: 600;
+    flex: 1 1 10rem;
+    min-width: 0;
+  }
+  .democracy :global(.filters input),
+  .democracy :global(.filters select) {
+    width: 100%;
+    min-width: 0;
+    padding: 0.65rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+  }
+  .democracy :global(.filters button) {
+    padding: 0.65rem 1rem;
+    border: 0;
+    border-radius: 8px;
+    background: var(--navy-900);
+    color: white;
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+  }
+  .democracy :global(.related) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    margin: 1rem 0;
+  }
+  .democracy :global(.related a) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .democracy :global(.reference-grid) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    gap: 1rem;
+  }
+  .democracy :global(.reference-grid .card) {
+    padding: 1.25rem;
+    min-width: 0;
+  }
+  .democracy :global(.reference-grid h3) {
+    display: flex;
+    gap: 0.5rem;
+    align-items: start;
+    margin: 0 0 0.75rem;
+  }
+  .democracy :global(.reference-value) {
+    font-size: 1.8rem;
+    font-weight: 800;
+    line-height: 1.25;
+    margin: 0.5rem 0;
+    color: var(--navy-900);
+  }
+</style>

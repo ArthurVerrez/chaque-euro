@@ -1,0 +1,333 @@
+---
+import ProcurementCompetition from "../../components/ProcurementCompetition.astro";
+import ProcurementOpportunities from "../../components/ProcurementOpportunities.astro";
+import OrganisationLobbying from "../../components/OrganisationLobbying.astro";
+import Answer from "../../components/Answer.astro";
+import Icon from "../../components/Icon.astro";
+import BarList from "../../components/BarList.astro";
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import ContractFlowSection from "../../components/ContractFlowSection.astro";
+import Explainer from "../../components/Explainer.astro";
+import KeyFigures from "../../components/KeyFigures.astro";
+import Provenance from "../../components/Provenance.astro";
+import Toc from "../../components/Toc.astro";
+import Term from "../../components/Term.astro";
+import Base from "../../layouts/Base.astro";
+import {
+  getProcurementCompetition,
+  getOrganisation,
+  getOrganisationLobbying,
+  getProcurementOpportunities,
+} from "../../lib/data";
+import { kindIcon, type IconName } from "../../lib/icons";
+import { NBSP, formatEuros, formatSiren, plural } from "../../lib/format";
+
+const siren = Astro.params.siren ?? "";
+const org = /^\d{9}$/.test(siren) ? await getOrganisation(siren) : null;
+if (!org) Astro.response.status = 404;
+const lobbying = org ? await getOrganisationLobbying(siren) : null;
+const hasLobbying = lobbying && (lobbying.french.length > 0 || lobbying.european.length > 0);
+const competition = org ? await getProcurementCompetition(siren) : null;
+const opportunities = org ? await getProcurementOpportunities(siren) : null;
+
+const currentYear = new Date().getFullYear();
+const summaries = org
+  ? [
+      org.grants && {
+        icon: "grant" as const,
+        label: `Versements de l'État en ${org.grants.year}`,
+        amount: org.grants.amount,
+        note: plural(org.grants.count, "versement", "versements"),
+      },
+      org.won && {
+        icon: "award" as const,
+        label: "Marchés publics remportés",
+        amount: org.won.amount,
+        note: `${plural(org.won.count, "marché", "marchés")} depuis 2019`,
+      },
+      org.awarded && {
+        icon: "buyer" as const,
+        label: "Marchés publics attribués",
+        amount: org.awarded.amount,
+        note: `${plural(org.awarded.count, "marché", "marchés")} depuis 2019`,
+      },
+    ]
+      .filter((summary) => summary !== null)
+      .sort((a, b) => b.amount - a.amount)
+  : [];
+const figures = summaries.map((summary) => ({
+  icon: summary.icon,
+  label: summary.label,
+  value: formatEuros(summary.amount),
+  note: summary.note,
+}));
+const SUBJECTS: Record<string, string> = {
+  Association: "Cette association",
+  Fondation: "Cette fondation",
+  "Société commerciale": "Cette entreprise",
+  "Collectivité territoriale": "Cette collectivité",
+  "Administration de l'État": "Cette administration",
+};
+const subject = (org && SUBJECTS[org.kind]) ?? "Cet organisme";
+const contractClauses = [
+  org?.awarded && { flow: org.awarded, verb: "a attribué" },
+  org?.won && { flow: org.won, verb: "a remporté" },
+]
+  .filter((clause) => clause !== null && clause !== undefined)
+  .sort((a, b) => b.flow.amount - a.flow.amount)
+  .map(
+    ({ flow, verb }) =>
+      `${verb} ${plural(flow.count, "marché public", "marchés publics")} pour ${formatEuros(flow.amount)}`,
+  );
+const answer =
+  [
+    org?.grants &&
+      `${subject} a reçu ${formatEuros(org.grants.amount)} de versements de l'État en ${org.grants.year}.`,
+    contractClauses.length > 0 &&
+      `Depuis 2019, ${org?.grants ? (subject.startsWith("Cet ") ? "il" : "elle") : subject.toLowerCase()} ${contractClauses.join(" et ")}.`,
+  ]
+    .filter(Boolean)
+    .join(" ") || null;
+const flows = org
+  ? [org.won, org.awarded].filter((flow) => flow !== null).sort((a, b) => b.amount - a.amount)
+  : [];
+const toc: { href: string; label: string; icon: IconName }[] = [
+  { href: "#en-bref", label: "En bref", icon: "info" },
+  ...(org?.grants
+    ? [{ href: "#subventions", label: "Versements de l’État", icon: "grant" as const }]
+    : []),
+  ...flows.map((flow) => ({
+    href: `#flux-${flow.role}`,
+    label: flow.role === "titulaire" ? "Marchés remportés" : "Marchés attribués",
+    icon: flow.role === "titulaire" ? ("award" as const) : ("buyer" as const),
+  })),
+  ...(opportunities?.notices.length
+    ? [{ href: "#appels-offres", label: "Appels d’offres", icon: "buyer" as const }]
+    : []),
+  ...(opportunities?.projects.length
+    ? [{ href: "#projets-achats", label: "Achats annoncés", icon: "calendar" as const }]
+    : []),
+  ...(hasLobbying
+    ? [{ href: "#lobbying", label: "Représentant d’intérêts", icon: "lobbying" as const }]
+    : []),
+  ...(competition && competition.summary.total > 0
+    ? [{ href: "#concurrence", label: "Offre unique", icon: "compare" as const }]
+    : []),
+  { href: "#identite", label: "Identité et sources", icon: "identity" },
+];
+const programmes = org?.grants?.programmes ?? [];
+const others = programmes.slice(8);
+const othersAmount = others.reduce((total, programme) => total + programme.amount, 0);
+const othersCount = others.reduce((total, programme) => total + programme.count, 0);
+const grantProgrammes = programmes.slice(0, 8).map((programme) => ({
+  icon: "layers" as const,
+  label: programme.label ?? `Programme${NBSP}${programme.code ?? "inconnu"}`,
+  value: programme.amount,
+  display: formatEuros(programme.amount),
+  note: [
+    programme.label && `Programme${NBSP}${programme.code}`,
+    plural(programme.count, "versement", "versements"),
+  ]
+    .filter(Boolean)
+    .join(" · "),
+}));
+if (others.length > 0) {
+  grantProgrammes.push({
+    icon: "layers",
+    label: `${others.length} autres programmes`,
+    value: othersAmount,
+    display: formatEuros(othersAmount),
+    note: plural(othersCount, "versement", "versements"),
+  });
+}
+const title = org
+  ? `${org.name}${NBSP}: marchés publics et versements de l’État`
+  : "Organisation introuvable";
+const description = answer ?? "Aucune donnée publique pour ce SIREN.";
+---
+
+<Base title={title} description={description} noindex={!org}>
+  {org ? (
+    <>
+      <header class="page-head" id="en-bref">
+        <div class="container">
+          <Breadcrumbs
+            items={[{ label: "Organisations", href: "/organisations" }, { label: org.name }]}
+          />
+          <p class="badges">
+            <span class="badge">
+              <Icon name={kindIcon(org.kind)} size={14} />
+              {org.kind}
+            </span>
+            {!org.active && <span class="badge closed">Activité cessée</span>}
+          </p>
+          <div class="entity">
+            <Icon name={kindIcon(org.kind)} />
+            <h1>{org.name}</h1>
+          </div>
+          <p class="identity">
+            <span>
+              <Icon name="identity" size={16} />
+              <Term id="siren">SIREN</Term> <span class="num">{formatSiren(org.siren)}</span>
+            </span>
+            {org.activity && (
+              <span>
+                <Icon name="company" size={16} />
+                {org.activity}
+              </span>
+            )}
+          </p>
+          {answer && <Answer text={answer} />}
+          <KeyFigures figures={figures} />
+          {org.commune && (
+            <p class="commune-link">
+              <Icon name="town" size={16} />
+              Cette organisation est une commune :{" "}
+              <a href={`/commune/${org.commune.insee}`}>voir les comptes de {org.commune.name}</a>
+            </p>
+          )}
+        </div>
+      </header>
+      <Toc items={toc} />
+
+      <div class="container">
+        {org.grants && (
+          <section class="section" id="subventions" aria-labelledby="titre-subventions">
+            <div class="section-head">
+              <h2 id="titre-subventions">
+                <Icon name="grant" />
+                Les versements de l'État en {org.grants.year}
+              </h2>
+              <p>
+                Versements par <Term id="programme">programme</Term> du budget de l'État.
+              </p>
+            </div>
+            <div class="grid two">
+              <div class="card">
+                <BarList caption="Par programme du budget de l'État" items={grantProgrammes} />
+              </div>
+              <div class="card">
+                <h3>
+                  <Icon name="grant" />
+                  Les plus gros versements
+                </h3>
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">Objet</th>
+                      <th scope="col" class="num">
+                        Montant
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {org.grants.largest.map((grant) => (
+                      <tr>
+                        <td>
+                          <Icon name="grant" size={15} />
+                          {grant.purpose ?? "Objet non précisé"}
+                          <span class="muted small block">
+                            Programme&nbsp;{grant.programmeCode ?? "?"}
+                            {grant.programmeLabel && ` · ${grant.programmeLabel}`}
+                          </span>
+                        </td>
+                        <td class="num">{formatEuros(grant.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="explain">
+              <Explainer title="Ce que cette liste ne dit pas">
+                <p>
+                  Les données de {org.grants.year} proviennent de l'
+                  <Term id="jaune-associations">annexe « Jaune »</Term>. Elles incluent des
+                  subventions, des prestations de services et d'autres versements que le fichier ne
+                  distingue pas. Les aides des collectivités et des opérateurs ne sont pas couvertes
+                  de façon exhaustive.
+                </p>
+              </Explainer>
+            </div>
+            <Provenance provenance={org.grants.provenance} />
+          </section>
+        )}
+
+        {flows.map((flow) => (
+          <ContractFlowSection flow={flow} currentYear={currentYear} />
+        ))}
+
+        {competition && competition.summary.total > 0 && (
+          <ProcurementCompetition data={competition} />
+        )}
+        {hasLobbying && <OrganisationLobbying data={lobbying} />}
+
+        {opportunities &&
+          (opportunities.notices.length > 0 || opportunities.projects.length > 0) && (
+            <ProcurementOpportunities opportunities={opportunities} />
+          )}
+
+        <section class="section" id="identite" aria-labelledby="titre-identite">
+          <div class="section-head">
+            <h2 id="titre-identite">
+              <Icon name="identity" />
+              Identité et sources
+            </h2>
+          </div>
+          <Provenance provenance={org.identity} />
+        </section>
+      </div>
+    </>
+  ) : (
+    <header class="page-head">
+      <div class="container">
+        <Breadcrumbs
+          items={[{ label: "Organisations", href: "/organisations" }, { label: "Introuvable" }]}
+        />
+        <h1>Aucune donnée pour ce SIREN</h1>
+        <p class="lead">
+          Ce SIREN n'apparaît ni dans les marchés publics publiés depuis 2019, ni dans les
+          subventions de l'État aux associations. Les entrepreneurs individuels ne sont jamais
+          affichés sur ce site.
+        </p>
+        <a class="button" href="/recherche">
+          Faire une recherche
+        </a>
+      </div>
+    </header>
+  )}
+</Base>
+
+<style>
+  .badge.closed {
+    background: #fdecea;
+    color: #8a1c13;
+  }
+
+  .identity {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
+    color: var(--text-secondary);
+    margin: 0.5rem 0 0;
+  }
+
+  .identity span,
+  .commune-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .commune-link {
+    margin: 1.25rem 0 0;
+  }
+
+  .explain {
+    margin: 1.5rem 0 0;
+  }
+
+  .block {
+    display: block;
+  }
+</style>

@@ -1,0 +1,53 @@
+---
+import Base from "../../layouts/Base.astro";
+import AnalysisCard from "../../components/AnalysisCard.astro";
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import Icon from "../../components/Icon.astro";
+import { ANALYSES } from "../../lib/analyses";
+
+const [featured, ...rest] = ANALYSES;
+---
+
+<Base
+  title="Analyses"
+  description="Des réponses en graphiques aux questions sur l’argent public, avec les données officielles, leurs sources et leurs limites."
+>
+  <header class="page-head">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Analyses" }]} />
+      <div class="entity">
+        <Icon name="analysis" />
+        <h1>Analyses</h1>
+      </div>
+      <p class="lead">Une question, des graphiques, des sources officielles.</p>
+    </div>
+  </header>
+  <div class="container articles">
+    {featured && (
+      <div class="featured">
+        <AnalysisCard article={featured} featured />
+      </div>
+    )}
+    {rest.map((article) => (
+      <AnalysisCard article={article} />
+    ))}
+  </div>
+</Base>
+
+<style>
+  .articles {
+    display: grid;
+    gap: 1.25rem;
+    padding-top: 2.5rem;
+  }
+
+  @media (min-width: 48rem) {
+    .articles {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .featured {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

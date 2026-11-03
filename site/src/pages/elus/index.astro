@@ -1,0 +1,141 @@
+---
+import Democracy from "../../layouts/Democracy.astro";
+import Icon from "../../components/Icon.astro";
+import PublicTable from "../../components/PublicTable.astro";
+import PublicPagination from "../../components/PublicPagination.astro";
+import Provenance from "../../components/Provenance.astro";
+import { getElectedIndex } from "../../lib/data";
+import { formatDate, formatNumber } from "../../lib/format";
+import { pageNumber, roleLabels } from "../../lib/democracy";
+const params = Astro.url.searchParams;
+const filters = {
+  q: params.get("q") ?? "",
+  chamber: params.get("chambre") ?? "",
+  group: params.get("groupe") ?? "",
+  department: params.get("departement") ?? "",
+  page: pageNumber(params.get("page")),
+};
+const data = await getElectedIndex(filters);
+const figure = (kind: string, label: string) => ({
+  icon: "elected" as const,
+  label,
+  value: formatNumber(data.chambers.find((r) => r.role_kind === kind)?.count ?? 0),
+  note: `Relevé du ${formatDate(data.provenance.citations.find((c) => c.source.id === (kind === "senator" ? "senat-members" : kind === "minister" ? "an-history" : "an-members"))?.source.retrievedAt ?? null)}`,
+});
+---
+
+<Democracy
+  title="Élus et institutions"
+  description="Mandats, groupes et votes publics des parlementaires, fonctions gouvernementales et répertoire des élus locaux."
+  icon="elected"
+  answer="Retrouvez les mandats officiels et les votes publics. La participation aux scrutins décrit les votes enregistrés pendant le mandat, sans mesurer l’ensemble du travail parlementaire."
+  figures={[
+    figure("deputy", "Députés en exercice"),
+    figure("senator", "Sénateurs en exercice"),
+    figure("minister", "Fonctions gouvernementales AN"),
+  ]}
+  provenance={data.provenance}
+  sections={[
+    { id: "repertoire", label: "Rechercher", icon: "search" },
+    { id: "scrutins", label: "Votes récents", icon: "vote" },
+  ]}
+>
+  <section id="repertoire" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="elected" />
+        Le répertoire parlementaire
+      </h2>
+    </div>
+    <form class="filters" method="get">
+      <label>
+        Nom
+        <input name="q" type="search" value={filters.q} />
+      </label>
+      <label>
+        Chambre ou fonction
+        <select name="chambre">
+          <option value="">Toutes</option>
+          {[
+            ["AN", "Assemblée nationale"],
+            ["SENAT", "Sénat"],
+            ["minister", "Gouvernement (répertoire AN)"],
+          ].map(([value, label]) => (
+            <option value={value} selected={filters.chamber === value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Groupe
+        <select name="groupe">
+          <option value="">Tous</option>
+          {data.groups.map((r) => (
+            <option selected={filters.group === r.label}>{r.label}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Département
+        <select name="departement">
+          <option value="">Tous</option>
+          {data.departments.map((r) => (
+            <option value={r.code} selected={filters.department === r.code}>
+              {r.code} · {r.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button type="submit">Rechercher</button>
+    </form>
+    <PublicTable
+      caption="Fonctions en cours dans les sources importées"
+      columns={["Nom", "Fonction", "Territoire", "Groupe"]}
+      rows={data.people.map((p) => [
+        { text: p.display_name, href: `/elus/${p.id}` },
+        { text: roleLabels[p.role_kind] ?? p.role_kind },
+        { text: p.territory_label ?? "Non renseigné" },
+        { text: p.group_label ?? "Non renseigné" },
+      ])}
+    />
+    <PublicPagination page={filters.page} count={data.count} />
+    <p class="small muted">
+      Les membres du gouvernement sont ceux du répertoire parlementaire AN. Le rapprochement
+      exhaustif avec les décrets de nomination reste à compléter.
+    </p>
+    <div class="related">
+      <a href="/elus/registre">
+        <Icon name="town" size={18} />
+        Répertoire national et maires
+      </a>
+      <a href="/campagnes">
+        <Icon name="campaign" size={18} />
+        Comptes de campagne
+      </a>
+      <a href="/train-de-vie">
+        <Icon name="spending" size={18} />
+        Indemnités et moyens
+      </a>
+    </div>
+    <Provenance provenance={data.provenance} />
+  </section>
+  <section id="scrutins" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="vote" />
+        Scrutins publics récents
+      </h2>
+    </div>
+    <PublicTable
+      caption="Derniers scrutins publiés dans les deux chambres"
+      columns={["Date", "Chambre", "Scrutin"]}
+      rows={data.ballots.map((b) => [
+        { text: formatDate(b.voted_on) },
+        { text: b.chamber === "AN" ? "Assemblée nationale" : "Sénat" },
+        { text: b.title, href: `/votes/${b.id}` },
+      ])}
+    />
+    <Provenance provenance={data.voteProvenance} />
+  </section>
+</Democracy>

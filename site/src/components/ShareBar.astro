@@ -1,0 +1,153 @@
+---
+import Icon from "./Icon.astro";
+import { formatEuros, formatNumber } from "../lib/format";
+
+export interface Share {
+  label: string;
+  value: number;
+  href?: string;
+  other?: boolean;
+}
+
+interface Props {
+  parts: Share[];
+  caption: string;
+  whole: string;
+}
+
+const COLORS = [1, 2, 3, 4, 5, 6, 7].map((slot) => `var(--series-${slot})`);
+const DARK_TEXT = new Set([2, 3, 4]);
+
+const { parts, caption, whole } = Astro.props;
+const total = parts.reduce((sum, part) => sum + Math.max(part.value, 0), 0);
+const items = parts.map((part, index) => {
+  const share = total > 0 ? Math.max(part.value, 0) / total : 0;
+  const other = part.other === true || index >= COLORS.length;
+  return {
+    ...part,
+    share,
+    per100: formatNumber(share * 100),
+    color: other ? "var(--series-other)" : COLORS[index],
+    ink: other || DARK_TEXT.has(index) ? "#121826" : "#ffffff",
+  };
+});
+---
+
+<figure class="share-bar">
+  <figcaption>
+    <Icon name="share" size={18} />
+    {caption}
+  </figcaption>
+  <div
+    class="bar"
+    role="img"
+    aria-label={`${caption} : ${items.map((item) => `${item.label} ${item.per100} €`).join(", ")}`}
+  >
+    {items.map((item) => (
+      <span
+        class="segment"
+        style={`flex-grow: ${item.share}; background: ${item.color}; color: ${item.ink}`}
+        title={`${item.label} : ${item.per100} € sur 100 €`}
+      >
+        {item.share >= 0.07 && <span class="inside">{item.per100}&nbsp;€</span>}
+      </span>
+    ))}
+  </div>
+  <ol class="legend">
+    {items.map((item) => (
+      <li>
+        <span class="swatch" style={`background: ${item.color}`} />
+        <span class="name">{item.href ? <a href={item.href}>{item.label}</a> : item.label}</span>
+        <strong class="per num">{item.per100}&nbsp;€</strong>
+        <span class="amount num muted">{formatEuros(item.value)}</span>
+      </li>
+    ))}
+  </ol>
+  <p class="note">Sur 100 € de {whole}. Montants arrondis.</p>
+</figure>
+
+<style>
+  .share-bar {
+    margin: 0;
+  }
+
+  figcaption {
+    font-weight: 650;
+    margin-bottom: 0.75rem;
+  }
+
+  .bar {
+    display: flex;
+    gap: 2px;
+    height: 2.75rem;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .segment {
+    display: flex;
+    align-items: center;
+    min-width: 2px;
+    padding-left: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+  }
+
+  .inside {
+    white-space: nowrap;
+  }
+
+  .legend {
+    list-style: none;
+    margin: 1rem 0 0;
+    padding: 0;
+    font-size: 0.9375rem;
+  }
+
+  .legend li {
+    display: grid;
+    grid-template-columns: 0.75rem 1fr auto;
+    gap: 0 0.75rem;
+    align-items: baseline;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .per {
+    text-align: right;
+  }
+
+  .swatch {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 3px;
+    align-self: center;
+  }
+
+  .name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .amount {
+    grid-column: 2 / -1;
+    font-size: 0.8125rem;
+  }
+
+  .note {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    margin: 0.75rem 0 0;
+  }
+
+  @media (min-width: 40rem) {
+    .legend li {
+      grid-template-columns: 0.75rem 1fr 3.5rem 5.5rem;
+    }
+
+    .amount {
+      grid-column: auto;
+      text-align: right;
+    }
+  }
+</style>

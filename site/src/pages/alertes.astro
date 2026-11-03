@@ -1,0 +1,100 @@
+---
+import Democracy from "../layouts/Democracy.astro";
+import Icon from "../components/Icon.astro";
+import PublicTable from "../components/PublicTable.astro";
+import PublicPagination from "../components/PublicPagination.astro";
+import Provenance from "../components/Provenance.astro";
+import Explainer from "../components/Explainer.astro";
+import { getDemocracyAlerts } from "../lib/data";
+import { electionLabels, pageNumber } from "../lib/democracy";
+import { formatDate, formatNumber } from "../lib/format";
+const params = Astro.url.searchParams;
+const filters = {
+  rule: params.get("regle") ?? "",
+  election: params.get("election") ?? "",
+  department: params.get("departement") ?? "",
+  page: pageNumber(params.get("page")),
+};
+const rules: Record<string, string> = {
+  "rejected-account": "Compte rejeté",
+  "not-filed": "Absence de dépôt",
+  "late-filed": "Dépôt hors délai",
+};
+const data = await getDemocracyAlerts(filters);
+---
+
+<Democracy
+  title="Alertes et statuts officiels"
+  description="Statuts CNCCFP publiés, selon des règles explicites et vérifiables, sans qualification pénale."
+  icon="alert"
+  answer="Ces informations reprennent trois statuts administratifs explicites : compte rejeté, absence de dépôt et dépôt hors délai. Elles ne constituent ni un classement des personnes ni une qualification pénale."
+  figures={data.totals.map((t) => ({
+    icon: "scale",
+    label: rules[t.rule] ?? t.rule,
+    value: formatNumber(t.count),
+    note: "Comptes publiés 2024",
+  }))}
+  provenance={data.provenance}
+  sections={[{ id: "statuts", label: "Rechercher", icon: "search" }]}
+>
+  <section id="statuts" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="scale" />
+        Décisions publiées
+      </h2>
+    </div>
+    <form class="filters" method="get">
+      <label>
+        Statut
+        <select name="regle">
+          <option value="">Tous</option>
+          {Object.entries(rules).map(([id, label]) => (
+            <option value={id} selected={filters.rule === id}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Élection
+        <select name="election">
+          <option value="">Toutes</option>
+          {Object.entries(electionLabels).map(([id, label]) => (
+            <option value={id} selected={filters.election === id}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Code département
+        <input name="departement" value={filters.department} />
+      </label>
+      <button type="submit">Filtrer</button>
+    </form>
+    <PublicTable
+      caption="Statut dans la publication CNCCFP, procédure judiciaire non renseignée"
+      columns={["Candidat", "Élection et territoire", "Statut officiel", "Publication"]}
+      rows={data.rows.map((r) => [
+        { text: r.candidate_name, href: `/campagnes/${r.election_id}/${r.candidate_id}` },
+        { text: `${electionLabels[r.election_id]} · ${r.territory_code}` },
+        { text: r.official_status },
+        { text: formatDate(r.observed_on) },
+      ])}
+    />
+    <PublicPagination page={filters.page} count={data.count} />
+    <Explainer title="Ce que ces statuts permettent de dire">
+      <p>
+        Les codes R, AD et HD déclenchent respectivement les trois catégories. DD désigne une
+        dispense, pas un défaut de dépôt. Une approbation après réformation reste une approbation.
+        Une réduction de remboursement n’est pas une accusation de fraude.
+      </p>
+      <p>
+        L’absence de publication HATVP ne prouve pas un défaut de dépôt. Aucun nom n’est ajouté sur
+        cette seule base. Les décisions municipales non analysées ne produisent pas d’alerte.
+      </p>
+    </Explainer>
+    <Provenance provenance={data.provenance} />
+  </section>
+</Democracy>

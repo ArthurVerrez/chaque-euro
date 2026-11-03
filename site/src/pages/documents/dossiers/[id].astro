@@ -1,0 +1,123 @@
+---
+import Base from "../../../layouts/Base.astro";
+import Answer from "../../../components/Answer.astro";
+import Breadcrumbs from "../../../components/Breadcrumbs.astro";
+import Icon from "../../../components/Icon.astro";
+import Provenance from "../../../components/Provenance.astro";
+import Toc from "../../../components/Toc.astro";
+import { getLegislativeFile, documentPublisher, documentKind } from "../../../lib/data";
+import { formatDate } from "../../../lib/format";
+import DocumentContent from "../../../components/DocumentContent.astro";
+const data = await getLegislativeFile(Astro.params.id ?? "");
+if (!data) return Astro.redirect("/404", 302);
+const { file } = data;
+const latest = data.events.filter((event) => event.temporal_status === "réalisé").at(-1);
+const next = data.events.find((event) => event.temporal_status === "annoncé");
+---
+
+<Base title={file.title_public} description="Étapes législatives et liens du producteur officiel.">
+  <DocumentContent>
+    <header class="page-head">
+      <div class="container">
+        <Breadcrumbs
+          items={[
+            { label: "Dossiers législatifs", href: "/documents/dossiers" },
+            { label: "Dossier" },
+          ]}
+        />
+        <div class="entity">
+          <Icon name="legislation" />
+          <h1>{file.title_public}</h1>
+        </div>
+        <Answer text={`${file.status}. Source : ${documentPublisher(file.source_id)}.`} />
+        <p>
+          {documentKind(file.kind)}
+          {file.legislature && ` · Législature ${file.legislature}`}
+        </p>
+        {file.source_modified_at && (
+          <p>Modification source : {formatDate(file.source_modified_at)}</p>
+        )}
+        <a href={file.record_url}>
+          <Icon name="external" size={15} />
+          Voir la source
+        </a>
+        {latest && (
+          <p>
+            Dernière étape datée réalisée : {latest.label_public}, {formatDate(latest.event_at)}.
+          </p>
+        )}
+        {next && (
+          <p>
+            Prochaine étape annoncée : {next.label_public}, {formatDate(next.event_at)}.
+          </p>
+        )}
+        <Provenance provenance={data.provenance} />
+      </div>
+    </header>
+    <Toc
+      items={[
+        { href: "#etapes", label: "Étapes", icon: "calendar" },
+        { href: "#liens", label: "Autres notices", icon: "external" },
+      ]}
+    />
+    <section class="section" id="etapes">
+      <div class="container">
+        <div class="section-head">
+          <h2>
+            <Icon name="calendar" />
+            Les étapes du dossier
+          </h2>
+        </div>
+        <ol class="document-results">
+          {data.events.map((event) => (
+            <li>
+              <p class="document-meta">
+                <Icon name="calendar" size={15} />
+                {event.event_at ? formatDate(event.event_at) : "Date non renseignée"} ·{" "}
+                {event.temporal_status} · {event.chamber}
+              </p>
+              <h3>
+                <a href={event.record_url}>{event.label_public}</a>
+              </h3>
+              {event.outcome && <p>Résultat source : {event.outcome}</p>}
+              <a href={event.record_url}>Voir la source</a>
+            </li>
+          ))}
+        </ol>
+        {data.events.length === 0 && <p>Aucune étape disponible dans cette source.</p>}
+        {data.documents.length > 0 && (
+          <ul>
+            {data.documents.map((document) => (
+              <li>
+                <a href={document.record_url}>{document.title_public}</a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+    <section class="section" id="liens">
+      <div class="container">
+        <div class="section-head">
+          <h2>
+            <Icon name="external" />
+            Les autres notices officielles
+          </h2>
+        </div>
+        {data.related.length ? (
+          <ul>
+            {data.related.map((row) => (
+              <li>
+                <a href={`/documents/dossiers/${row.id}`}>
+                  {documentPublisher(row.source_id)} : {row.title_public}
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>Aucun raccordement exact établi dans les liens de cette notice.</p>
+        )}
+      </div>
+    </section>
+  </DocumentContent>
+</Base>

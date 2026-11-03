@@ -1,0 +1,207 @@
+---
+import Analysis from "../../layouts/Analysis.astro";
+import Section from "../../components/AnalysisSection.astro";
+import LineChart from "../../components/LineChart.astro";
+import Provenance from "../../components/Provenance.astro";
+import Term from "../../components/Term.astro";
+import { analysis } from "../../lib/analyses";
+import { getDeficitAnalysis } from "../../lib/data";
+import { formatBillions, formatPercent } from "../../lib/format";
+const data = await getDeficitAnalysis();
+const latest = data.years.at(-1)!;
+const debt = data.years.filter((year) => year.apu_debt !== null);
+const budget = data.years.filter((year) => year.budget_balance !== null);
+const rate = (value: number) => formatPercent(value, 1);
+const figures = [
+  {
+    icon: "spending" as const,
+    label: "Déficit public",
+    value: formatBillions(-latest.apu_balance),
+    note: `${rate(-latest.apu_ratio)} du PIB en ${latest.year}`,
+    term: "deficit" as const,
+  },
+  {
+    icon: "debt" as const,
+    label: "Dette publique",
+    value: formatBillions(latest.apu_debt!),
+    note: `${rate(latest.apu_debt_ratio!)} du PIB à fin ${latest.year}`,
+  },
+  {
+    icon: "state" as const,
+    label: "Déficit de l’État",
+    value: formatBillions(-latest.state_balance!),
+    note: `Comptabilité nationale, ${latest.year}`,
+  },
+];
+const sections = [
+  { id: "solde", label: "Le déficit", icon: "trend" as const },
+  { id: "euros", label: "En euros", icon: "euro" as const },
+  { id: "dette", label: "La dette", icon: "debt" as const },
+  { id: "dette-euros", label: "Dette en euros", icon: "euro" as const },
+  { id: "etat", label: "Deux soldes de l’État", icon: "state" as const },
+];
+---
+
+<Analysis
+  article={analysis("deficit-par-president")}
+  answer={`En ${latest.year}, le déficit public atteint ${formatBillions(-latest.apu_balance)}, soit ${rate(-latest.apu_ratio)} du PIB. La dette s’établit à ${rate(latest.apu_debt_ratio!)} du PIB. Les présidences donnent des repères dans le temps, sans suffire à expliquer ces résultats.`}
+  figures={figures}
+  provenance={[data.provenance]}
+  sections={sections}
+>
+  <Section
+    id="solde"
+    title="Le déficit rapporté à la richesse produite"
+    icon="trend"
+    provenance={data.provenance}
+  >
+    <p>
+      Le solde des <Term id="administrations-publiques">administrations publiques</Term> rassemble
+      l’État, ses organismes, les collectivités et la Sécurité sociale. Quand il est négatif, leurs
+      dépenses dépassent leurs recettes. Le <Term id="pib">PIB</Term> sert à rapporter cet écart à
+      la taille de l’économie.
+    </p>
+    <p>
+      La série remonte à 1949. Vous pouvez suivre les ruptures autour des crises et les périodes de
+      réduction du déficit. Les bandes alternées indiquent les présidences&#8239;; elles ne
+      constituent ni un classement, ni une mesure de responsabilité.
+    </p>
+    <LineChart
+      slot="chart"
+      caption="Solde annuel des APU et de l’État, en % du PIB"
+      labels={data.years.map((row) => String(row.year))}
+      series={[
+        { label: "Ensemble des APU", values: data.years.map((row) => row.apu_ratio) },
+        { label: "État, comptabilité nationale", values: data.years.map((row) => row.state_ratio) },
+      ]}
+      format={rate}
+      bands={data.periods}
+      events={data.events}
+    />
+  </Section>
+  <Provenance provenance={data.contextProvenance} />
+  <Section
+    id="euros"
+    title="En milliards d’euros courants"
+    icon="euro"
+    provenance={data.provenance}
+  >
+    <p>
+      Les montants vous donnent l’écart annuel à financer. Ils ne permettent pas de comparer
+      directement le pouvoir d’achat d’un euro de 1950 à celui d’aujourd’hui : l’inflation et la
+      croissance ont changé l’échelle.
+    </p>
+    <p>
+      Le solde de l’État est une partie du solde public. Les autres administrations peuvent être en
+      excédent ou en déficit la même année. Il ne faut donc pas additionner les deux courbes.
+    </p>
+    <LineChart
+      slot="chart"
+      caption="Solde annuel, en Md€ courants"
+      labels={data.years.map((row) => String(row.year))}
+      series={[
+        { label: "Ensemble des APU", values: data.years.map((row) => row.apu_balance) },
+        { label: "État", values: data.years.map((row) => row.state_balance) },
+      ]}
+      format={formatBillions}
+      bands={data.periods}
+    />
+  </Section>
+  <Section
+    id="dette"
+    title="La dette est un stock, le déficit un flux"
+    icon="debt"
+    provenance={data.provenance}
+  >
+    <p>
+      La <Term id="dette-publique">dette publique</Term> est mesurée à la fin de l’année. La série
+      homogène disponible commence en 1978. Elle cumule des emprunts passés, mais sa variation ne
+      correspond pas exactement au déficit : les opérations financières et la trésorerie
+      interviennent aussi.
+    </p>
+    <p>
+      En {latest.year}, elle représente {formatBillions(latest.apu_debt!)} pour toutes les APU, dont{" "}
+      {formatBillions(latest.state_debt!)} pour la contribution de l’État. Les ratios ci-dessous
+      utilisent le PIB de chaque année.
+    </p>
+    <LineChart
+      slot="chart"
+      caption="Dette de Maastricht à fin décembre, en % du PIB"
+      labels={debt.map((row) => String(row.year))}
+      series={[
+        { label: "Ensemble des APU", values: debt.map((row) => row.apu_debt_ratio) },
+        { label: "Contribution de l’État", values: debt.map((row) => row.state_debt_ratio) },
+      ]}
+      format={rate}
+      bands={data.periods}
+    />
+  </Section>
+  <Section
+    id="dette-euros"
+    title="Le montant de dette à rembourser"
+    icon="euro"
+    provenance={data.provenance}
+  >
+    <p>
+      Les milliards d’euros indiquent le stock nominal à fin décembre. Le ratio au PIB peut diminuer
+      alors que ce montant augmente, si la production en euros progresse plus vite. Vous pouvez
+      ainsi distinguer l’évolution de la somme due de celle de son poids dans l’économie.
+    </p>
+    <LineChart
+      slot="chart"
+      caption="Dette de Maastricht à fin décembre, en Md€ courants"
+      labels={debt.map((row) => String(row.year))}
+      series={[
+        { label: "Ensemble des APU", values: debt.map((row) => row.apu_debt) },
+        { label: "Contribution de l’État", values: debt.map((row) => row.state_debt) },
+      ]}
+      format={formatBillions}
+      bands={data.periods}
+    />
+  </Section>
+  <Section
+    id="etat"
+    title="Pourquoi deux chiffres pour le déficit de l’État ?"
+    icon="state"
+    provenance={data.provenance}
+  >
+    <p>
+      Le résultat d’exécution des lois de finances suit les règles budgétaires. La{" "}
+      <Term id="comptabilite-nationale">comptabilité nationale</Term> rattache les opérations à leur
+      fait générateur et traite différemment les prêts, les participations et certains fonds.
+    </p>
+    <p>
+      Le tableau de passage de l’Insee permet de comparer ces deux mesures depuis 2009. Le solde
+      budgétaire présenté ici exclut les opérations avec le FMI&#8239;; ce périmètre doit rester
+      visible quand vous le rapprochez d’un autre chiffre publié.
+    </p>
+    <LineChart
+      slot="chart"
+      caption="Deux mesures du solde de l’État, en Md€"
+      labels={budget.map((row) => String(row.year))}
+      series={[
+        { label: "Résultat budgétaire hors FMI", values: budget.map((row) => row.budget_balance) },
+        { label: "Comptabilité nationale", values: budget.map((row) => row.state_balance) },
+      ]}
+      format={formatBillions}
+    />
+  </Section>
+  <div slot="method">
+    <p>
+      Le budget d’une année est normalement préparé et voté l’année précédente. Une alternance en
+      cours d’année hérite donc d’autorisations déjà votées. Le Gouvernement peut ensuite modifier
+      la politique ou l’exécution. Les cohabitations et intérims ne sont pas représentés dans les
+      bandes annuelles.
+    </p>
+    <p>
+      Une récession réduit les recettes et augmente certaines dépenses, même à politique inchangée.
+      Les intérêts dépendent aussi des taux et des emprunts passés. Aucune moyenne présidentielle ni
+      attribution causale n’est calculée.
+    </p>
+    <p>
+      Les données 2025 sont provisoires. Pour 2024, la série dédiée au déficit et le tableau 3.215
+      diffèrent de 119,1 M€ pour le total APU. Nous conservons la série dédiée et contrôlons cet
+      écart explicitement. Les valeurs absentes ne sont pas remplacées par zéro.
+    </p>
+  </div>
+</Analysis>

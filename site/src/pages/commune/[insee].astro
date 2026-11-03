@@ -1,0 +1,464 @@
+---
+import CommuneLocalMoney from "../../components/CommuneLocalMoney.astro";
+import Answer from "../../components/Answer.astro";
+import Icon from "../../components/Icon.astro";
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import CompareList from "../../components/CompareList.astro";
+import ContractFlowSection from "../../components/ContractFlowSection.astro";
+import Explainer from "../../components/Explainer.astro";
+import FlowChart from "../../components/FlowChart.astro";
+import KeyFigures from "../../components/KeyFigures.astro";
+import LineChart from "../../components/LineChart.astro";
+import Locator from "../../components/Locator.astro";
+import Provenance from "../../components/Provenance.astro";
+import ShareBar from "../../components/ShareBar.astro";
+import Term from "../../components/Term.astro";
+import Toc from "../../components/Toc.astro";
+import Base from "../../layouts/Base.astro";
+import { getCommuneLocal, getCommune, type FinanceLine } from "../../lib/data";
+import { communeFlow } from "../../lib/flows";
+import { NBSP, formatEuro, formatEuros, formatNumber } from "../../lib/format";
+
+const insee = Astro.params.insee ?? "";
+const commune = /^[0-9][0-9AB][0-9]{3}$/.test(insee)
+  ? await getCommune(insee, Number(Astro.url.searchParams.get("annee")))
+  : null;
+if (!commune) Astro.response.status = 404;
+const accounts = commune?.accounts;
+const local = commune ? await getCommuneLocal(insee) : null;
+
+const find = (lines: FinanceLine[], item: string): FinanceLine | undefined =>
+  lines.find((entry) => entry.item === item);
+const line = (item: string) => find(accounts?.lines ?? [], item);
+const spending = line("depenses");
+const debt = line("dette");
+
+function comparison(value: number, median: number): string {
+  const ratio = value / median - 1;
+  if (Math.abs(ratio) < 0.05) return "un niveau proche de la médiane";
+  return `${formatNumber(Math.abs(ratio) * 100)}${NBSP}% de ${ratio > 0 ? "plus" : "moins"} que la médiane`;
+}
+
+const answer =
+  commune && accounts && spending?.perCapita != null && spending.median != null && accounts.stratum
+    ? `En ${accounts.year}, ${commune.name} a dépensé ${formatEuro(spending.perCapita)} par habitant, ${comparison(spending.perCapita, spending.median)} des communes de ${accounts.stratum.label} (${formatEuro(spending.median)}).`
+    : null;
+
+const flow = accounts ? communeFlow(accounts) : null;
+const spendingParts = flow?.outflows.filter((part) => part.tone === "out") ?? [];
+const revenueParts = flow?.inflows.filter((part) => part.tone === "in") ?? [];
+const section = (name: string) => accounts?.lines.filter((entry) => entry.section === name) ?? [];
+const history = (commune?.history ?? []).map((entry) => ({
+  year: entry.year,
+  population: entry.population,
+  spending: find(entry.lines, "depenses"),
+  revenue: find(entry.lines, "recettes"),
+  savings: find(entry.lines, "epargne_brute"),
+  debt: find(entry.lines, "dette"),
+}));
+const yearHref = (year: number) =>
+  year === commune?.latestYear ? `/commune/${insee}` : `/commune/${insee}?annee=${year}`;
+const perCapita = (entry: FinanceLine | undefined) =>
+  entry?.perCapita != null ? formatEuro(entry.perCapita) : "n.d.";
+const figures = accounts
+  ? [
+      {
+        icon: "person" as const,
+        label: "Dépenses par habitant",
+        term: "par-habitant" as const,
+        value: perCapita(spending),
+        note: spending?.median != null ? `médiane : ${formatEuro(spending.median)}` : undefined,
+      },
+      {
+        icon: "spending" as const,
+        label: "Dépenses totales",
+        term: "depenses-totales" as const,
+        value: spending ? formatEuros(spending.amount) : "n.d.",
+        note: "hors remboursement de la dette",
+      },
+      {
+        icon: "people" as const,
+        label: "Habitants",
+        value: accounts.population ? formatNumber(accounts.population) : "n.d.",
+        note: "population totale Insee",
+      },
+      {
+        icon: "debt" as const,
+        label: "Dette par habitant",
+        term: "dette" as const,
+        value: perCapita(debt),
+        note: debt?.median != null ? `médiane : ${formatEuro(debt.median)}` : undefined,
+      },
+    ]
+  : [];
+const title = commune
+  ? `${commune.name} (${commune.departmentCode})${NBSP}: ${accounts?.year === commune.latestYear ? "budget et dépenses par habitant" : `comptes ${accounts?.year}`}`
+  : "Commune introuvable";
+---
+
+<Base
+  title={title}
+  description={answer ?? "Aucune donnée pour ce code commune."}
+  noindex={!commune}
+>
+  {commune && accounts ? (
+    <>
+      <header class="page-head" id="en-bref">
+        <div class="container">
+          <Breadcrumbs
+            items={[
+              { label: "Communes", href: "/communes" },
+              {
+                label: commune.departmentName ?? "Département",
+                href: `/departement/${commune.departmentCode}`,
+              },
+              { label: commune.name },
+            ]}
+          />
+          <div class="intro">
+            <div>
+              <p class="badges">
+                <span class="badge">
+                  <Icon name="town" size={14} />
+                  Commune
+                </span>
+                <span class="badge">
+                  <Icon name="map" size={14} />
+                  {commune.departmentName} ({commune.departmentCode})
+                </span>
+              </p>
+              <div class="entity">
+                <Icon name="town" />
+                <h1>{commune.name}</h1>
+              </div>
+              {answer && <Answer text={answer} />}
+            </div>
+            {commune.location && (
+              <Locator
+                location={commune.location}
+                href={`/departement/${commune.departmentCode}`}
+                label={`${commune.name} dans le département ${commune.departmentName} : voir la carte des communes`}
+              />
+            )}
+          </div>
+          {commune.insee === "75056" && (
+            <p class="caveat">
+              Depuis 2019, les comptes de Paris incluent ses dépenses de département.
+            </p>
+          )}
+          <nav class="years" aria-label="Année des comptes">
+            <p>
+              <Icon name="calendar" size={16} />
+              Année des comptes
+            </p>
+            <ul class="chips">
+              {commune.history.map((entry) => (
+                <li>
+                  <a
+                    href={yearHref(entry.year)}
+                    aria-current={entry.year === accounts.year ? "page" : undefined}
+                  >
+                    {entry.year}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          {accounts.year !== commune.latestYear && (
+            <p class="older small">
+              Vous consultez les comptes {accounts.year}.{" "}
+              <a href={yearHref(commune.latestYear)}>
+                Voir les plus récents ({commune.latestYear})
+              </a>
+            </p>
+          )}
+          <KeyFigures figures={figures} />
+          <Provenance provenance={commune.provenance} />
+        </div>
+      </header>
+      <Toc
+        items={[
+          { href: "#en-bref", label: "En bref", icon: "info" },
+          ...(flow
+            ? [{ href: "#circuit", label: "Recettes et dépenses", icon: "flow" as const }]
+            : []),
+          { href: "#evolution", label: "Évolution", icon: "trend" },
+          { href: "#depenses", label: "Où va l'argent", icon: "spending" },
+          { href: "#recettes", label: "D'où vient l'argent", icon: "revenue" },
+          { href: "#fiscalite-locale", label: "Fiscalité", icon: "localTax" },
+          { href: "#dotations", label: "Dotations", icon: "grant" },
+          { href: "#impot-revenu", label: "Revenus", icon: "incomeTax" },
+          { href: "#participation", label: "Participation", icon: "vote" },
+          ...(commune.buyer
+            ? [{ href: "#flux-acheteur", label: "Marchés publics", icon: "buyer" as const }]
+            : []),
+        ]}
+      />
+
+      <div class="container">
+        {flow && (
+          <section class="section" id="circuit" aria-labelledby="titre-circuit">
+            <div class="section-head">
+              <h2 id="titre-circuit">
+                <Icon name="flow" />
+                Le budget {accounts.year} en un coup d'œil
+              </h2>
+            </div>
+            <div class="card">
+              <FlowChart
+                caption={`Recettes et dépenses de ${commune.name} en ${accounts.year}`}
+                flow={flow}
+              />
+            </div>
+            <Provenance provenance={commune.provenance} />
+          </section>
+        )}
+
+        <section class="section" id="evolution" aria-labelledby="titre-evolution">
+          <div class="section-head">
+            <h2 id="titre-evolution">
+              <Icon name="trend" />
+              D'une année à l'autre
+            </h2>
+            <p>
+              Comparé à la <Term id="mediane">médiane</Term> des{" "}
+              <Term id="strate">communes de même taille</Term>.
+            </p>
+          </div>
+          <div class="grid">
+            <div class="card">
+              <LineChart
+                caption="Dépenses totales par habitant"
+                labels={history.map((entry) => String(entry.year))}
+                series={[
+                  {
+                    label: commune.name,
+                    values: history.map((entry) => entry.spending?.perCapita ?? null),
+                  },
+                  {
+                    label: "Médiane des communes de même taille",
+                    values: history.map((entry) => entry.spending?.median ?? null),
+                    muted: true,
+                  },
+                ]}
+                format={formatEuro}
+              />
+            </div>
+            <div class="card">
+              <table>
+                <caption class="table-caption">
+                  Année par année, par habitant
+                  <span>Cliquez sur une année pour voir ses comptes en détail.</span>
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Année</th>
+                    <th scope="col" class="num hide-small">
+                      Habitants
+                    </th>
+                    <th scope="col" class="num">
+                      Dépenses
+                    </th>
+                    <th scope="col" class="num hide-small">
+                      Recettes
+                    </th>
+                    <th scope="col" class="num hide-small">
+                      <Term id="epargne-brute">Épargne brute</Term>
+                    </th>
+                    <th scope="col" class="num">
+                      <Term id="dette">Dette</Term>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((entry) => (
+                    <tr>
+                      <th scope="row">
+                        <Icon name="calendar" size={15} />
+                        <a
+                          href={yearHref(entry.year)}
+                          aria-current={entry.year === accounts.year ? "page" : undefined}
+                        >
+                          {entry.year}
+                        </a>
+                      </th>
+                      <td class="num hide-small">
+                        {entry.population ? formatNumber(entry.population) : "n.d."}
+                      </td>
+                      <td class="num">{perCapita(entry.spending)}</td>
+                      <td class="num hide-small">{perCapita(entry.revenue)}</td>
+                      <td class="num hide-small">{perCapita(entry.savings)}</td>
+                      <td class="num">{perCapita(entry.debt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <Provenance provenance={commune.provenance} />
+        </section>
+
+        <section class="section" id="depenses" aria-labelledby="titre-depenses">
+          <div class="section-head">
+            <h2 id="titre-depenses">
+              <Icon name="spending" />
+              Où va l'argent
+            </h2>
+            <p>Poste par poste, en {accounts.year}.</p>
+          </div>
+          <div class="grid two">
+            <div class="card">
+              <ShareBar
+                caption={`Sur 100 € dépensés par ${commune.name}`}
+                whole="dépenses totales, hors remboursement de la dette"
+                parts={spendingParts}
+              />
+            </div>
+            <div class="card">
+              <CompareList
+                caption="Par habitant, comparé aux communes de même taille"
+                lines={section("depense")}
+              />
+            </div>
+          </div>
+          <div class="explain">
+            <Explainer title="Comment lire ces chiffres">
+              <p>
+                Les <Term id="comptes-consolides">comptes consolidés</Term> regroupent le budget
+                principal et les <Term id="budget-annexe">budgets annexes</Term> de la commune (eau,
+                transports…), sans les flux entre eux.
+              </p>
+              <p>
+                Les dépenses de l'<Term id="intercommunalite">intercommunalité</Term> ne sont pas
+                comptées : une commune qui lui a confié beaucoup de compétences paraît dépenser
+                moins.
+              </p>
+              <p>
+                Une <Term id="commune-nouvelle">commune issue d'une fusion</Term> est présentée dans
+                son périmètre actuel : avant la fusion, les comptes des anciennes communes sont
+                additionnés.
+              </p>
+            </Explainer>
+          </div>
+          <Provenance provenance={commune.provenance} />
+        </section>
+
+        <section class="section" id="recettes" aria-labelledby="titre-recettes">
+          <div class="section-head">
+            <h2 id="titre-recettes">
+              <Icon name="revenue" />
+              D'où vient l'argent
+            </h2>
+            <p>Hors emprunts.</p>
+          </div>
+          <div class="grid two">
+            <div class="card">
+              <ShareBar
+                caption={`Sur 100 € de recettes de ${commune.name}`}
+                whole="recettes totales, hors emprunts"
+                parts={revenueParts}
+              />
+            </div>
+            <div class="card">
+              <CompareList caption="Dette et épargne par habitant" lines={section("dette")} />
+            </div>
+          </div>
+          <div class="explain">
+            <Explainer title="Épargne brute et dette">
+              <p>
+                L'épargne brute est ce qu'il reste des recettes de fonctionnement une fois les{" "}
+                <Term id="fonctionnement">dépenses de fonctionnement</Term> payées. Elle sert à
+                rembourser la <Term id="dette">dette</Term> et à investir.
+              </p>
+            </Explainer>
+          </div>
+          <Provenance provenance={commune.provenance} />
+        </section>
+
+        {local && <CommuneLocalMoney data={local} />}
+
+        {commune.buyer && (
+          <ContractFlowSection flow={commune.buyer.flow} currentYear={new Date().getFullYear()} />
+        )}
+      </div>
+    </>
+  ) : (
+    <header class="page-head">
+      <div class="container">
+        <Breadcrumbs items={[{ label: "Communes", href: "/communes" }, { label: "Introuvable" }]} />
+        <h1>Commune introuvable</h1>
+        <p class="lead">Aucun compte n'est publié pour ce code Insee.</p>
+        <a class="button" href="/communes">
+          Chercher une commune
+        </a>
+      </div>
+    </header>
+  )}
+</Base>
+
+<style>
+  .explain {
+    margin: 1.5rem 0 0;
+  }
+
+  .years {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.875rem;
+    margin: 0 0 1.25rem;
+  }
+
+  .years p {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .years .chips {
+    margin: 0;
+    gap: 0.375rem;
+  }
+
+  .intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .intro :global(.locator) {
+    margin-top: 1.25rem;
+  }
+
+  .caveat {
+    margin: -0.75rem 0 1.75rem;
+    padding: 0.75rem 1rem;
+    border-left: 3px solid var(--series-4);
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: 0.9375rem;
+  }
+
+  .older {
+    margin: -0.5rem 0 1.25rem;
+    color: var(--text-secondary);
+  }
+
+  .table-caption {
+    text-align: left;
+    font-weight: 650;
+    margin-bottom: 0.5rem;
+  }
+
+  .table-caption span {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+</style>

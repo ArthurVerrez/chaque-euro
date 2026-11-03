@@ -1,0 +1,206 @@
+---
+import Democracy from "../layouts/Democracy.astro";
+import Icon from "../components/Icon.astro";
+import PublicTable from "../components/PublicTable.astro";
+import Provenance from "../components/Provenance.astro";
+import Explainer from "../components/Explainer.astro";
+import Term from "../components/Term.astro";
+import BarList from "../components/BarList.astro";
+import { getPublicExpenses } from "../lib/data";
+import { formatDate, formatEuroCents, formatEuros, formatNumber } from "../lib/format";
+const data = await getPublicExpenses();
+const parliament = data.references.filter((r) =>
+  ["Assemblée nationale", "Sénat"].includes(r.institution),
+);
+const local = data.references.filter((r) => r.source_id === "local-allowance");
+const presidency = data.references.find((r) => r.source_id === "presidency-accounts")!;
+const kinds: Record<string, string> = {
+  allowance: "Indemnité",
+  envelope: "Enveloppe autorisée",
+  ceiling: "Plafond",
+  institutional_actual: "Charge institutionnelle",
+};
+---
+
+<Democracy
+  title="Train de vie des institutions"
+  description="Indemnités brutes, enveloppes de frais, budgets institutionnels et plafonds locaux, avec dates et limites."
+  icon="spending"
+  answer="Une indemnité, une enveloppe de frais et un budget d’institution décrivent des réalités différentes. Vous trouvez ici leurs barèmes et leurs dates, sans les attribuer à la dépense personnelle d’un élu."
+  provenance={data.accessProvenance}
+  sections={[
+    { id: "parlement", label: "Parlement", icon: "elected" },
+    { id: "institutions", label: "Institutions", icon: "state" },
+    { id: "cabinets", label: "Cabinets", icon: "staff" },
+    { id: "locaux", label: "Barèmes locaux", icon: "town" },
+    { id: "acces", label: "Ce qui est public", icon: "hidden" },
+    { id: "cada", label: "Avis CADA", icon: "scale" },
+  ]}
+>
+  <section id="parlement" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="elected" />
+        <span>
+          Indemnités et <Term id="enveloppe-frais">enveloppes parlementaires</Term>
+        </span>
+      </h2>
+    </div>
+    <div class="reference-grid">
+      {parliament.map((r) => (
+        <article class="card">
+          <h3>
+            <Icon name={r.value_kind === "allowance" ? "incomeTax" : "spending"} />
+            {r.measure}
+          </h3>
+          <p class="reference-value">{formatEuroCents(r.amount_cents)}</p>
+          <p>
+            {r.institution} · {r.territory_category}. {r.unit}, {r.gross_net}.
+          </p>
+          <p class="small muted">
+            {kinds[r.value_kind]} · référence au {formatDate(r.effective_on)}.
+          </p>
+          <Provenance provenance={r.provenance} />
+        </article>
+      ))}
+    </div>
+  </section>
+  <section id="institutions" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="state" />
+        Budgets institutionnels
+      </h2>
+    </div>
+    <BarList
+      caption="Mission Pouvoirs publics, exécution et crédits votés séparés"
+      items={data.budget
+        .filter((r) => r.amount !== null)
+        .map((r) => ({
+          icon: "state",
+          label: `${r.year} · ${r.stage}`,
+          value: r.amount,
+          display: formatEuros(r.amount),
+        }))}
+    />
+    <p>
+      <a href="/budget-etat">Voir les programmes et les crédits du budget de l’État</a>. Ces totaux
+      comprennent des moyens parlementaires : ils ne s’ajoutent pas aux enveloppes présentées plus
+      haut.
+    </p>
+    <Provenance provenance={data.budgetProvenance} />
+    <div class="card">
+      <h3>
+        <Icon name="state" />
+        Présidence de la République
+      </h3>
+      <p class="reference-value">{formatEuros(presidency.amount_cents / 100)}</p>
+      <p>
+        Charges de l’exercice 2024, selon la Cour des comptes. Ce montant n’est ni la dotation de
+        l’État ni une dépense personnelle du président.
+      </p>
+      <Provenance provenance={presidency.provenance} />
+    </div>
+  </section>
+  <section id="cabinets" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="staff" />
+        Cabinets ministériels
+      </h2>
+    </div>
+    <BarList
+      caption="Effectifs au 1er juillet 2025, annexe PLF 2026"
+      items={data.cabinets.map((r) => ({
+        icon: "staff",
+        label: r.category,
+        value: r.value,
+        display: formatNumber(r.value),
+      }))}
+    />
+    <p class="small muted">
+      Photographie historique, pas effectif actuel du gouvernement. Aucun salaire individuel ou
+      moyen n’est déduit de ces effectifs.
+    </p>
+    <Provenance provenance={data.cabinetProvenance} />
+  </section>
+  <section id="locaux" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="town" />
+        Barèmes des élus locaux
+      </h2>
+    </div>
+    <PublicTable
+      caption="Barèmes bruts mensuels au 1er janvier 2026, hors majorations et règles de cumul"
+      columns={["Fonction", "Population", "Montant de référence"]}
+      rows={local.map((r) => [
+        { text: r.role_kind },
+        { text: r.territory_category },
+        { text: formatEuroCents(r.amount_cents) },
+      ])}
+    />
+    <p>Ces plafonds ne prouvent pas les indemnités réellement versées par une commune.</p>
+    <Provenance provenance={local[0]!.provenance} />
+  </section>
+  <section id="acces" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="hidden" />
+        Ce qui n’est pas disponible ici
+      </h2>
+    </div>
+    <Explainer title="Les justificatifs individuels de frais">
+      <p>
+        Les chambres publient leurs règles et des contrôles internes. Aucun jeu national vérifié de
+        justificatifs individuels parlementaires n’est disponible dans ce corpus. Les enveloppes ne
+        permettent donc pas de reconstituer les achats ou les remboursements d’une personne.
+      </p>
+      <p>
+        Les refus écrits de juin 2026 évoqués publiquement ne sont pas reproduits ici : les
+        courriers officiels n’ont pas été obtenus pour cette vérification. Publication,
+        communication sur demande et contrôle interne sont des questions distinctes.
+      </p>
+      <p>
+        Les déclarations de patrimoine HATVP, les données de famille et les coordonnées privées
+        restent exclues.
+      </p>
+    </Explainer>
+    <Provenance provenance={data.accessProvenance} />
+  </section>
+  <section id="cada" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="scale" />
+        Accès aux documents : avis CADA
+      </h2>
+    </div>
+    <p>
+      Séances couvertes jusqu’au{" "}
+      <strong>
+        {formatDate(
+          data.cada
+            .map((r) => r.last)
+            .sort()
+            .at(-1) ?? null,
+        )}
+      </strong>
+      . Le fichier mis en ligne en 2026 ne contient pas des avis de 2026.
+    </p>
+    <PublicTable
+      caption="Dossiers uniques ; sens favorable et défavorable peuvent se chevaucher"
+      columns={["Type", "Dossiers", "Avec sens favorable", "Avec sens défavorable"]}
+      rows={data.cada.map((r) => [
+        { text: r.kind },
+        { text: formatNumber(r.count) },
+        { text: formatNumber(r.favorable) },
+        { text: formatNumber(r.unfavorable) },
+      ])}
+    />
+    <p class="small muted">
+      Un avis est consultatif et ne prouve pas que le document a été communiqué. Les textes, les
+      requérants privés et les trois sanctions sont exclus.
+    </p>
+    <Provenance provenance={data.cadaProvenance} />
+  </section>
+</Democracy>

@@ -1,0 +1,272 @@
+---
+import DepartmentLocalMoney from "../../components/DepartmentLocalMoney.astro";
+import Toc from "../../components/Toc.astro";
+import Answer from "../../components/Answer.astro";
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import ChoroplethMap from "../../components/ChoroplethMap.astro";
+import Explainer from "../../components/Explainer.astro";
+import Icon from "../../components/Icon.astro";
+import KeyFigures from "../../components/KeyFigures.astro";
+import Provenance from "../../components/Provenance.astro";
+import Term from "../../components/Term.astro";
+import Base from "../../layouts/Base.astro";
+import { getDepartement } from "../../lib/data";
+import {
+  NBSP,
+  formatEuro,
+  formatEuros,
+  formatGap,
+  formatNumber,
+  medianGap,
+} from "../../lib/format";
+
+const code = (Astro.params.code ?? "").toUpperCase();
+const departement = /^(\d{2}|2[AB]|97[1-6])$/.test(code) ? await getDepartement(code) : null;
+if (!departement) Astro.response.status = 404;
+
+const CLASSES = [
+  { label: `Plus de 20${NBSP}% en dessous`, color: "var(--div-low-2)", below: -0.2 },
+  { label: `5 à 20${NBSP}% en dessous`, color: "var(--div-low-1)", below: -0.05 },
+  { label: "Proche de la médiane", color: "var(--div-mid)", below: 0.05 },
+  { label: `5 à 20${NBSP}% au-dessus`, color: "var(--div-high-1)", below: 0.2 },
+  { label: `Plus de 20${NBSP}% au-dessus`, color: "var(--div-high-2)", below: Infinity },
+];
+const communes = (departement?.communes ?? []).map((commune) => ({
+  ...commune,
+  gap: medianGap(commune.perCapita, commune.median),
+}));
+const gapPhrase = (gap: number | null) =>
+  gap !== null && Math.abs(gap) < 0.05
+    ? "proche de la médiane"
+    : `${formatGap(gap)} par rapport à la médiane`;
+const [, , mapWidth = 0] = (departement?.viewBox ?? "").split(" ").map(Number);
+const labelSize = mapWidth * 0.022;
+const placed: { x0: number; y0: number; x1: number; y1: number }[] = [];
+const labels = new Map<string, { text: string; x: number; y: number }>();
+for (const commune of communes) {
+  if (placed.length === 12) break;
+  if (commune.cx === null || commune.cy === null) continue;
+  const half = (commune.name.length * labelSize * 0.56) / 2;
+  const box = {
+    x0: commune.cx - half,
+    x1: commune.cx + half,
+    y0: commune.cy - labelSize * 0.7,
+    y1: commune.cy + labelSize * 0.7,
+  };
+  if (
+    placed.some(
+      (other) => box.x0 < other.x1 && other.x0 < box.x1 && box.y0 < other.y1 && other.y0 < box.y1,
+    )
+  )
+    continue;
+  placed.push(box);
+  labels.set(commune.insee, { text: commune.name, x: commune.cx, y: commune.cy });
+}
+const areas = communes.map((commune) => ({
+  id: commune.insee,
+  name: commune.name,
+  path: commune.path,
+  value: commune.gap,
+  display:
+    commune.perCapita === null
+      ? "pas de données"
+      : `${formatEuro(commune.perCapita)} par habitant (${gapPhrase(commune.gap)})`,
+  href: `/commune/${commune.insee}`,
+  label: labels.get(commune.insee),
+}));
+const count = (test: (gap: number) => boolean) =>
+  communes.filter((commune) => commune.gap !== null && test(commune.gap)).length;
+const above = count((gap) => gap >= 0.05);
+const below = count((gap) => gap <= -0.05);
+const near = count((gap) => Math.abs(gap) < 0.05);
+const answer = departement
+  ? `En ${departement.year}, les communes de ce département ont dépensé ${formatEuro(departement.perCapita)} par habitant en moyenne, ${formatEuros(departement.spending)} au total.`
+  : null;
+const figures = departement
+  ? [
+      { icon: "town" as const, label: "Communes", value: formatNumber(communes.length) },
+      { icon: "people" as const, label: "Habitants", value: formatNumber(departement.population) },
+      {
+        icon: "spending" as const,
+        label: "Dépenses totales",
+        value: formatEuros(departement.spending),
+        term: "depenses-totales" as const,
+      },
+      {
+        icon: "person" as const,
+        label: "Par habitant",
+        value: formatEuro(departement.perCapita),
+        note: "toutes communes confondues",
+        term: "par-habitant" as const,
+      },
+    ]
+  : [];
+---
+
+<Base
+  title={
+    departement
+      ? `${departement.name} (${departement.code}) : les dépenses de ses communes`
+      : "Département introuvable"
+  }
+  description={answer ?? "Aucune donnée pour ce département."}
+  noindex={!departement}
+>
+  {departement ? (
+    <>
+      <header class="page-head">
+        <div class="container">
+          <Breadcrumbs
+            items={[{ label: "Communes", href: "/communes" }, { label: departement.name }]}
+          />
+          <p class="badges">
+            <span class="badge">
+              <Icon name="map" size={14} />
+              Département ({departement.code})
+            </span>
+          </p>
+          <div class="entity">
+            <Icon name="map" />
+            <h1>{departement.name}</h1>
+          </div>
+          {answer && <Answer text={answer} />}
+          <KeyFigures figures={figures} />
+          <Provenance provenance={departement.provenance} />
+        </div>
+      </header>
+
+      <Toc
+        items={[
+          { href: "#conseil", label: "Collectivité", icon: "administration" },
+          { href: "#participation", label: "Participation", icon: "vote" },
+          { href: "#titre-carte", label: "Communes", icon: "town" },
+        ]}
+      />
+      <div class="container">
+        <DepartmentLocalMoney code={code} />
+        <section class="section" aria-labelledby="titre-carte">
+          <div class="section-head">
+            <h2 id="titre-carte">
+              <Icon name="map" />
+              Chaque commune comparée à celles de même taille
+            </h2>
+            <p>
+              {above} au-dessus de la <Term id="mediane">médiane</Term>, {below} en dessous, {near}{" "}
+              proches.
+            </p>
+          </div>
+          <div class="grid">
+            <div class="card">
+              <ChoroplethMap
+                caption={`Dépenses totales par habitant en ${departement.year}, écart à la médiane`}
+                viewBox={departement.viewBox}
+                areas={areas}
+                classes={CLASSES}
+                labelSize={labelSize}
+              />
+            </div>
+            <Explainer title="Comment lire cette carte">
+              <p>
+                Chaque commune est comparée à la médiane des communes de sa taille, partout en
+                France. Une couleur n'est ni bonne ni mauvaise : une commune touristique ou très
+                équipée dépense souvent plus.
+              </p>
+              <p>
+                Les dépenses de l'<Term id="intercommunalite">intercommunalité</Term> ne sont pas
+                comptées : une commune qui lui a confié beaucoup de compétences paraît dépenser
+                moins.
+              </p>
+              <p>
+                Les noms affichés sont ceux des communes les plus peuplées. Survolez une commune
+                pour voir son nom et son chiffre, cliquez pour ouvrir sa page.
+              </p>
+            </Explainer>
+          </div>
+          <Provenance provenance={departement.provenance} />
+        </section>
+
+        <section class="section" aria-labelledby="titre-liste">
+          <div class="section-head">
+            <h2 id="titre-liste">
+              <Icon name="list" />
+              Toutes les communes
+            </h2>
+          </div>
+          <div class="card">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Commune</th>
+                  <th scope="col" class="num hide-small">
+                    Habitants
+                  </th>
+                  <th scope="col" class="num">
+                    Par habitant
+                  </th>
+                  <th scope="col" class="num hide-small">
+                    Médiane
+                  </th>
+                  <th scope="col" class="num">
+                    Écart
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {communes.map((commune) => (
+                  <tr>
+                    <th scope="row">
+                      <Icon name="town" size={15} />
+                      <a href={`/commune/${commune.insee}`}>{commune.name}</a>
+                    </th>
+                    <td class="num hide-small">
+                      {commune.population ? formatNumber(commune.population) : "n.d."}
+                    </td>
+                    <td class="num">
+                      {commune.perCapita === null ? "n.d." : formatEuro(commune.perCapita)}
+                    </td>
+                    <td class="num hide-small">
+                      {commune.median === null ? "n.d." : formatEuro(commune.median)}
+                    </td>
+                    <td class="num">{formatGap(commune.gap)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </>
+  ) : (
+    <header class="page-head">
+      <div class="container">
+        <Breadcrumbs items={[{ label: "Communes", href: "/communes" }, { label: "Introuvable" }]} />
+        <h1>Département introuvable</h1>
+        <p class="lead">Aucun compte de commune n'est publié pour ce code de département.</p>
+        <a class="button" href="/communes">
+          Voir la carte des départements
+        </a>
+      </div>
+    </header>
+  )}
+</Base>
+
+<style>
+  @media (max-width: 40rem) {
+    table {
+      table-layout: fixed;
+      width: 100%;
+    }
+    th:first-child {
+      width: 42%;
+    }
+    th:last-child {
+      width: 20%;
+    }
+    th[scope="row"] {
+      overflow-wrap: anywhere;
+    }
+    td.num {
+      white-space: nowrap;
+    }
+  }
+</style>

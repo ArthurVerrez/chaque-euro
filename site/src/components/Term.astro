@@ -1,0 +1,112 @@
+---
+import { GLOSSARY, type TermId } from "../lib/glossary";
+
+interface Props {
+  id: TermId;
+}
+
+const { id } = Astro.props;
+---
+
+<a
+  class="term"
+  href={`/lexique#${id}`}
+  aria-haspopup="dialog"
+  data-term={GLOSSARY[id].term}
+  data-definition={GLOSSARY[id].definition}
+>
+  <slot />
+  <span class="visually-hidden"> (définition)</span>
+</a>
+
+<script>
+  const popup = document.createElement("div");
+  if ("popover" in HTMLElement.prototype) {
+    popup.className = "term-popup";
+    popup.popover = "auto";
+    popup.setAttribute("role", "dialog");
+    const title = document.createElement("strong");
+    const definition = document.createElement("p");
+    const more = document.createElement("a");
+    more.textContent = "Voir dans le lexique";
+    popup.replaceChildren(title, definition, more);
+    document.body.appendChild(popup);
+
+    document.addEventListener("click", (event) => {
+      const link = (event.target as Element).closest<HTMLAnchorElement>("a.term");
+      if (!link) return;
+      event.preventDefault();
+      title.textContent = link.dataset.term ?? "";
+      definition.textContent = link.dataset.definition ?? "";
+      more.href = link.href;
+      popup.setAttribute("aria-label", title.textContent);
+      popup.showPopover();
+      const lines = [...link.getClientRects()];
+      const first = lines[0] ?? link.getBoundingClientRect();
+      const last = lines.at(-1) ?? first;
+      const left = Math.min(Math.max(last.left, 8), innerWidth - popup.offsetWidth - 8);
+      const below = last.bottom + 8;
+      const top =
+        below + popup.offsetHeight > innerHeight ? first.top - popup.offsetHeight - 8 : below;
+      popup.style.left = `${left}px`;
+      popup.style.top = `${Math.max(top, 8)}px`;
+      more.focus({ preventScroll: true });
+    });
+    addEventListener("scroll", () => popup.hidePopover(), { passive: true });
+  }
+</script>
+
+<style>
+  .term {
+    color: inherit;
+    text-decoration: underline dotted 1.5px;
+    text-decoration-color: var(--link);
+    text-underline-offset: 0.2em;
+    border-radius: 3px;
+    cursor: help;
+  }
+
+  .term:hover {
+    color: var(--link);
+    background: var(--navy-50);
+    text-decoration-style: solid;
+  }
+
+  .term::after {
+    content: "\2060";
+    padding-right: 0.85em;
+    background: var(--link);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='m20 20-4.8-4.8'/%3E%3C/svg%3E")
+      no-repeat right center / 0.7em;
+  }
+
+  :global(.term-popup) {
+    position: fixed;
+    inset: auto;
+    width: min(22rem, calc(100vw - 1rem));
+    margin: 0;
+    padding: 1rem 1.125rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: 0 12px 32px rgb(7 22 49 / 18%);
+    color: var(--text-secondary);
+    font-size: 0.9375rem;
+    line-height: 1.55;
+  }
+
+  :global(.term-popup strong) {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--navy-900);
+  }
+
+  :global(.term-popup p) {
+    margin: 0 0 0.5rem;
+  }
+
+  :global(.term-popup a) {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+</style>

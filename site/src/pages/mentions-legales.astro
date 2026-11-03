@@ -1,0 +1,168 @@
+---
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import Icon from "../components/Icon.astro";
+import Toc from "../components/Toc.astro";
+import Base from "../layouts/Base.astro";
+import type { IconName } from "../lib/icons";
+
+const CONTACT = "contact@polastra.com";
+const sections: { id: string; label: string; icon: IconName }[] = [
+  { id: "editeur", label: "Éditeur", icon: "identity" },
+  { id: "correction", label: "Demander une correction", icon: "answer" },
+  { id: "personnes", label: "Personnes nommées", icon: "elected" },
+  { id: "visiteurs", label: "Visiteurs", icon: "hidden" },
+];
+const named: { term: string; text: string }[] = [
+  {
+    term: "Qui",
+    text: "Élus, membres du Gouvernement, candidats aux élections et personnes nommées par un texte publié au Journal officiel, dans leur fonction publique uniquement. Les autres personnes physiques ne sont jamais nommées : les entrepreneurs individuels et les unités non diffusibles du répertoire Sirene apparaissent sans nom ni numéro SIREN.",
+  },
+  {
+    term: "Quelles données",
+    text: "Nom, fonctions et mandats, votes publics, participation, date et nombre de rubriques des déclarations d’intérêts publiées par la HATVP, comptes de campagne et décisions de la CNCCFP, nominations au Journal officiel. Jamais de déclaration de patrimoine, d’adresse, de date de naissance ni de coordonnées.",
+  },
+  {
+    term: "Pourquoi",
+    text: "Informer le public sur l’exercice des fonctions publiques et l’usage de l’argent public. Base légale : l’intérêt légitime (RGPD, art. 6.1.f). Les votes sont des positions rendues publiques par les personnes elles-mêmes dans leur fonction (art. 9.2.e).",
+  },
+  {
+    term: "Destinataires",
+    text: "Toute personne qui consulte le site ou télécharge ses fichiers. Cloudflare achemine les pages depuis les États-Unis et adhère au Data Privacy Framework UE-États-Unis.",
+  },
+  {
+    term: "Durée",
+    text: "Les données sont remplacées à chaque mise à jour. Une information retirée par sa source disparaît ici à la mise à jour suivante.",
+  },
+  {
+    term: "Vos droits",
+    text: "Accès, rectification, opposition, limitation et effacement, à l’adresse ci-dessus. Aucune décision automatisée n’est prise. Cette page tient lieu d’information individuelle (art. 14.5.b).",
+  },
+];
+---
+
+<Base
+  title="Mentions légales et données personnelles"
+  description="Qui édite Chaque Euro, comment demander une correction et quelles données personnelles le site publie."
+>
+  <header class="page-head">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Mentions légales" }]} />
+      <div class="entity">
+        <Icon name="privacy" />
+        <h1>Mentions légales et données personnelles</h1>
+      </div>
+    </div>
+  </header>
+  <Toc items={sections.map((s) => ({ href: `#${s.id}`, label: s.label, icon: s.icon }))} />
+
+  <div class="container">
+    <section class="section" id="editeur" aria-labelledby="titre-editeur">
+      <h2 id="titre-editeur">
+        <Icon name="identity" />
+        Éditeur
+      </h2>
+      <dl class="facts">
+        <div>
+          <dt>Édité par</dt>
+          <dd>Arthur Verrez, directeur de la publication</dd>
+        </div>
+        <div>
+          <dt>Contact</dt>
+          <dd>
+            <a href={`mailto:${CONTACT}`}>{CONTACT}</a>
+          </dd>
+        </div>
+        <div>
+          <dt>Hébergement</dt>
+          <dd>
+            Cloudflare, Inc., 101 Townsend St, San Francisco, CA 94107, États-Unis, +1 650 319 8930.
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="section" id="correction" aria-labelledby="titre-correction">
+      <h2 id="titre-correction">
+        <Icon name="answer" />
+        Demander une correction
+      </h2>
+      <p>
+        Une donnée vous concerne et vous semble fausse, ou vous vous opposez à sa publication ?
+        Écrivez à <a href={`mailto:${CONTACT}`}>{CONTACT}</a> en indiquant l’adresse de la page.
+        Vous recevez une réponse sous un mois. Cette adresse reçoit aussi les demandes de droit de
+        réponse.
+      </p>
+      <p class="muted">
+        Si l’erreur vient de la source officielle, signalez-la aussi à son éditeur : la page suit la
+        source à chaque mise à jour.
+      </p>
+    </section>
+
+    <section class="section" id="personnes" aria-labelledby="titre-personnes">
+      <h2 id="titre-personnes">
+        <Icon name="elected" />
+        Personnes nommées
+      </h2>
+      <dl class="facts">
+        {named.map((item) => (
+          <div>
+            <dt>{item.term}</dt>
+            <dd>{item.text}</dd>
+          </div>
+        ))}
+        <div>
+          <dt>Sources</dt>
+          <dd>
+            Assemblée nationale, Sénat, HATVP, CNCCFP, ministère de l’Intérieur et Journal officiel.{" "}
+            <a href="/methodologie#sources">Voir toutes les sources</a>.
+          </dd>
+        </div>
+        <div>
+          <dt>Réclamation</dt>
+          <dd>
+            Vous pouvez saisir la <a href="https://www.cnil.fr/fr/plaintes">CNIL</a>.
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="section" id="visiteurs" aria-labelledby="titre-visiteurs">
+      <h2 id="titre-visiteurs">
+        <Icon name="hidden" />
+        Visiteurs
+      </h2>
+      <p>
+        Le site ne dépose aucun cookie et ne mesure pas l’audience. Cloudflare traite votre adresse
+        IP pour acheminer les pages. Le serveur journalise les pages demandées, sans adresse IP.
+      </p>
+    </section>
+  </div>
+</Base>
+
+<style>
+  .facts {
+    margin: 1.25rem 0 0;
+  }
+
+  .facts div {
+    display: grid;
+    gap: 0.25rem 2rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (min-width: 48rem) {
+    .facts div {
+      grid-template-columns: 12rem 1fr;
+    }
+  }
+
+  dt {
+    font-weight: 700;
+  }
+
+  dd {
+    margin: 0;
+    color: var(--text-secondary);
+  }
+</style>

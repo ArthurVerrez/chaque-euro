@@ -1,0 +1,43 @@
+---
+import { getCommuneDgfHistory } from "../lib/data";
+import { formatEuros } from "../lib/format";
+import Explainer from "./Explainer.astro";
+import Icon from "./Icon.astro";
+import LineChart from "./LineChart.astro";
+import Provenance from "./Provenance.astro";
+import Term from "./Term.astro";
+
+const data = await getCommuneDgfHistory();
+---
+
+<section class="section" id="dotations" aria-labelledby="titre-dotations">
+  <div class="section-head">
+    <h2 id="titre-dotations">
+      <Icon name="grant" />
+      La DGF dans les comptes des communes
+    </h2>
+    <p>
+      La <Term id="dgf">dotation globale de fonctionnement</Term> comptabilisée, en euros courants.
+    </p>
+  </div>
+  <div class="card">
+    <LineChart
+      caption="DGF comptabilisée par les communes, 2018-2025"
+      labels={data.history.map((row) => String(row.year))}
+      series={[{ label: "DGF des communes", values: data.history.map((row) => row.amount) }]}
+      format={formatEuros}
+    />
+  </div>
+  <Explainer title="Comptes exécutés et allocations 2026">
+    <p>
+      Cette série additionne la DGF dans les comptes communaux disponibles. Elle ne comprend pas la
+      DGF des départements ni des intercommunalités. La couverture varie avec les comptes publiés.
+    </p>
+    <p>
+      Les attributions DGCL 2026 ne sont pas intégrées : la licence n’est pas précisée dans le
+      catalogue DGCL ni dans le miroir OFGL. Les comptes exécutés 2025 ne sont pas présentés comme
+      des allocations 2026.
+    </p>
+  </Explainer>
+  <Provenance provenance={data.provenance} />
+</section>

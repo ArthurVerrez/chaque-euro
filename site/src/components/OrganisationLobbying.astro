@@ -1,0 +1,82 @@
+---
+import Icon from "./Icon.astro";
+import BarList from "./BarList.astro";
+import Provenance from "./Provenance.astro";
+import EuropeanLobbyingTable from "./EuropeanLobbyingTable.astro";
+import Explainer from "./Explainer.astro";
+import Term from "./Term.astro";
+import type { getOrganisationLobbying } from "../lib/data";
+import { exercisePeriod } from "../lib/democracy";
+import { formatNumber } from "../lib/format";
+interface Props {
+  data: Awaited<ReturnType<typeof getOrganisationLobbying>>;
+}
+const { data } = Astro.props;
+---
+
+<section class="section" id="lobbying" aria-labelledby="titre-lobbying">
+  <div class="section-head">
+    <h2 id="titre-lobbying">
+      <Icon name="lobbying" /> Représentant d’intérêts
+    </h2>
+    <p>
+      Les déclarations de <Term id="lobbying">représentation d’intérêts</Term> de cette
+      organisation.
+    </p>
+  </div>
+  {data.french.map((row) => (
+    <>
+      <div class="card">
+        <h3>
+          <Icon name="lobbying" /> Répertoire HATVP
+        </h3>
+        <p>
+          {row.budget_label ?? "Dépenses non déclarées"} ·{" "}
+          {exercisePeriod(row.starts_on, row.ends_on)}
+        </p>
+        <p>{formatNumber(row.activities ?? 0)} fiches d’activité dans cet exercice.</p>
+        {row.activities_reconciled === 0 && (
+          <p class="small muted">
+            Le répertoire annonce {formatNumber(row.declared_activities ?? 0)} fiches ; seules les
+            fiches effectivement présentes dans l’export sont comptées ici.
+          </p>
+        )}
+        {data.targets.length > 0 && (
+          <BarList
+            caption="Institutions ciblées dans le dernier exercice clos publié"
+            items={data.targets.map((target) => ({
+              label: target.label,
+              value: target.count,
+              display: formatNumber(target.count),
+              icon: "state",
+            }))}
+          />
+        )}
+      </div>
+      <Provenance provenance={row.provenance} />
+    </>
+  ))}
+  {data.european.length > 0 && (
+    <>
+      <div class="card">
+        <h3>
+          <Icon name="europe" /> Registre de transparence de l’UE
+        </h3>
+        <EuropeanLobbyingTable rows={data.european} />
+      </div>
+      {data.european.map((row) => (
+        <Provenance provenance={row.provenance} />
+      ))}
+    </>
+  )}
+  <Explainer title="Ce que ce rapprochement permet de lire">
+    <p>
+      La HATVP est rapprochée par SIREN. Le registre UE l’est par nom normalisé identique, pays
+      France et unicité dans les deux registres. Ce dernier rapprochement est indicatif.
+    </p>
+    <p>
+      Les marchés, versements de l’État et déclarations couvrent des périodes différentes. Leur
+      présence sur une même page ne prouve aucun lien entre eux.
+    </p>
+  </Explainer>
+</section>

@@ -1,0 +1,519 @@
+---
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import Explainer from "../components/Explainer.astro";
+import Icon from "../components/Icon.astro";
+import KeyFigures from "../components/KeyFigures.astro";
+import Toc from "../components/Toc.astro";
+import Base from "../layouts/Base.astro";
+import { getDownloads } from "../lib/data";
+import { formatBytes, formatDayMonth, formatNumber, formatYear, plural } from "../lib/format";
+import type { IconName } from "../lib/icons";
+
+const downloads = await getDownloads();
+const TABLES: Record<string, { label: string; icon: IconName }> = {
+  state_monthly: { label: "Exécution mensuelle de l'État", icon: "calendar" },
+  state_titles: { label: "Dépenses de l'État par titre", icon: "layers" },
+  state_ministries: { label: "Dépenses de l'État par ministère", icon: "state" },
+  state_assets: { label: "Bilan de l'État", icon: "state" },
+  compulsory_levies: { label: "Prélèvements obligatoires", icon: "revenue" },
+  european_finances: { label: "Finances publiques en Europe", icon: "europe" },
+  european_functions: { label: "Dépenses publiques européennes par fonction", icon: "europe" },
+  quarterly_debt: { label: "Dette publique trimestrielle", icon: "trend" },
+  social_benefits: { label: "Prestations de protection sociale", icon: "socialSecurity" },
+  green_budget: { label: "Budget vert", icon: "layers" },
+  social_branches: { label: "Comptes des cinq branches", icon: "socialSecurity" },
+  social_ondam: { label: "Objectif de dépenses d’assurance maladie", icon: "socialSecurity" },
+  health_payers: { label: "Financeurs de la santé", icon: "socialSecurity" },
+  pension_indicators: { label: "Retraites et pensions", icon: "socialSecurity" },
+  family_benefits: { label: "Prestations de la branche famille", icon: "socialSecurity" },
+  unemployment_accounts: { label: "Comptes de l’assurance chômage", icon: "socialSecurity" },
+  rail_network: { label: "Financement de SNCF Réseau", icon: "analysis" },
+  deficit_series: { label: "Soldes et dette publics depuis 1949", icon: "trend" },
+  eu_flows: { label: "Flux financiers France et Union européenne", icon: "europe" },
+  eu_headings: { label: "Dépenses européennes en France", icon: "europe" },
+  paris_comparison: { label: "Comparaison des comptes de Paris", icon: "compare" },
+  paris_context: { label: "Contexte des finances de Paris", icon: "analysis" },
+  rail_transfers: { label: "Transferts publics au transport ferroviaire", icon: "analysis" },
+  rail_revenue: { label: "Revenus des services ferroviaires", icon: "analysis" },
+  rail_context: { label: "Dette et fonds du secteur ferroviaire", icon: "analysis" },
+  student_scholarships: { label: "Bourses étudiantes", icon: "analysis" },
+  student_budget: { label: "Programmes budgétaires de l’enseignement supérieur", icon: "analysis" },
+  student_cost: { label: "Dépense par étudiant", icon: "analysis" },
+  administration_pivots: { label: "Implantations des services", icon: "map" },
+  administration_coverage: { label: "Compétence des préfectures par commune", icon: "map" },
+  official_journals: { label: "Éditions du Journal officiel", icon: "journal" },
+  official_texts: { label: "Textes publiables du Journal officiel", icon: "journal" },
+  legislative_files: { label: "Dossiers législatifs", icon: "legislation" },
+  legislative_file_refs: { label: "Références des dossiers", icon: "source" },
+  legislative_events: { label: "Étapes législatives", icon: "calendar" },
+  legislative_documents: { label: "Documents parlementaires liés", icon: "contract" },
+  budget_legislation: { label: "Textes financiers", icon: "state" },
+  administrations: { label: "Structures administratives", icon: "administration" },
+  administration_relations: { label: "Rattachements administratifs", icon: "layers" },
+
+  lobbying_organisations: { label: "Organisations du répertoire HATVP", icon: "lobbying" },
+  lobbying_exercises: { label: "Exercices et budgets déclarés HATVP", icon: "euro" },
+  lobbying_activities: { label: "Fiches publiées HATVP", icon: "list" },
+  lobbying_targets: { label: "Institutions et ministères ciblés", icon: "state" },
+  lobbying_defaults: { label: "Défauts de déclaration HATVP", icon: "info" },
+  lobbying_quarters: { label: "Publications HATVP par trimestre", icon: "calendar" },
+  lobbying_crossrefs: { label: "Lobbying, marchés et versements", icon: "compare" },
+  eu_lobbying: { label: "Organisations françaises au registre UE", icon: "europe" },
+  eu_lobbying_interests: { label: "Domaines d’intérêt UE", icon: "layers" },
+  party_accounts: { label: "Comptes des partis 2021 à 2024", icon: "politicalFinance" },
+  party_aid_losses: { label: "Perte de l’aide publique aux partis", icon: "info" },
+  procurement_breakdown: { label: "Marchés par mois, territoire et procédure", icon: "contract" },
+  procurement_competition: { label: "Offre unique et couverture depuis 2024", icon: "compare" },
+  procurement_quality: { label: "Délais de publication des marchés", icon: "calendar" },
+  procurement_latest: { label: "Dernières notifications", icon: "contract" },
+  procurement_notices: { label: "Avis BOAMP à échéance future", icon: "buyer" },
+  procurement_projects: { label: "Projets APProch à venir", icon: "calendar" },
+  competition_decisions: { label: "Sanctions par décision", icon: "scale" },
+  competition_companies: { label: "Sanctions par société, non additionnables", icon: "company" },
+  public_people: { label: "Élus et fonctions publiques", icon: "elected" },
+  public_organs: { label: "Organes parlementaires", icon: "state" },
+  public_mandates: { label: "Mandats et appartenances", icon: "elected" },
+  public_ballots: { label: "Scrutins publics", icon: "vote" },
+  public_votes: { label: "Votes nominatifs", icon: "vote" },
+  public_vote_corrections: { label: "Corrections et intentions de vote", icon: "info" },
+  public_person_metrics: { label: "Participation aux scrutins", icon: "percent" },
+  interest_declarations: { label: "Déclarations d’intérêts disponibles", icon: "declaration" },
+  declared_interests: { label: "Rubriques déclarées, sans texte libre", icon: "declaration" },
+  campaign_accounts: { label: "Comptes de campagne 2024", icon: "campaign" },
+  campaign_account_lines: { label: "Détail des comptes de campagne", icon: "campaign" },
+  campaign_decisions: { label: "Décisions municipales 2026, partielles", icon: "scale" },
+  rne_statistics: { label: "Statistiques de mandats RNE", icon: "elected" },
+  local_executives: { label: "Maires, fonctions publiques", icon: "town" },
+  cada_opinions: { label: "Avis et conseils CADA minimisés", icon: "scale" },
+  expense_reference_values: { label: "Barèmes et enveloppes publics", icon: "spending" },
+  cabinet_statistics: { label: "Effectifs des cabinets, juillet 2025", icon: "staff" },
+  transparency_alerts: { label: "Statuts CNCCFP explicites", icon: "alert" },
+
+  orgs: { label: "Organisations", icon: "building" },
+  org_years: { label: "Marchés par organisation et par année", icon: "calendar" },
+  org_counterparts: { label: "Principaux partenaires", icon: "people" },
+  contracts: { label: "Marchés publics", icon: "contract" },
+  org_contracts: { label: "Organisations de chaque marché", icon: "list" },
+  source_files: { label: "Fichiers sources des marchés", icon: "source" },
+  grants: { label: "Versements aux associations", icon: "grant" },
+  budget: { label: "Budget de l'État par programme", icon: "layers" },
+  revenue: { label: "Recettes de l'État", icon: "revenue" },
+  budget_voted: { label: "Budget voté pour 2026", icon: "calendar" },
+  public_finances: { label: "Dépenses publiques par année", icon: "trend" },
+  public_accounts: { label: "Comptes des administrations par nature", icon: "spending" },
+  public_functions: { label: "Argent public par usage", icon: "flow" },
+  local_accounts: { label: "Comptes des collectivités par niveau", icon: "administration" },
+  commune_taxes: { label: "Fiscalité locale par bénéficiaire", icon: "localTax" },
+  tax_strata: { label: "Médianes des taux et bases fiscales", icon: "scale" },
+  commune_income: { label: "Impôt sur le revenu par commune", icon: "incomeTax" },
+  commune_turnout: { label: "Participation électorale par commune", icon: "vote" },
+  department_turnout: { label: "Participation électorale par département", icon: "vote" },
+  commune_dgf_history: { label: "DGF dans les comptes communaux", icon: "grant" },
+  communes: { label: "Communes", icon: "town" },
+  commune_years: { label: "Population des communes par année", icon: "people" },
+  commune_finances: { label: "Comptes des communes", icon: "spending" },
+  finance_items: { label: "Postes comptables", icon: "list" },
+  strata: { label: "Médianes par taille de commune", icon: "scale" },
+  departements: { label: "Départements", icon: "map" },
+  facts: { label: "Chiffres clés", icon: "trend" },
+  timeline: { label: "Marchés publiés par année", icon: "columns" },
+};
+const GROUPS: { id: string; title: string; icon: IconName; tables: string[] }[] = [
+  {
+    id: "protection-sociale",
+    title: "Protection sociale et santé",
+    icon: "socialSecurity",
+    tables: [
+      "social_branches",
+      "social_ondam",
+      "health_payers",
+      "pension_indicators",
+      "family_benefits",
+      "unemployment_accounts",
+      "social_benefits",
+    ],
+  },
+  {
+    id: "analyses",
+    title: "Données des analyses",
+    icon: "analysis",
+    tables: [
+      "rail_network",
+      "deficit_series",
+      "eu_flows",
+      "eu_headings",
+      "paris_comparison",
+      "paris_context",
+      "rail_transfers",
+      "rail_revenue",
+      "rail_context",
+      "student_scholarships",
+      "student_budget",
+      "student_cost",
+    ],
+  },
+  {
+    id: "documents",
+    title: "Documents et administrations",
+    icon: "journal",
+    tables: [
+      "official_journals",
+      "official_texts",
+      "legislative_files",
+      "legislative_file_refs",
+      "legislative_events",
+      "legislative_documents",
+      "budget_legislation",
+      "administrations",
+      "administration_relations",
+      "administration_pivots",
+      "administration_coverage",
+    ],
+  },
+  {
+    id: "democratie",
+    title: "Lobbying et financement politique",
+    icon: "politicalFinance",
+    tables: [
+      "lobbying_organisations",
+      "lobbying_exercises",
+      "lobbying_activities",
+      "lobbying_targets",
+      "lobbying_defaults",
+      "lobbying_quarters",
+      "lobbying_crossrefs",
+      "eu_lobbying",
+      "eu_lobbying_interests",
+      "party_accounts",
+      "party_aid_losses",
+    ],
+  },
+  {
+    id: "elus",
+    title: "Élus, campagnes et moyens publics",
+    icon: "elected",
+    tables: [
+      "public_people",
+      "public_organs",
+      "public_mandates",
+      "public_ballots",
+      "public_votes",
+      "public_vote_corrections",
+      "public_person_metrics",
+      "interest_declarations",
+      "declared_interests",
+      "campaign_accounts",
+      "campaign_account_lines",
+      "campaign_decisions",
+      "rne_statistics",
+      "local_executives",
+      "cada_opinions",
+      "expense_reference_values",
+      "cabinet_statistics",
+      "transparency_alerts",
+    ],
+  },
+  {
+    id: "marches",
+    title: "Organisations et marchés publics",
+    icon: "contract",
+    tables: [
+      "orgs",
+      "org_years",
+      "org_counterparts",
+      "contracts",
+      "org_contracts",
+      "source_files",
+      "procurement_breakdown",
+      "procurement_quality",
+      "procurement_competition",
+      "procurement_latest",
+      "procurement_notices",
+      "procurement_projects",
+      "competition_decisions",
+      "competition_companies",
+    ],
+  },
+  { id: "subventions", title: "Versements de l'État", icon: "grant", tables: ["grants"] },
+  {
+    id: "budget",
+    title: "Budget de l'État et dépense publique",
+    icon: "state",
+    tables: [
+      "budget",
+      "revenue",
+      "budget_voted",
+      "public_finances",
+      "public_accounts",
+      "public_functions",
+      "state_monthly",
+      "state_titles",
+      "state_ministries",
+      "state_assets",
+      "compulsory_levies",
+      "european_finances",
+      "european_functions",
+      "quarterly_debt",
+      "green_budget",
+    ],
+  },
+  {
+    id: "communes",
+    title: "Communes et départements",
+    icon: "town",
+    tables: [
+      "local_accounts",
+      "commune_taxes",
+      "tax_strata",
+      "commune_income",
+      "commune_turnout",
+      "department_turnout",
+      "commune_dgf_history",
+      "communes",
+      "commune_years",
+      "commune_finances",
+      "finance_items",
+      "strata",
+      "departements",
+    ],
+  },
+  { id: "reperes", title: "Repères", icon: "trend", tables: ["facts", "timeline"] },
+];
+const byName = new Map(downloads.tables.map((table) => [table.table, table]));
+const groups = GROUPS.map((group) => ({
+  ...group,
+  tables: group.tables.flatMap((name) => byName.get(name) ?? []),
+}));
+const files = downloads.tables.flatMap((table) => table.files);
+const FORMATS: Record<string, { label: string; icon: IconName }> = {
+  csv: { label: "CSV", icon: "csv" },
+  parquet: { label: "Parquet", icon: "parquet" },
+};
+---
+
+<Base
+  title="Télécharger les données"
+  description="Toutes les tables calculées par Chaque Euro, en CSV et en Parquet : organisations, marchés publics, subventions, budget de l'État, comptes des communes."
+>
+  <header class="page-head">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Télécharger les données" }]} />
+      <div class="entity">
+        <Icon name="download" />
+        <h1>Télécharger les données</h1>
+      </div>
+      <p class="lead">Toutes les tables du site, en CSV et en Parquet.</p>
+      <KeyFigures
+        figures={[
+          {
+            icon: "list",
+            label: "Tables",
+            value: formatNumber(downloads.tables.length),
+          },
+          {
+            icon: "download",
+            label: "Fichiers",
+            value: formatNumber(files.length),
+          },
+          {
+            icon: "source",
+            label: "Taille totale",
+            value: formatBytes(files.reduce((total, file) => total + file.bytes, 0)),
+          },
+          {
+            icon: "calendar",
+            label: "Mise à jour",
+            value: downloads.builtAt ? formatDayMonth(downloads.builtAt) : "n.d.",
+            note: downloads.builtAt ? formatYear(downloads.builtAt) : undefined,
+          },
+        ]}
+      />
+    </div>
+  </header>
+  <Toc
+    items={groups.map((group) => ({ href: `#${group.id}`, label: group.title, icon: group.icon }))}
+  />
+
+  <div class="container">
+    {groups.map((group) => (
+      <section class="section" id={group.id} aria-labelledby={`titre-${group.id}`}>
+        <div class="section-head">
+          <h2 id={`titre-${group.id}`}>
+            <Icon name={group.icon} />
+            {group.title}
+          </h2>
+        </div>
+        <ul class="tables">
+          {group.tables.map((table) => (
+            <li class="card table">
+              <div class="about">
+                <h3>
+                  <Icon name={TABLES[table.table]?.icon ?? "list"} />
+                  {TABLES[table.table]?.label ?? table.table}
+                </h3>
+                <p>{table.description}</p>
+                <p class="meta small">
+                  <span>
+                    <Icon name="count" size={14} />
+                    {plural(table.rows, "ligne", "lignes")}
+                  </span>
+                  <span>
+                    <Icon name="code" size={14} />
+                    <code>{table.table}</code>
+                  </span>
+                </p>
+              </div>
+              <div class="files">
+                {[...table.files]
+                  .sort((a, b) => a.format.localeCompare(b.format))
+                  .map((file) => (
+                    <a class="file" href={`/telechargements/fichiers/${file.file}`} download>
+                      <Icon name={FORMATS[file.format]?.icon ?? "download"} size={18} />
+                      <span>
+                        {FORMATS[file.format]?.label ?? file.format}
+                        <span class="size">{formatBytes(file.bytes)}</span>
+                      </span>
+                      <Icon name="download" size={16} />
+                    </a>
+                  ))}
+                <details class="hashes small">
+                  <summary>Empreintes SHA-256</summary>
+                  {table.files.map((file) => (
+                    <p>
+                      {file.file} : <code>{file.sha256}</code>
+                    </p>
+                  ))}
+                </details>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+
+    <section class="section" aria-labelledby="titre-usage">
+      <div class="section-head">
+        <h2 id="titre-usage">
+          <Icon name="book" />
+          Utiliser ces fichiers
+        </h2>
+      </div>
+      <div class="grid">
+        <Explainer title="Dans un tableur">
+          <p>
+            Ouvrez le fichier CSV contenu dans l'archive avec Excel ou LibreOffice. Les comptes des
+            communes dépassent le million de lignes, la limite d'Excel : utilisez alors le Parquet.
+          </p>
+        </Explainer>
+        <Explainer title="Avec un outil de données">
+          <p>
+            Les fichiers Parquet se lisent directement avec DuckDB, Python ou R, par exemple :{" "}
+            <code>select * from 'commune_finances.parquet' where insee = '69123'</code>.
+          </p>
+        </Explainer>
+        <Explainer title="Réutilisation">
+          <p>
+            Les conditions de réutilisation dépendent de chaque source. Citez les producteurs et
+            consultez les licences et le cadre de réutilisation dans
+            <a href="/methodologie#sources">Méthode et sources</a>. Les entrepreneurs individuels
+            n'y sont jamais nommés.
+          </p>
+        </Explainer>
+      </div>
+    </section>
+  </div>
+</Base>
+
+<style>
+  .tables {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1rem;
+  }
+
+  .table {
+    display: grid;
+    gap: 1rem 2rem;
+  }
+
+  @media (min-width: 56rem) {
+    .table {
+      grid-template-columns: minmax(0, 1fr) 17rem;
+      align-items: start;
+    }
+  }
+
+  .about p {
+    margin: 0.25rem 0 0;
+    color: var(--text-secondary);
+  }
+
+  .about .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
+    margin-top: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .files {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .file {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    color: var(--text);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .file:hover {
+    border-color: var(--link);
+    color: var(--link);
+    background: var(--navy-50);
+  }
+
+  .file > span {
+    flex: 1;
+  }
+
+  .size {
+    margin-left: 0.375rem;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+
+  .file :global(svg) {
+    flex: none;
+    color: var(--navy-800);
+  }
+
+  .hashes summary {
+    color: var(--link);
+  }
+
+  .hashes p {
+    margin: 0.375rem 0 0;
+    overflow-wrap: anywhere;
+    color: var(--text-muted);
+  }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.875em;
+  }
+</style>

@@ -1,0 +1,176 @@
+---
+import Democracy from "../../layouts/Democracy.astro";
+import Explainer from "../../components/Explainer.astro";
+import Icon from "../../components/Icon.astro";
+import PublicTable from "../../components/PublicTable.astro";
+import PublicPagination from "../../components/PublicPagination.astro";
+import Provenance from "../../components/Provenance.astro";
+import Term from "../../components/Term.astro";
+import BarList from "../../components/BarList.astro";
+import { getCampaignIndex } from "../../lib/data";
+import { electionLabels, pageNumber } from "../../lib/democracy";
+import { formatEuros, formatNumber } from "../../lib/format";
+const params = Astro.url.searchParams;
+const filters = {
+  election:
+    params.get("election") === "europeennes-2024" ? "europeennes-2024" : "legislatives-2024",
+  q: params.get("q") ?? "",
+  department: params.get("departement") ?? "",
+  decision: params.get("decision") ?? "",
+  page: pageNumber(params.get("page")),
+};
+const data = await getCampaignIndex(filters);
+const money = (v: number | null) => (v === null ? "Non renseigné" : formatEuros(v / 100));
+---
+
+<Democracy
+  title="Financement des campagnes"
+  description="Comptes de campagne publiés par la CNCCFP, législatives et européennes 2024, décisions municipales 2026 partielles."
+  icon="campaign"
+  answer="Les dépenses déclarées par les candidats sont rapprochées des montants retenus par la CNCCFP. Les décisions sont administratives. Un rejet de compte ne constitue pas une condamnation pénale."
+  figures={[
+    {
+      icon: "campaign",
+      label: "Comptes publiés",
+      value: formatNumber(data.totals.count),
+      note: electionLabels[filters.election],
+    },
+    {
+      icon: "spending",
+      label: "Dépenses déclarées",
+      value: money(data.totals.declared),
+      note: electionLabels[filters.election],
+    },
+    {
+      icon: "scale",
+      label: "Dépenses retenues",
+      value: money(data.totals.retained),
+      note: electionLabels[filters.election],
+    },
+    {
+      icon: "contribution",
+      label: "Apports de partis retenus",
+      value: money(data.totals.party),
+      note: "Apports des comptes publiés, sans attribution par parti",
+    },
+  ]}
+  provenance={data.provenance}
+  sections={[
+    { id: "comptes", label: "Comptes 2024", icon: "campaign" },
+    { id: "decisions", label: "Décisions", icon: "scale" },
+    { id: "municipales", label: "Municipales 2026", icon: "town" },
+  ]}
+>
+  <section id="comptes" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="campaign" />
+        <Term id="compte-campagne">Comptes de campagne</Term>
+      </h2>
+    </div>
+    <form class="filters" method="get">
+      <label>
+        Élection
+        <select name="election">
+          {Object.entries(electionLabels).map(([id, label]) => (
+            <option value={id} selected={filters.election === id}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Candidat ou circonscription
+        <input name="q" type="search" value={filters.q} />
+      </label>
+      <label>
+        Département
+        <select name="departement">
+          <option value="">Tous</option>
+          {data.territories.map((t) => (
+            <option value={t.code} selected={t.code === filters.department}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Décision
+        <select name="decision">
+          <option value="">Toutes</option>
+          {data.decisions.map((d) => (
+            <option value={d.decision_code} selected={d.decision_code === filters.decision}>
+              {d.decision_code} · {d.decision_label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button type="submit">Rechercher</button>
+    </form>
+    <PublicTable
+      caption={`${electionLabels[filters.election]} : comptes publiés, pas ensemble des candidatures`}
+      columns={["Candidat et circonscription", "Décision", "Déclaré", "Retenu"]}
+      rows={data.accounts.map((a) => [
+        {
+          text: `${a.candidate_name} · ${a.constituency}`,
+          href: `/campagnes/${a.election_id}/${a.candidate_id}`,
+        },
+        { text: `${a.decision_code} · ${a.decision_label}` },
+        { text: money(a.declared_expenses_cents) },
+        { text: money(a.retained_expenses_cents) },
+      ])}
+    />
+    <PublicPagination page={filters.page} count={data.count} />
+    <Provenance provenance={data.provenance} />
+  </section>
+  <section id="decisions" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="scale" />
+        Décisions par code officiel
+      </h2>
+    </div>
+    <BarList
+      caption={electionLabels[filters.election] ?? "Comptes 2024"}
+      items={data.decisions.map((d) => ({
+        icon: "scale",
+        label: `${d.decision_code} · ${d.decision_label}`,
+        value: d.count,
+        display: formatNumber(d.count),
+      }))}
+    />
+    <Explainer title="Comment lire les décisions et remboursements">
+      <p>
+        DD : dispense de dépôt. ARR : réduction du remboursement, sans réformation automatiquement
+        déduite. Les montants RFE et FT sont fixés par la commission, sans preuve de paiement.
+      </p>
+    </Explainer>
+    <Provenance provenance={data.provenance} />
+  </section>
+  <section id="municipales" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="town" />
+        Municipales 2026 : décisions publiées
+      </h2>
+    </div>
+    <p>
+      Couverture partielle pendant le contrôle des comptes. Le résultat, les montants et la date de
+      chaque décision se lisent dans le PDF officiel. Une rectification ne remplace pas
+      silencieusement la décision initiale.
+    </p>
+    <details>
+      <summary>Consulter les {formatNumber(data.municipal.length)} documents indexés</summary>
+      <PublicTable
+        caption="Décisions initiales et rectificatives du portail officiel"
+        columns={["Candidat", "Territoire", "Document"]}
+        rows={data.municipal.map((d) => [
+          { text: d.candidate_name },
+          { text: d.territory_label },
+          { text: d.rectifies_id ? "Décision rectificative" : "Décision initiale", href: d.url },
+        ])}
+      />
+    </details>
+    <Provenance provenance={data.municipalProvenance} />
+  </section>
+</Democracy>

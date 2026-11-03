@@ -1,0 +1,259 @@
+---
+import Answer from "./Answer.astro";
+import BarList from "./BarList.astro";
+import Breadcrumbs from "./Breadcrumbs.astro";
+import Icon from "./Icon.astro";
+import KeyFigures from "./KeyFigures.astro";
+import LocalLevelsExplainer from "./LocalLevelsExplainer.astro";
+import Provenance from "./Provenance.astro";
+import Toc from "./Toc.astro";
+import { getLocalAccounts } from "../lib/data";
+import { formatEuro, formatEuros, formatNumber } from "../lib/format";
+
+interface Props {
+  level: "region" | "epci";
+}
+const { level } = Astro.props;
+const selected = Number(Astro.url.searchParams.get("annee") ?? 2025);
+const year = Number.isInteger(selected) && selected >= 2018 && selected <= 2025 ? selected : 2025;
+const data = await getLocalAccounts(level, year);
+const title = level === "region" ? "Régions et collectivités uniques" : "Intercommunalités";
+const query = (Astro.url.searchParams.get("q") ?? "").trim();
+const filtered = data.accounts.filter(
+  (row) =>
+    row.name.toLocaleLowerCase("fr").includes(query.toLocaleLowerCase("fr")) ||
+    row.siren.includes(query),
+);
+const pageSize = 50;
+const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
+const requestedPage = Number(Astro.url.searchParams.get("page") ?? 1);
+const page = Number.isInteger(requestedPage) ? Math.max(1, Math.min(pages, requestedPage)) : 1;
+const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
+const href = (target: number) =>
+  `?${new URLSearchParams({ annee: String(year), q: query, page: String(target) })}`;
+const euros = (value: number | null) => (value === null ? "n.d." : formatEuros(value));
+const perCapita = (value: number | null) => (value === null ? "n.d." : formatEuro(value));
+const chart = [...filtered]
+  .filter((row) => row.spendingPerCapita !== null)
+  .sort((a, b) => (b.spendingPerCapita ?? 0) - (a.spendingPerCapita ?? 0))
+  .slice(0, 8);
+---
+
+<header class="page-head" id="en-bref">
+  <div class="container">
+    <Breadcrumbs items={[{ label: title }]} />
+    <div class="entity">
+      <Icon name={level === "region" ? "region" : "intercommunalite"} />
+      <h1>{title}</h1>
+    </div>
+    <Answer
+      text={`En ${year}, les comptes de ${formatNumber(data.accounts.length)} collectivités sont disponibles, avec leurs dépenses, recettes et dette.`}
+    />
+    <KeyFigures
+      figures={[
+        {
+          icon: "administration",
+          label: "Collectivités",
+          value: formatNumber(data.accounts.length),
+        },
+        { icon: "calendar", label: "Exercice", value: String(year) },
+      ]}
+    />
+    <Provenance provenance={data.provenance} />
+  </div>
+</header>
+<Toc
+  items={[
+    { href: "#comptes", label: "Les comptes", icon: "list" },
+    { href: "#comparaison", label: "Par habitant", icon: "compare" },
+  ]}
+/>
+<div class="container">
+  <section class="section" id="comptes" aria-labelledby="titre-comptes">
+    <div class="section-head">
+      <h2 id="titre-comptes">
+        <Icon name="list" />
+        Les comptes {year}
+      </h2>
+      <p>Montants totaux et, en dessous, montants par habitant.</p>
+    </div>
+    <form method="get" class="filters">
+      <label>
+        Exercice
+        <select name="annee">
+          {Array.from({ length: 8 }, (_, i) => 2025 - i).map((entry) => (
+            <option value={entry} selected={entry === year}>
+              {entry}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Nom ou SIREN
+        <input name="q" type="search" value={query} />
+      </label>
+      <button type="submit" class="button">
+        Afficher
+      </button>
+    </form>
+    {level === "epci" && year === 2025 && (
+      <p class="small muted">
+        L’OFGL signale quatre comptes 2025 indisponibles. Aucun montant n’est estimé.
+      </p>
+    )}
+    <div class="card accounts">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Collectivité</th>
+            <th scope="col" class="num">
+              Dépenses
+            </th>
+            <th scope="col" class="num">
+              Recettes
+            </th>
+            <th scope="col" class="num">
+              Dette
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {visible.map((row) => (
+            <tr>
+              <th scope="row">
+                <a
+                  href={
+                    row.provenance.citations[0]?.recordUrl ??
+                    row.provenance.citations[0]?.source.pageUrl
+                  }
+                >
+                  {row.name}
+                </a>
+                <span class="detail muted">
+                  {row.category === "CTU" || row.category === "MET69"
+                    ? "Collectivité particulière · "
+                    : row.category === "EPT"
+                      ? "EPT · "
+                      : ""}
+                  {row.siren}
+                </span>
+              </th>
+              <td class="num">
+                {euros(row.spending)}
+                <span class="detail muted">{perCapita(row.spendingPerCapita)} / hab.</span>
+              </td>
+              <td class="num">
+                {euros(row.revenue)}
+                <span class="detail muted">{perCapita(row.revenuePerCapita)} / hab.</span>
+              </td>
+              <td class="num">
+                {euros(row.debt)}
+                <span class="detail muted">{perCapita(row.debtPerCapita)} / hab.</span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {!visible.length && <p>Aucune collectivité ne correspond à votre recherche.</p>}
+    </div>
+    {pages > 1 && (
+      <nav class="pagination" aria-label="Pages des intercommunalités">
+        {page > 1 && <a href={href(page - 1)}>Précédente</a>}
+        <span>
+          Page {page} sur {pages}
+        </span>
+        {page < pages && <a href={href(page + 1)}>Suivante</a>}
+      </nav>
+    )}
+    <Provenance provenance={data.provenance} />
+    <LocalLevelsExplainer />
+  </section>
+  <section class="section" id="comparaison" aria-labelledby="titre-comparaison">
+    <div class="section-head">
+      <h2 id="titre-comparaison">
+        <Icon name="compare" />
+        Dépenses par habitant
+      </h2>
+      <p>Les huit montants les plus élevés dans votre sélection, sans jugement sur la gestion.</p>
+    </div>
+    <div class="card">
+      <BarList
+        caption={`Dépenses hors remboursement de dette en ${year}`}
+        items={chart.map((row) => ({
+          label: row.name,
+          value: row.spendingPerCapita ?? 0,
+          display: perCapita(row.spendingPerCapita),
+          note: row.category === "CTU" ? "Compétences particulières" : undefined,
+        }))}
+      />
+    </div>
+    <Provenance provenance={data.provenance} />
+  </section>
+</div>
+
+<style>
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: end;
+    margin-bottom: 1rem;
+  }
+  label {
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.875rem;
+  }
+  input,
+  select {
+    min-height: 2.75rem;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    max-width: 100%;
+  }
+  .accounts {
+    min-width: 0;
+  }
+  table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  th:first-child {
+    width: 40%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .detail {
+    display: block;
+    font-size: 0.75rem;
+    margin-top: 0.4rem;
+    font-weight: 400;
+    white-space: normal;
+  }
+  .pagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  @media (max-width: 40rem) {
+    .accounts {
+      padding: 0.5rem;
+    }
+    th:first-child {
+      width: 34%;
+    }
+    td,
+    th {
+      font-size: 0.75rem;
+      padding-inline: 0.25rem;
+    }
+    .detail {
+      font-size: 0.6875rem;
+    }
+  }
+</style>

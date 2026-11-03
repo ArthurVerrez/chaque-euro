@@ -1,0 +1,167 @@
+---
+import Icon from "./Icon.astro";
+export interface Column {
+  label: string;
+  value: number;
+  display: string;
+  detail: string;
+  partial?: boolean;
+}
+
+interface Props {
+  columns: Column[];
+  caption: string;
+  unit: string;
+}
+
+const { columns, caption, unit } = Astro.props;
+const max = Math.max(...columns.map((column) => column.value), 0);
+const height = (value: number) => (max > 0 ? Math.max((value / max) * 85, value > 0 ? 1 : 0) : 0);
+const partial = columns.some((column) => column.partial);
+---
+
+<figure class="column-chart">
+  <figcaption>
+    <span class="caption">
+      <Icon name="columns" size={18} />
+      {caption}
+    </span>
+    <span class="unit">{unit}</span>
+  </figcaption>
+  <div class="plot" aria-hidden="true">
+    {columns.map((column) => (
+      <div class="col" title={`${column.label} : ${column.detail}`}>
+        <span class="value">{column.display}</span>
+        <span
+          class:list={["bar", { partial: column.partial }]}
+          style={`height: ${height(column.value)}%`}
+        />
+      </div>
+    ))}
+  </div>
+  <div class="labels" aria-hidden="true">
+    {columns.map((column) => (
+      <span>
+        {column.label}
+        {column.partial && "*"}
+      </span>
+    ))}
+  </div>
+  {partial && <p class="footnote">* Année en cours : les données sont incomplètes.</p>}
+  <div class="visually-hidden">
+    <table>
+      <caption>{caption}</caption>
+      <tbody>
+        {columns.map((column) => (
+          <tr>
+            <th scope="row">{column.label}</th>
+            <td>{column.detail}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</figure>
+
+<style>
+  .column-chart {
+    margin: 0;
+  }
+
+  figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .caption {
+    font-weight: 650;
+  }
+
+  .unit {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+  }
+
+  .plot,
+  .labels {
+    display: flex;
+    gap: 0.375rem;
+  }
+
+  .plot {
+    align-items: flex-end;
+    height: 13rem;
+    border-bottom: 1px solid var(--border-strong);
+  }
+
+  .col {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+  }
+
+  .value {
+    font-size: 0.75rem;
+    font-weight: 650;
+    white-space: nowrap;
+    margin-bottom: 0.25rem;
+  }
+
+  .bar {
+    width: min(100%, 2.75rem);
+    background: var(--bar);
+    border-radius: 4px 4px 0 0;
+  }
+
+  .bar.partial {
+    background: repeating-linear-gradient(
+      135deg,
+      var(--bar) 0 4px,
+      color-mix(in srgb, var(--bar) 55%, white) 4px 8px
+    );
+  }
+
+  .labels {
+    margin: 0.375rem 0 0.75rem;
+  }
+
+  .labels span {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  .footnote {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  @media (min-width: 40rem) {
+    .value,
+    .labels span {
+      font-size: 0.8125rem;
+    }
+  }
+
+  .caption {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .caption :global(svg) {
+    flex: none;
+    color: var(--navy-800);
+  }
+</style>

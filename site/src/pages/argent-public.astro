@@ -1,0 +1,396 @@
+---
+import Answer from "../components/Answer.astro";
+import BarList, { type BarItem } from "../components/BarList.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import Explainer from "../components/Explainer.astro";
+import FlowChart from "../components/FlowChart.astro";
+import Icon from "../components/Icon.astro";
+import KeyFigures, { type Figure } from "../components/KeyFigures.astro";
+import LineChart from "../components/LineChart.astro";
+import Provenance from "../components/Provenance.astro";
+import Term from "../components/Term.astro";
+import Toc from "../components/Toc.astro";
+import Base from "../layouts/Base.astro";
+import { getPublicMoney, getPublicIndicators } from "../lib/data";
+import { PUBLIC_SECTORS, PUBLIC_FUNCTIONS, publicMoneyFlow } from "../lib/flows";
+import {
+  formatEuro,
+  formatEuros,
+  formatNumber,
+  formatBillions,
+  formatPercent,
+} from "../lib/format";
+
+const FIRST_YEAR = 2000;
+const [money, indicators] = await Promise.all([getPublicMoney(), getPublicIndicators()]);
+const levyYear = indicators.levies.rows[0]?.year;
+const levyTotal =
+  indicators.levies.rows.find((row) => row.block === "beneficiary" && row.code === "TOTAL")
+    ?.amount ?? 0;
+const levyBars = (block: string): BarItem[] =>
+  indicators.levies.rows
+    .filter((row) => row.block === block && row.code !== "TOTAL" && row.code !== "S1311")
+    .map((row) => ({ label: row.label, value: row.amount, display: formatBillions(row.amount) }));
+const europeanNames: Record<string, string> = {
+  FR: "France",
+  DE: "Allemagne",
+  IT: "Italie",
+  ES: "Espagne",
+  NL: "Pays-Bas",
+  EU27_2020: "Union européenne (27)",
+};
+const europeYear = indicators.europe.rows[0]?.year;
+const europeBars = (metric: "spending" | "revenue" | "balance" | "debt"): BarItem[] =>
+  [...indicators.europe.rows]
+    .sort((a, b) => Math.abs(b[metric]) - Math.abs(a[metric]))
+    .map((row) => ({
+      label: europeanNames[row.geo] ?? row.geo,
+      value: Math.abs(row[metric]),
+      display: formatPercent(row[metric] / 100, 1),
+      strong: row.geo === "FR",
+      note: row.status ? "donnée révisable" : undefined,
+    }));
+const functionsYear = Math.max(...indicators.europe.functions.map((row) => row.year));
+const europeFunctions = Object.entries(PUBLIC_FUNCTIONS)
+  .filter(([code]) => code.length === 4)
+  .map(([code, entry]) => ({
+    label: entry.label,
+    france: indicators.europe.functions.find(
+      (row) => row.geo === "FR" && row.year === functionsYear && row.function === code,
+    )?.spending,
+    eu: indicators.europe.functions.find(
+      (row) => row.geo === "EU27_2020" && row.year === functionsYear && row.function === code,
+    )?.spending,
+  }))
+  .filter((row) => row.france !== undefined && row.eu !== undefined);
+const debt = indicators.debt.row;
+const { finances, functions, stateBudget, households } = money;
+const sector = (code: string) => finances.sectors.find((entry) => entry.code === code);
+const latest = (code: string) => sector(code)?.years.at(-1);
+const total = latest("S13");
+const year = total?.year ?? 0;
+const spending = total?.spending ?? 0;
+const parts = PUBLIC_SECTORS.map(({ code, icon, slug }) => ({
+  icon,
+  href: `/argent-public/${slug}`,
+  label: sector(code)?.name ?? code,
+  value: latest(code)?.spending ?? 0,
+}));
+const counted = parts.reduce((sum, part) => sum + part.value, 0);
+const steps: BarItem[] = [
+  ...parts.map((part, index) => ({
+    ...part,
+    display: formatEuros(part.value),
+    offset: parts.slice(0, index).reduce((sum, previous) => sum + previous.value, 0),
+  })),
+  {
+    icon: "compare",
+    label: "Versé entre administrations",
+    note: "compté deux fois",
+    value: counted - spending,
+    display: `− ${formatEuros(counted - spending)}`,
+    offset: spending,
+    muted: true,
+  },
+  {
+    icon: "euro",
+    label: "Tout l'argent public",
+    value: spending,
+    display: formatEuros(spending),
+    strong: true,
+  },
+];
+const stateShare = functions.sectors.find((entry) => entry.code === "S13111")?.spending ?? 0;
+const figures: Figure[] = [
+  {
+    icon: "euro",
+    label: "Argent public",
+    term: "depenses-consolidees",
+    value: formatEuros(spending),
+    note: `dépensé en ${year}`,
+  },
+  {
+    icon: "people",
+    label: "Par ménage",
+    term: "menage",
+    value: formatEuro(spending / households),
+    note: `${formatNumber(households)} ménages (Insee)`,
+  },
+  {
+    icon: "state",
+    label: "Budget de l'État",
+    value: formatEuros(stateBudget.spent),
+    note: "voté par le Parlement",
+  },
+  {
+    icon: "socialSecurity",
+    label: "Sécurité sociale",
+    value: formatEuros(latest("S1314")?.spending ?? 0),
+    note: "son propre budget, voté à part",
+  },
+];
+const years = sector("S13")?.years.filter((entry) => entry.year >= FIRST_YEAR) ?? [];
+const series = ["S13", ...PUBLIC_SECTORS.map(({ code }) => code)].map((code) => ({
+  label: code === "S13" ? "Tout l'argent public" : (sector(code)?.name ?? code),
+  values: (sector(code)?.years ?? [])
+    .filter((entry) => entry.year >= FIRST_YEAR)
+    .map((entry) => entry.spending),
+}));
+const answer = `En ${year}, l'État, la Sécurité sociale, les collectivités et les opérateurs de l'État ont dépensé ${formatEuros(spending)}, soit ${formatEuro(spending / households)} par ménage. Le budget de l'État n'en est qu'une partie.`;
+---
+
+<Base title="Tout l'argent public" description={answer}>
+  <header class="page-head" id="en-bref">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Tout l'argent public" }]} />
+      <div class="entity">
+        <Icon name="euro" />
+        <h1>Tout l'argent public</h1>
+      </div>
+      <Answer text={answer} />
+      <KeyFigures figures={figures} />
+      <Provenance provenance={finances.provenance} />
+    </div>
+  </header>
+  <Toc
+    items={[
+      { href: "#en-bref", label: "En bref", icon: "info" },
+      { href: "#qui", label: "Qui dépense", icon: "compare" },
+      { href: "#usages", label: "À quoi il sert", icon: "flow" },
+      { href: "#prelevements", label: "Qui prélève quoi", icon: "revenue" },
+      { href: "#europe", label: "Comparer avec l’Europe", icon: "europe" },
+      { href: "#dette", label: "Dette trimestrielle", icon: "debt" },
+      { href: "#evolution", label: "Année par année", icon: "trend" },
+    ]}
+  />
+
+  <div class="container">
+    <section class="section" id="qui" aria-labelledby="titre-qui">
+      <div class="section-head">
+        <h2 id="titre-qui">
+          <Icon name="compare" />
+          Qui dépense
+        </h2>
+        <p>
+          Quatre familles d'<Term id="administrations-publiques">administrations publiques</Term>.
+          Elles se versent de l'argent entre elles : on ne le compte qu'une fois.
+        </p>
+      </div>
+      <div class="card">
+        <BarList caption={`Dépenses ${year}`} items={steps} />
+      </div>
+      <h3>
+        <Icon name="building" size={20} />
+        Les administrations publiques
+      </h3>
+      <ul class="families">
+        {PUBLIC_SECTORS.map((family) => (
+          <li>
+            <a href={`/argent-public/${family.slug}`}>
+              <Icon name={family.icon} size={18} />
+              {family.name}
+            </a>
+          </li>
+        ))}
+      </ul>
+      <div class="explain">
+        <Explainer title={`Et les ${formatEuros(stateBudget.spent)} du budget de l'État ?`}>
+          <p>
+            C'est le budget voté par le Parlement. L'Insee compte l'État selon des règles
+            européennes, sur un périmètre un peu différent : {formatEuros(parts[0]?.value ?? 0)} en
+            {year}. Les deux ne s'additionnent pas.
+          </p>
+          <p>
+            <a href="/budget-etat">Le budget de l'État, mission par mission</a>
+          </p>
+        </Explainer>
+      </div>
+      <Provenance provenance={finances.provenance} />
+    </section>
+
+    <section class="section" id="usages" aria-labelledby="titre-usages">
+      <div class="section-head">
+        <h2 id="titre-usages">
+          <Icon name="flow" />À quoi sert tout l'argent public
+        </h2>
+        <p>
+          Tout est mis en commun, puis réparti par usage. Dernière année détaillée :{" "}
+          {functions.year}.
+        </p>
+      </div>
+      <div class="card">
+        <FlowChart
+          caption={`Qui paie, et pour quoi, en ${functions.year}`}
+          flow={publicMoneyFlow(money)}
+        />
+      </div>
+      <div class="explain">
+        <Explainer title="Pourquoi l'État pèse moins ici">
+          <p>
+            Chaque euro n'est compté qu'une fois, chez l'administration qui le dépense. La dotation
+            de l'État aux communes compte ainsi chez les collectivités. L'État pèse alors{" "}
+            {formatEuros(stateShare)}.
+          </p>
+        </Explainer>
+      </div>
+      <Provenance provenance={functions.provenance} />
+    </section>
+
+    <section class="section" id="prelevements" aria-labelledby="titre-prelevements">
+      <div class="section-head">
+        <h2 id="titre-prelevements">
+          <Icon name="revenue" />
+          Qui prélève quoi
+        </h2>
+        <p>
+          <Term id="prelevements-obligatoires">Prélèvements obligatoires</Term> :{" "}
+          {formatBillions(levyTotal)} en {levyYear}.
+        </p>
+      </div>
+      <div class="card">
+        <BarList
+          caption={`Administrations bénéficiaires en ${levyYear}`}
+          items={levyBars("beneficiary")}
+        />
+      </div>
+      <div class="card">
+        <BarList
+          caption={`Principaux impôts et cotisations en ${levyYear}`}
+          items={levyBars("tax")}
+        />
+      </div>
+      <Explainer title="Deux lectures des mêmes prélèvements">
+        <p>
+          Le premier graphique répartit le total entre bénéficiaires, après transferts de recettes
+          fiscales. Le second présente une sélection d'impôts et les cotisations effectives ; il
+          n'est pas exhaustif. L'impôt sur le revenu et l'impôt sur les sociétés y sont présentés
+          avant crédits d'impôt, comme dans le tableau INSEE. Ces deux graphiques ne s'additionnent
+          pas.
+        </p>
+      </Explainer>
+      <Provenance provenance={indicators.levies.provenance} />
+    </section>
+    <section class="section" id="europe" aria-labelledby="titre-europe">
+      <div class="section-head">
+        <h2 id="titre-europe">
+          <Icon name="europe" />
+          Comparer avec l'Europe
+        </h2>
+        <p>
+          Administrations publiques, en part du <Term id="pib">PIB</Term>, année commune{" "}
+          {europeYear}.
+        </p>
+      </div>
+      {[
+        { metric: "spending" as const, label: "Dépenses publiques" },
+        { metric: "revenue" as const, label: "Recettes publiques" },
+        { metric: "balance" as const, label: "Solde public (excédent +, déficit −)" },
+        { metric: "debt" as const, label: "Dette de Maastricht" },
+      ].map(({ metric, label }) => (
+        <div class="card">
+          <BarList caption={`${label}, ${europeYear} (% du PIB)`} items={europeBars(metric)} />
+        </div>
+      ))}
+      <Explainer title={`Par fonction, France et Union européenne (${functionsYear})`}>
+        <div class="card">
+          <BarList
+            caption={`France : dépenses par fonction en ${functionsYear} (% du PIB)`}
+            items={europeFunctions.map((row) => ({
+              label: row.label,
+              value: row.france ?? 0,
+              display: formatPercent((row.france ?? 0) / 100, 1),
+            }))}
+          />
+        </div>
+        <div class="card">
+          <BarList
+            caption={`Union européenne : dépenses par fonction en ${functionsYear} (% du PIB)`}
+            items={europeFunctions.map((row) => ({
+              label: row.label,
+              value: row.eu ?? 0,
+              display: formatPercent((row.eu ?? 0) / 100, 1),
+            }))}
+          />
+        </div>
+      </Explainer>
+      <Explainer title="Comment comparer">
+        <p>
+          L'Union européenne est un agrégat des 27 pays, pas la moyenne simple des ratios. Les pays
+          affichés sont les cinq plus grandes économies de l'Union en PIB nominal. Les règles
+          comptables sont harmonisées, mais l'organisation des services publics diffère. Les barres
+          du solde montrent son ampleur ; le signe affiché indique un déficit ou un excédent. Les
+          données peuvent être révisées.
+        </p>
+      </Explainer>
+      <Provenance provenance={indicators.europe.provenance} />
+    </section>
+    {debt && (
+      <section class="section" id="dette" aria-labelledby="titre-dette">
+        <div class="section-head">
+          <h2 id="titre-dette">
+            <Icon name="debt" />
+            La dette au dernier trimestre
+          </h2>
+          <p>
+            <Term id="dette-publique">Dette de Maastricht</Term> à la fin de{" "}
+            {debt.period.replace("Q", "T")}
+            {debt.status?.includes("p") ? ", donnée provisoire" : ""}.
+          </p>
+        </div>
+        <KeyFigures
+          figures={[
+            {
+              icon: "debt",
+              label: "Dette brute consolidée",
+              value: formatBillions(debt.amount),
+              note: "toutes les administrations publiques",
+            },
+            {
+              icon: "percent",
+              label: "En part du PIB",
+              value: formatPercent(debt.ratio / 100, 1),
+              note: "PIB des quatre derniers trimestres",
+            },
+          ]}
+        />
+        <Provenance provenance={indicators.debt.provenance} />
+      </section>
+    )}
+    <section class="section" id="evolution" aria-labelledby="titre-evolution">
+      <div class="section-head">
+        <h2 id="titre-evolution">
+          <Icon name="trend" />
+          D'une année à l'autre
+        </h2>
+      </div>
+      <div class="card chart">
+        <LineChart
+          caption="Dépenses par an"
+          labels={years.map((entry) => String(entry.year))}
+          series={series}
+          format={formatEuros}
+        />
+      </div>
+      <Provenance provenance={finances.provenance} />
+    </section>
+  </div>
+</Base>
+
+<style>
+  #prelevements > .card + .card,
+  #europe > .card + .card {
+    margin-top: 1rem;
+  }
+
+  .families {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0.75rem;
+    list-style: none;
+    padding: 0;
+  }
+
+  .explain {
+    margin-top: 1rem;
+  }
+</style>

@@ -1,0 +1,61 @@
+---
+import type { LocalTurnout, Provenance as ProvenanceData } from "../lib/data";
+import { formatNumber, formatPercent } from "../lib/format";
+import BarList from "./BarList.astro";
+import Explainer from "./Explainer.astro";
+import Icon from "./Icon.astro";
+import Provenance from "./Provenance.astro";
+import Term from "./Term.astro";
+
+interface Props {
+  rows: LocalTurnout[];
+  provenance: ProvenanceData;
+}
+const { rows, provenance } = Astro.props;
+---
+
+<section class="section" id="participation" aria-labelledby="titre-participation">
+  <div class="section-head">
+    <h2 id="titre-participation">
+      <Icon name="vote" />
+      Participation aux élections
+    </h2>
+    <p>La part des inscrits qui ont voté, sur le périmètre de chaque scrutin.</p>
+  </div>
+  {rows.length ? (
+    <>
+      <div class="card">
+        <BarList
+          caption="Votants parmi les inscrits"
+          items={rows.map((row) => ({
+            icon: "vote",
+            label: row.label,
+            value: row.turnout ?? 0,
+            display: row.turnout === null ? "n.d." : formatPercent(row.turnout / 100, 1),
+            note:
+              row.voters === null || row.registered === null
+                ? "Effectifs incohérents dans la source, non affichés"
+                : `${formatNumber(row.voters)} votants sur ${formatNumber(row.registered)} inscrits${row.excludedCommunes ? ` (${row.excludedCommunes} commune exclue : effectifs incohérents)` : ""}`,
+          }))}
+        />
+      </div>
+      <Explainer title="Comparer les scrutins">
+        <p>
+          La <Term id="participation-electorale">participation</Term> ne mesure pas le soutien à une
+          politique. Aucun résultat de parti ou de candidat n’est présenté.
+        </p>
+        <p>
+          Un second tour ne concerne que les électeurs encore appelés à voter. Son périmètre peut
+          être plus petit que celui du premier tour, y compris à l’intérieur d’une commune pour les
+          législatives. Les municipales 2026 sont des résultats publiés après le scrutin,
+          susceptibles de rectifications.
+        </p>
+      </Explainer>
+      <Provenance provenance={provenance} />
+    </>
+  ) : (
+    <p class="muted">
+      Aucune donnée de participation pour ce territoire dans les fichiers retenus.
+    </p>
+  )}
+</section>

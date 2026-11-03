@@ -1,0 +1,162 @@
+---
+import Icon from "./Icon.astro";
+import type { FinanceLine } from "../lib/data";
+import { formatEuro, formatEuros, formatNumber } from "../lib/format";
+
+interface Props {
+  lines: FinanceLine[];
+  caption: string;
+}
+
+const { lines, caption } = Astro.props;
+const max = Math.max(...lines.flatMap((line) => [line.perCapita ?? 0, line.median ?? 0]), 0);
+const position = (value: number) => (max > 0 ? Math.max((value / max) * 100, 0) : 0);
+const gap = (line: FinanceLine) => {
+  if (line.perCapita === null || !line.median) return null;
+  const ratio = line.perCapita / line.median - 1;
+  if (Math.abs(ratio) < 0.05) return "proche de la médiane";
+  return `${formatNumber(Math.abs(ratio) * 100)} % ${ratio > 0 ? "au-dessus" : "en dessous"} de la médiane`;
+};
+---
+
+<figure class="compare">
+  <figcaption>
+    <Icon name="compare" size={18} />
+    {caption}
+  </figcaption>
+  <p class="legend small" aria-hidden="true">
+    <span class="legend-item">
+      <span class="key fill-key"></span>la commune
+    </span>
+    <span class="legend-item">
+      <span class="key tick-key"></span>médiane des communes de même taille
+    </span>
+  </p>
+  <ol>
+    {lines.map((line) => (
+      <li>
+        <span class="label">{line.label}</span>
+        <span class="value num">
+          {line.perCapita === null ? "n.d." : `${formatEuro(line.perCapita)}`}
+          <span class="unit"> par habitant</span>
+        </span>
+        <span class="track" aria-hidden="true">
+          <span class="fill" style={`width: ${position(Math.max(line.perCapita ?? 0, 0))}%`} />
+          {line.median !== null && (
+            <span class="tick" style={`left: ${position(Math.max(line.median, 0))}%`} />
+          )}
+        </span>
+        <span class="detail small">
+          Total {formatEuros(line.amount)}
+          {line.median !== null && (
+            <>
+              {" "}
+              · médiane {formatEuro(line.median)} · {gap(line)}
+            </>
+          )}
+        </span>
+      </li>
+    ))}
+  </ol>
+</figure>
+
+<style>
+  .compare {
+    margin: 0;
+  }
+
+  figcaption {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  .legend {
+    color: var(--text-secondary);
+    margin: 0 0 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 1rem;
+  }
+
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .key {
+    display: inline-block;
+    flex: none;
+  }
+
+  .fill-key {
+    width: 14px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--bar);
+  }
+
+  .tick-key {
+    width: 2px;
+    height: 16px;
+    background: var(--marker);
+  }
+
+  ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1rem;
+  }
+
+  li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.25rem 1rem;
+    align-items: baseline;
+  }
+
+  .value {
+    font-weight: 600;
+  }
+
+  .unit {
+    font-weight: 400;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+  }
+
+  .track {
+    grid-column: 1 / -1;
+    position: relative;
+    height: 10px;
+    background: var(--bar-track);
+    border-radius: 4px;
+  }
+
+  .fill {
+    display: block;
+    height: 100%;
+    background: var(--bar);
+    border-radius: 0 4px 4px 0;
+  }
+
+  .tick {
+    position: absolute;
+    top: -4px;
+    width: 2px;
+    height: 18px;
+    margin-left: -1px;
+    background: var(--marker);
+    box-shadow:
+      2px 0 0 var(--surface),
+      -2px 0 0 var(--surface);
+  }
+
+  .detail {
+    grid-column: 1 / -1;
+    color: var(--text-secondary);
+  }
+</style>

@@ -1,0 +1,1645 @@
+# Single source of truth for every dataset used by Chaque Euro.
+# The pipeline downloads from these URLs and copies this registry into the site database,
+# so every source link shown on the site comes from this file.
+
+[licences.lo2]
+name = "Licence Ouverte 2.0"
+url = "https://www.data.gouv.fr/pages/legal/licences/etalab-2-0"
+
+[licences.lo-an]
+name = "Licence Ouverte / Open Licence (Assemblée nationale)"
+url = "https://data.assemblee-nationale.fr/licence-ouverte-open-licence"
+
+[licences.odbl]
+name = "Open Database License (ODbL)"
+url = "https://opendatacommons.org/licenses/odbl/1-0/"
+
+[[sources]]
+id = "decp"
+short_name = "DECP"
+name = "Données essentielles de la commande publique consolidées (format tabulaire)"
+publisher = "Colin Maudry (decp-processing), à partir des publications officielles des acheteurs"
+page_url = "https://www.data.gouv.fr/datasets/donnees-essentielles-de-la-commande-publique-consolidees-format-tabulaire"
+file_url = "https://www.data.gouv.fr/api/1/datasets/r/11cea8e8-df3e-4ed1-932b-781e2635e432"
+code_url = "https://github.com/ColinMaudry/decp-processing/blob/main/docs/explications_montants_anormaux.md"
+licence = "lo2"
+frequency = "Quotidienne"
+kind = "file"
+filename = "decp.parquet"
+usage = "Marchés publics : qui achète, à qui, combien, quand."
+limits = [
+  "Le montant d'un marché est celui prévu au contrat, hors taxes. Pour un accord-cadre, c'est souvent un plafond. Ce n'est pas la somme payée.",
+  "Quand un marché a plusieurs titulaires, nous répartissons son montant à parts égales entre eux pour calculer le total d'une organisation.",
+  "Les montants signalés comme aberrants ou suspects par le consolidateur ne sont pas comptés dans les totaux. Pour les aberrants, son estimation par les marchés comparables (montant_rationalise) est affichée à titre indicatif à côté du montant déclaré. Les valeurs absentes, non positives ou d’au moins 999 999 999 € sont aussi exclues des totaux.",
+  "Seuls les marchés de 40 000 € HT ou plus doivent être publiés, et certains acheteurs ne publient pas tout. Une absence ne prouve pas qu'un marché n'existe pas.",
+  "Les acheteurs ont deux mois après la notification pour publier : les mois les plus récents sont incomplets.",
+  "Nous ne retenons que les marchés notifiés depuis le 1er janvier 2019, dans leur dernière version connue (modifications incluses), datés par leur notification initiale si disponible, sinon la première notification connue.",
+]
+
+[[sources]]
+id = "sirene"
+data_date = "2026-11-01"
+short_name = "Sirene"
+name = "Base Sirene des entreprises et de leurs établissements, fichier StockUniteLegale"
+publisher = "Insee"
+page_url = "https://www.data.gouv.fr/datasets/base-sirene-des-entreprises-et-de-leurs-etablissements-siren-siret"
+file_url = "https://www.data.gouv.fr/api/1/datasets/r/350182c9-148a-46e0-8389-76c2ec1374a3"
+record_url = "https://annuaire-entreprises.data.gouv.fr/entreprise/{siren}"
+licence = "lo2"
+frequency = "Mensuelle"
+kind = "file"
+filename = "StockUniteLegale.parquet"
+usage = "Nom, catégorie juridique et activité de chaque organisation identifiée par son SIREN."
+limits = [
+  "Les entrepreneurs individuels (catégorie juridique 1000) sont des personnes physiques : nous n'affichons jamais leur nom ni leur numéro.",
+  "Les unités en diffusion partielle n'ont pas de nom public : elles apparaissent comme « Nom non diffusé ».",
+  "Un SIREN désigne une entité juridique, pas un groupe. Les filiales d'un même groupe ont chacune leur page.",
+]
+
+[[sources]]
+id = "ofgl-communes"
+data_date = "2025-12-31"
+short_name = "OFGL"
+name = "Comptes consolidés des communes 2018-2025"
+publisher = "Observatoire des finances et de la gestion publique locales (OFGL), à partir des comptes de gestion de la DGFiP"
+page_url = "https://data.ofgl.fr/explore/dataset/ofgl-base-communes-consolidee/"
+file_url = "https://data.ofgl.fr/api/explore/v2.1/catalog/datasets/ofgl-base-communes-consolidee/records"
+record_url = "https://data.ofgl.fr/explore/dataset/ofgl-base-communes-consolidee/table/?refine.com_code={insee}&refine.exer={year}"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "ofgl_records"
+filename = "communes.jsonl"
+years = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+aggregates = [
+  "Dépenses totales hors remb",
+  "Dépenses de fonctionnement",
+  "Dépenses d'investissement hors remb",
+  "Frais de personnel",
+  "Achats et charges externes",
+  "Dépenses d'intervention",
+  "Subventions aux personnes de droit privé",
+  "Charges financières",
+  "Dépenses d'équipement",
+  "Subventions d'équipement versées",
+  "Recettes totales hors emprunts",
+  "Impôts locaux",
+  "Dotation globale de fonctionnement",
+  "Encours de dette",
+  "Epargne brute",
+]
+usage = "Dépenses, recettes et dette de chaque commune, par habitant et comparées aux communes de taille proche."
+limits = [
+  "Comptes consolidés : budget principal et budgets annexes, sans les flux entre eux.",
+  "La population est la population totale Insee retenue par l'OFGL pour l'exercice.",
+  "La comparaison se fait avec la médiane des communes de la même strate de population (définition de la DGCL).",
+  "Les dépenses de l'intercommunalité (EPCI) ne sont pas incluses : une commune qui a transféré beaucoup de compétences paraît dépenser moins.",
+  "Les communes sont présentées dans leur périmètre géographique actuel : pour une commune issue d'une fusion, les années antérieures additionnent les comptes et les populations des anciennes communes.",
+  "Depuis 2019, Paris est à la fois une commune et un département : ses comptes incluent les dépenses départementales, d'où une rupture entre 2018 et 2019.",
+]
+
+[[sources]]
+id = "contours-departements"
+data_date = "2026-01-01"
+short_name = "Contours"
+name = "Contours administratifs 2026, départements (généralisation 100 m)"
+publisher = "data.gouv.fr (Etalab), d'après Admin Express de l'IGN et OpenStreetMap"
+page_url = "https://www.data.gouv.fr/datasets/contours-administratifs"
+file_url = "https://contours-administratifs.s3.rbx.io.cloud.ovh.net/2026/geojson/departements-100m.geojson.gz"
+licence = "odbl"
+frequency = "Annuelle"
+kind = "file"
+filename = "departements-100m.geojson.gz"
+usage = "Tracé des départements sur la carte de France et dans le repère de chaque page commune."
+limits = [
+  "Tracés simplifiés pour l'affichage : ils ne servent pas à mesurer des distances ou des surfaces.",
+  "Les départements et régions d'outre-mer sont dessinés en médaillon, à une autre échelle que la métropole.",
+]
+
+[[sources]]
+id = "contours-communes"
+data_date = "2026-01-01"
+short_name = "Contours"
+name = "Contours administratifs 2026, communes (généralisation 100 m)"
+publisher = "data.gouv.fr (Etalab), d'après Admin Express de l'IGN et OpenStreetMap"
+page_url = "https://www.data.gouv.fr/datasets/contours-administratifs"
+file_url = "https://contours-administratifs.s3.rbx.io.cloud.ovh.net/2026/geojson/communes-100m.geojson.gz"
+licence = "odbl"
+frequency = "Annuelle"
+kind = "file"
+filename = "communes-100m.geojson.gz"
+usage = "Tracé des communes sur la carte de chaque département."
+limits = [
+  "Découpage communal de 2026. Une commune absente des comptes OFGL, ou créée après leur publication, reste grise sur la carte.",
+  "Tracés simplifiés pour l'affichage : les très petites communes peuvent apparaître comme un simple point.",
+]
+
+[[sources]]
+id = "jaune-associations"
+data_date = "2025-12-31"
+short_name = "Jaune associations"
+name = "PLF 2027, annexe Jaune « Effort financier de l'État en faveur des associations »"
+publisher = "Direction du Budget, ministères économiques et financiers"
+page_url = "https://www.budget.gouv.fr/documentation/documents-budgetaires/exercice-2027/projet-loi-finances-les/plf-2027-jaunes-budgetaires"
+file_url = "https://www.budget.gouv.fr/documentation/fid-download/85357"
+licence = "lo2"
+frequency = "Annuelle (avec le projet de loi de finances)"
+kind = "file"
+filename = "jaune-plf2027.xlsx"
+usage = "Versements de l'État aux associations en 2025, par programme budgétaire."
+limits = [
+  "Cette édition (PLF 2027) porte sur les crédits versés en 2025. Le fichier détaillé contient 132 660 versements, pour 10,504 milliards d'euros.",
+  "L'annexe comprend des subventions, des prestations de services et d'autres versements. Le fichier détaillé ne permet pas de les distinguer : le total affiché n'est donc pas un total de subventions au sens strict.",
+  "Les aides des collectivités et des opérateurs ne sont pas couvertes de façon exhaustive. Certains versements passent par un intermédiaire.",
+  "Les lignes sans SIREN exploitable ne sont rattachées à aucune page mais restent comptées dans les totaux nationaux.",
+]
+
+[[sources]]
+id = "plrg-2025"
+data_date = "2025-12-31"
+short_name = "PLRG 2025"
+name = "Projet de loi relatif aux résultats de la gestion 2025 (PLRG), annexe 1, crédits de paiement par mission et programme"
+publisher = "Direction du Budget, ministères économiques et financiers"
+page_url = "https://www.data.gouv.fr/datasets/projet-de-loi-relatif-aux-resultats-de-la-gestion-et-portant-approbation-des-comptes-de-lannee-plrg-2025"
+file_url = "https://data.economie.gouv.fr/api/v2/catalog/datasets/projet-de-loi-relatif-aux-resultats-de-la-gestion-et-portant-approbation-des-comptes-de-lannee-plrg-2025/attachments/annexe1_etat_cp_2025csv"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+filename = "plrg2025-annexe1-etat-cp.csv"
+usage = "Dépenses réellement constatées du budget général de l'État en 2025, par mission et programme."
+limits = [
+  "Budget général de l'État uniquement : ni Sécurité sociale, ni collectivités, ni comptes spéciaux, ni budgets annexes.",
+  "Ce sont des dépenses constatées en 2025 (exécution), pas des crédits votés pour 2026.",
+  "La mission « Remboursements et dégrèvements » correspond surtout à des impôts rendus aux contribuables.",
+]
+
+[[sources]]
+id = "plrg-2025-recettes"
+data_date = "2025-12-31"
+short_name = "PLRG 2025"
+name = "Projet de loi relatif aux résultats de la gestion 2025 (PLRG), annexe 1, recettes du budget général"
+publisher = "Direction du Budget, ministères économiques et financiers"
+page_url = "https://www.data.gouv.fr/datasets/projet-de-loi-relatif-aux-resultats-de-la-gestion-et-portant-approbation-des-comptes-de-lannee-plrg-2025"
+file_url = "https://data.economie.gouv.fr/api/v2/catalog/datasets/projet-de-loi-relatif-aux-resultats-de-la-gestion-et-portant-approbation-des-comptes-de-lannee-plrg-2025/attachments/annexe1_etat_recettes_2025csv"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+filename = "plrg2025-annexe1-etat-recettes.csv"
+usage = "Recettes réellement encaissées par le budget général de l'État en 2025, impôt par impôt."
+limits = [
+  "Recettes fiscales brutes : les impôts rendus aux contribuables apparaissent en dépense, dans la mission « Remboursements et dégrèvements ».",
+  "Les prélèvements sur recettes, versés aux collectivités territoriales et à l'Union européenne, sont retirés avant toute dépense du budget.",
+  "L'écart entre dépenses et recettes du budget général est un calcul de Chaque Euro : il ne reprend pas le solde officiel de l'État, qui inclut aussi les comptes spéciaux et les budgets annexes.",
+]
+
+[[sources]]
+id = "insee-menages"
+data_date = "2023-01-01"
+short_name = "Insee"
+name = "Couples-Familles-Ménages en 2023 (recensement de la population, exploitation complémentaire)"
+publisher = "Insee"
+page_url = "https://www.insee.fr/fr/statistiques/9006073"
+file_url = "https://www.insee.fr/fr/statistiques/fichier/9006073/DS_RP_MENAGES_COMP_2023.parquet"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "constant"
+value = 31274741
+vintage = "Recensement 2023, ménages au 1er janvier 2023, arrondis à l'unité"
+usage = "Nombre de ménages, pour ramener le budget de l'État à l'échelle d'un ménage."
+limits = [
+  "France hors Mayotte, ménages vivant dans un logement ordinaire.",
+  "Exploitation complémentaire : total national des résidences principales, toutes tailles de ménage et catégories socioprofessionnelles confondues. Géographie au 1er janvier 2026.",
+]
+
+[[sources]]
+id = "lfi-2026"
+data_date = "2026-12-31"
+short_name = "LFI 2026"
+name = "Loi de finances pour 2026, texte définitivement adopté, état B (crédits par mission)"
+publisher = "Assemblée nationale"
+page_url = "https://www.assemblee-nationale.fr/dyn/17/textes/l17t0227_texte-adopte-seance"
+file_url = "https://www.assemblee-nationale.fr/dyn/opendata/PRJLANR5L17BTA0227.html"
+licence = "lo-an"
+frequency = "Annuelle"
+kind = "file"
+filename = "lfi2026-texte-adopte.html"
+usage = "Crédits de paiement votés pour 2026, mission par mission, sur le budget général de l'État."
+limits = [
+  "Crédits votés : ce que l'État prévoit de dépenser, pas ce qu'il dépensera. Des lois de finances rectificatives peuvent les modifier en cours d'année.",
+  "Loi n° 2026-103 du 19 février 2026. Le tableau est extrait de la page du texte adopté (HTML), il n'existe pas de fichier tabulaire officiel.",
+  "Certaines missions changent de nom ou de périmètre d'une année à l'autre : la comparaison avec 2025 se fait sur le nom de la mission.",
+]
+
+[[sources]]
+id = "insee-apu"
+data_date = "2025-12-31"
+short_name = "Insee"
+name = "Comptes nationaux, tableau 3.215 : dépenses et recettes des administrations publiques par sous-secteur"
+publisher = "Insee"
+page_url = "https://www.insee.fr/fr/statistiques/8988845?sommaire=8988934"
+file_url = "https://www.insee.fr/fr/statistiques/fichier/8988845/t_3215_fr.xlsx"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+filename = "insee-t3215.xlsx"
+usage = "Dépenses et recettes de l'État, de ses opérateurs, des collectivités et de la Sécurité sociale, chaque année depuis 1978."
+limits = [
+  "Comptabilité nationale : l'État y est mesuré selon les règles européennes, sur un périmètre différent du budget général. Les deux montants ne se comparent pas directement.",
+  "Les sous-secteurs se versent de l'argent entre eux : leurs dépenses ne s'additionnent pas. Le total des administrations publiques est publié sans ces doublons.",
+  "La Sécurité sociale au sens de l'Insee inclut aussi les hôpitaux publics, l'assurance chômage et les retraites complémentaires.",
+  "La dernière année est provisoire et peut être révisée.",
+]
+
+[[sources]]
+id = "insee-apu-fonctions"
+data_date = "2024-12-31"
+short_name = "Insee"
+name = "Comptes nationaux, tableau 3.307 : dépenses consolidées des administrations publiques par fonction et par sous-secteur"
+publisher = "Insee"
+page_url = "https://www.insee.fr/fr/statistiques/8574707"
+file_url = "https://www.insee.fr/fr/statistiques/fichier/8574707/T_3307.xlsx"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+filename = "insee-t3307.xlsx"
+usage = "Ce que financent ensemble toutes les administrations publiques (santé, retraites, enseignement…) et la part de chacune, depuis 2009."
+limits = [
+  "Dernière année publiée : 2024. Les chiffres 2025 par fonction paraîtront en décembre 2026.",
+  "Dépenses consolidées : l'argent qu'une administration verse à une autre n'est compté qu'une fois, chez celle qui le dépense. La part de l'État y est donc plus faible que ses dépenses totales.",
+  "Classement international des fonctions des administrations publiques (COFOG). Les intérêts de la dette sont classés dans les services généraux.",
+]
+
+[[sources]]
+id = "insee-apu-comptes"
+data_date = "2025-12-31"
+short_name = "Insee"
+name = "Comptes nationaux, tableaux 3.203 à 3.214 : dépenses et recettes par nature et par administration"
+publisher = "Insee"
+page_url = "https://www.insee.fr/fr/statistiques/8988845?sommaire=8988934"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "files"
+usage = "Dépenses, recettes et soldes par nature des quatre familles d'administrations publiques et de leurs composantes, depuis 1978."
+limits = [
+  "Les administrations se versent de l'argent : les dépenses des composantes ne s'additionnent pas au total de leur famille.",
+  "Les montants sont publiés en milliards d'euros ; les arrondis peuvent créer de petits écarts entre la somme des postes et le total.",
+  "La dernière année est provisoire. Les dépenses par fonction proviennent d'une autre campagne et portent sur 2024.",
+  "Le sous-secteur ODAC n'est pas identique au périmètre des opérateurs défini dans les documents budgétaires.",
+]
+[sources.files]
+"t_3203_fr.xlsx" = "https://www.insee.fr/fr/statistiques/fichier/8988845/t_3203_fr.xlsx"
+"t_3204_fr.xlsx" = "https://www.insee.fr/fr/statistiques/fichier/8988845/t_3204_fr.xlsx"
+"t_3205_fr.xlsx" = "https://www.insee.fr/fr/statistiques/fichier/8988845/t_3205_fr.xlsx"
+"t_3207_fr.xlsx" = "https://www.insee.fr/fr/statistiques/fichier/8988845/t_3207_fr.xlsx"
+"t_3208_fr.xlsx" = "https://www.insee.fr/fr/statistiques/fichier/8988845/t_3208_fr.xlsx"
+"t_3209_fr.xlsx" = "https://www.insee.fr/fr/statistiques/fichier/8988845/t_3209_fr.xlsx"
+"t_3210_fr.xlsx" = "https://www.insee.fr/fr/statistiques/fichier/8988845/t_3210_fr.xlsx"
+"t_3211_fr.xlsx" = "https://www.insee.fr/fr/statistiques/fichier/8988845/t_3211_fr.xlsx"
+"t_3212_fr.xlsx" = "https://www.insee.fr/fr/statistiques/fichier/8988845/t_3212_fr.xlsx"
+"t_3213_fr.xlsx" = "https://www.insee.fr/fr/statistiques/fichier/8988845/t_3213_fr.xlsx"
+"t_3214_fr.xlsx" = "https://www.insee.fr/fr/statistiques/fichier/8988845/t_3214_fr.xlsx"
+
+[[sources]]
+id = "insee-apu-definition"
+short_name = "Insee"
+name = "Administrations publiques en 2025 : définition des sous-secteurs"
+publisher = "Insee"
+page_url = "https://www.insee.fr/fr/statistiques/8988833"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "reference"
+usage = "Périmètre des familles d'administrations publiques et exemples d'organismes."
+limits = ["Les sous-secteurs de comptabilité nationale ne se confondent pas avec les périmètres budgétaires."]
+
+[licences.ccby]
+name = "Creative Commons Attribution 4.0"
+url = "https://creativecommons.org/licenses/by/4.0/"
+
+[[sources]]
+id = "insee-deficit"
+data_date = "2025-12-31"
+short_name = "Insee"
+name = "Solde public par sous-secteur, base 2020"
+publisher = "Insee"
+page_url = "https://www.insee.fr/fr/statistiques/2381402"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Articles de la rubrique Analyses."
+limits = ["Périmètre et millésime précisés sous chaque graphique."]
+file_url = "https://www.insee.fr/fr/statistiques/fichier/2381402/econ-fin-pub-deficit-secteur.xlsx"
+filename = "deficit.xlsx"
+
+[[sources]]
+id = "insee-debt"
+data_date = "2025-12-31"
+short_name = "Insee"
+name = "Dette de Maastricht, tableau 3.101"
+publisher = "Insee"
+page_url = "https://www.insee.fr/fr/statistiques/8988843"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Articles de la rubrique Analyses."
+limits = ["Périmètre et millésime précisés sous chaque graphique."]
+file_url = "https://www.insee.fr/fr/statistiques/fichier/8988843/t_3101_fr.xlsx"
+filename = "debt.xlsx"
+
+[[sources]]
+id = "state-balance"
+data_date = "2025-12-31"
+short_name = "Insee"
+name = "Passage du solde budgétaire au solde national de l'État, tableau 3.107"
+publisher = "Insee"
+page_url = "https://www.insee.fr/fr/statistiques/8988843"
+file_url = "https://www.insee.fr/fr/statistiques/fichier/8988843/t_3107_fr.xlsx"
+filename = "balance.csv"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Solde budgétaire de l'État, distinct du solde en comptabilité nationale."
+limits = ["Le périmètre budgétaire diffère du périmètre de comptabilité nationale."]
+
+[[sources]]
+id = "eu-budget"
+data_date = "2025-12-31"
+short_name = "Commission européenne"
+name = "EU spending and revenue 2000-2025"
+publisher = "Commission européenne"
+page_url = "https://commission.europa.eu/strategy-and-policy/eu-budget/long-term-eu-budget/2021-2027/spending-and-revenue_en"
+licence = "ccby"
+frequency = "Annuelle"
+kind = "file"
+usage = "Articles de la rubrique Analyses."
+limits = ["Périmètre et millésime précisés sous chaque graphique."]
+file_url = "https://commission.europa.eu/document/download/9f334bee-d097-4b68-8f93-2225eabeb631_en?filename=eu_budget_spending_and_revenue_2000-2025.xlsx"
+filename = "eu.xlsx"
+
+[[sources]]
+id = "crc-paris"
+short_name = "CRC"
+name = "Situation financière de la Ville de Paris, 2025"
+publisher = "Chambre régionale des comptes Île-de-France"
+page_url = "https://www.ccomptes.fr/sites/default/files/2025-10/IDR2025-42.pdf"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Articles de la rubrique Analyses."
+limits = ["Périmètre et millésime précisés sous chaque graphique."]
+file_url = "https://www.ccomptes.fr/sites/default/files/2025-10/IDR2025-42.pdf"
+filename = "paris.pdf"
+
+[[sources]]
+id = "sdes-rail"
+data_date = "2024-12-31"
+short_name = "SDES"
+name = "Bilan des transports 2024, transport et activité économique"
+publisher = "SDES"
+page_url = "https://www.statistiques.developpement-durable.gouv.fr/bilan-annuel-des-transports-en-2024?list-chiffres=true"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Articles de la rubrique Analyses."
+limits = ["Périmètre et millésime précisés sous chaque graphique."]
+file_url = "https://www.statistiques.developpement-durable.gouv.fr/media/8861/download?inline="
+filename = "rail.xlsx"
+
+[[sources]]
+id = "art-rail"
+data_date = "2024-12-31"
+short_name = "ART"
+name = "Bilan ferroviaire 2024, données ouvertes"
+publisher = "Autorité de régulation des transports"
+page_url = "https://www.autorite-transports.fr/observatoire-et-numerique/marche-du-transport-ferroviaire/"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Articles de la rubrique Analyses."
+limits = ["Périmètre et millésime précisés sous chaque graphique."]
+file_url = "https://ftp.autorite-transports.fr/ART_Bilan_ferroviaire_2024_complet_open_data.xlsx"
+filename = "art.xlsx"
+
+[[sources]]
+id = "sies-grants"
+data_date = "2025-09-01"
+short_name = "SIES"
+name = "Boursiers sur critères sociaux 2025-2026, annexe"
+publisher = "MESR-SIES"
+page_url = "https://www.enseignementsup-recherche.gouv.fr/fr/les-boursiers-sur-criteres-sociaux-en-2025-2026-104308"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Articles de la rubrique Analyses."
+limits = ["Périmètre et millésime précisés sous chaque graphique."]
+file_url = "https://www.enseignementsup-recherche.gouv.fr/sites/default/files/2026-09/2026_09_NF_SIES_23_Annexe%20NF%20Boursiers%202025-2026.xlsx"
+filename = "grants.xlsx"
+
+[[sources]]
+id = "student-response"
+short_name = "MESR"
+name = "Annonces pour la jeunesse du 26 octobre 2026"
+publisher = "MESR"
+page_url = "https://www.enseignementsup-recherche.gouv.fr/fr/remplacement-de-la-plateforme-parcoursup-plafonnement-du-nombre-d-eleves-par-classe-etat-des-104451"
+licence = "lo2"
+frequency = "Ponctuelle"
+kind = "reference"
+usage = "Articles de la rubrique Analyses."
+limits = ["Périmètre et millésime précisés sous chaque graphique."]
+
+[[sources]]
+id = "presidents"
+short_name = "Élysée"
+name = "Les présidents de la République"
+publisher = "Présidence de la République"
+page_url = "https://www.elysee.fr/la-presidence/les-presidents-de-la-republique"
+licence = "lo2"
+frequency = "Ponctuelle"
+kind = "reference"
+usage = "Contexte et méthode des analyses."
+limits = ["Données de contexte, distinctes des séries annuelles."]
+
+[[sources]]
+id = "budget-calendar"
+short_name = "Économie"
+name = "Le projet de loi de finances : comment ça marche ?"
+publisher = "Ministère de l’Économie"
+page_url = "https://www.economie.gouv.fr/actualites/le-projet-de-loi-de-finances-plf-comment-ca-marche"
+licence = "lo2"
+frequency = "Ponctuelle"
+kind = "reference"
+usage = "Contexte et méthode des analyses."
+limits = ["Données de contexte, distinctes des séries annuelles."]
+
+[[sources]]
+id = "rail-debt"
+short_name = "AFT"
+name = "Reprise de dette SNCF Réseau"
+publisher = "Agence France Trésor"
+page_url = "https://www.aft.gouv.fr/fr/publications/communiques-presse/26-novembre-2018-dette-sncf-reseau"
+licence = "lo2"
+frequency = "Ponctuelle"
+kind = "reference"
+usage = "Contexte et méthode des analyses."
+limits = ["Données de contexte, distinctes des séries annuelles."]
+
+[[sources]]
+id = "rail-dividend"
+short_name = "Assemblée nationale"
+name = "Exécution 2025, programme 203"
+publisher = "Assemblée nationale"
+page_url = "https://www.assemblee-nationale.fr/dyn/docs/RAPPANR5L17B2847-tII.raw"
+licence = "lo-an"
+frequency = "Ponctuelle"
+kind = "file"
+filename = "page.html"
+file_url = "https://www.assemblee-nationale.fr/dyn/docs/RAPPANR5L17B2847-tII.raw"
+usage = "Contexte et méthode des analyses."
+limits = ["Données de contexte, distinctes des séries annuelles."]
+
+[[sources]]
+id = "student-cost"
+data_date = "2024-12-31"
+file_url = "https://www.education.gouv.fr/sites/default/files/2025-09/depp-ni-2025-52-442155.pdf"
+filename = "cost.pdf"
+short_name = "SIES"
+name = "Note d’information DEPP 25.52, dépenses d’éducation 2024"
+publisher = "MESR-SIES"
+page_url = "https://www.education.gouv.fr/sites/default/files/2025-09/depp-ni-2025-52-442155.pdf"
+licence = "lo2"
+frequency = "Ponctuelle"
+kind = "file"
+usage = "Contexte et méthode des analyses."
+limits = ["Données de contexte, distinctes des séries annuelles."]
+
+[[sources]]
+id = "plf-2027"
+data_date = "2027-12-31"
+short_name = "Assemblée nationale"
+name = "Projet de loi de finances 2027, état B"
+publisher = "Assemblée nationale"
+page_url = "https://www.assemblee-nationale.fr/dyn/opendata/PRJLANR5L17B3210.html"
+licence = "lo-an"
+frequency = "Ponctuelle"
+kind = "file"
+usage = "Contexte et méthode des analyses."
+limits = ["Données de contexte, distinctes des séries annuelles."]
+filename = "plf.html"
+file_url = "https://www.assemblee-nationale.fr/dyn/opendata/PRJLANR5L17B3210.html"
+
+[[sources]]
+id = "france-population"
+data_date = "2026-01-01"
+short_name = "Insee"
+name = "Bilan démographique 2025"
+publisher = "Insee"
+page_url = "https://www.insee.fr/fr/statistiques/5225246"
+licence = "lo2"
+frequency = "Ponctuelle"
+kind = "file"
+filename = "population.xlsx"
+file_url = "https://www.insee.fr/fr/statistiques/fichier/5225246/demo-pop-france.xlsx"
+usage = "Contexte et méthode des analyses."
+limits = ["Données de contexte, distinctes des séries annuelles."]
+
+
+[[sources]]
+id = "economic-events"
+short_name = "Insee"
+name = "Trente ans de vie économique et sociale"
+publisher = "Insee"
+page_url = "https://www.insee.fr/fr/statistiques/fichier/1374377/Histo14.pdf"
+licence = "lo2"
+frequency = "Ponctuelle"
+kind = "reference"
+usage = "Repères historiques des analyses, sans attribution causale des soldes."
+limits = ["Les millésimes anciens servent uniquement à dater les événements, pas à fournir les séries financières actuelles."]
+
+[licences.reference]
+name = "Référence documentaire, droits de l’éditeur"
+url = "https://www.snesup.fr/mentions-legales"
+
+[[sources]]
+id = "student-mobilisation"
+short_name = "SNESUP-FSU"
+name = "Mobilisation du 10 mars 2026"
+publisher = "SNESUP-FSU"
+page_url = "https://www.snesup.fr/agenda/rassemblement-pour-lemploi-la-liberte-academique-et-lavenir-de-la-jeunesse"
+licence = "reference"
+frequency = "Ponctuelle"
+kind = "reference"
+usage = "Datation et description des demandes et réponses, sans reprise de données chiffrées."
+limits = ["La position d’une organisation ne représente pas tous les étudiants."]
+
+[[sources]]
+id = "student-fees-demand"
+short_name = "SNESUP-FSU"
+name = "Motion du CNESER du 12 mai 2026 sur les droits différenciés"
+publisher = "SNESUP-FSU"
+page_url = "https://www.snesup.fr/motion-presentee-par-le-snesup-fsu-la-cgt-et-sud-education-la-seance-pleniere-du-cneser-du-12-mai"
+licence = "reference"
+frequency = "Ponctuelle"
+kind = "reference"
+usage = "Datation et description des demandes et réponses, sans reprise de données chiffrées."
+limits = ["La position d’une organisation ne représente pas tous les étudiants."]
+
+[[sources]]
+id = "student-fees-response"
+short_name = "Conseil d’État"
+name = "Ordonnance du 9 juillet 2026 décrivant le décret du 19 mai 2026"
+publisher = "Conseil d’État, diffusion Légifrance"
+page_url = "https://www.legifrance.gouv.fr/ceta/id/CETATEXT000054414009"
+licence = "lo2"
+frequency = "Ponctuelle"
+kind = "reference"
+usage = "Datation et description des demandes et réponses, sans reprise de données chiffrées."
+limits = ["La position d’une organisation ne représente pas tous les étudiants."]
+
+[[sources]]
+id = "state-monthly"
+data_date = "2026-08-31"
+short_name = "DGFiP"
+name = "Situations mensuelles budgétaires de l’État depuis 2024"
+publisher = "DGFiP"
+page_url = "https://data.economie.gouv.fr/explore/dataset/situations-mensuelles-budgetaires-series-longues/"
+file_url = "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/situations-mensuelles-budgetaires-series-longues/attachments/serie_longue_smb_dgfip_2024_xxcsv"
+filename = "monthly.csv"
+frequency = "Mensuelle"
+usage = "Exécution budgétaire cumulée en cours d’année."
+limits = ["Données provisoires. Le solde inclut les comptes spéciaux, contrairement au seul budget général."]
+licence = "lo2"
+kind = "file"
+
+[[sources]]
+id = "state-titles"
+data_date = "2025-12-31"
+short_name = "PLRG 2025"
+name = "PLRG 2025, annexe 1, dépenses par titre et catégorie"
+publisher = "Direction du Budget"
+page_url = "https://data.economie.gouv.fr/explore/dataset/projet-de-loi-relatif-aux-resultats-de-la-gestion-et-portant-approbation-des-comptes-de-lannee-plrg-2025/"
+file_url = "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/projet-de-loi-relatif-aux-resultats-de-la-gestion-et-portant-approbation-des-comptes-de-lannee-plrg-2025/attachments/annexe1_etat_titre_cat_2025csv"
+filename = "titles.csv"
+frequency = "Annuelle"
+usage = "Dépenses exécutées 2025 du budget général, par nature."
+limits = ["Crédits de paiement, remboursements et dégrèvements inclus."]
+licence = "lo2"
+kind = "file"
+
+[[sources]]
+id = "state-assets"
+data_date = "2025-12-31"
+short_name = "DGFiP CGE"
+name = "Compte général de l’État, bilan et compte de résultat"
+publisher = "DGFiP"
+page_url = "https://data.economie.gouv.fr/explore/dataset/balances_des_comptes_etat/"
+file_url = "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/balances_des_comptes_etat/exports/csv?select=annee%2Ccategorie%2Csum(balance_sortie_2)%20as%20amount&group_by=annee%2Ccategorie&where=annee%3Ddate%272025%27"
+filename = "balance.csv"
+frequency = "Annuelle"
+usage = "Actif, passif et situation nette au 31 décembre."
+limits = ["Comptabilité générale de l’État seul, distincte de la dette de Maastricht de toutes les administrations."]
+licence = "lo2"
+kind = "file"
+
+[[sources]]
+id = "drees-protection"
+data_date = "2024-12-31"
+short_name = "DREES"
+name = "Comptes de la protection sociale, séries depuis 1959"
+publisher = "DREES"
+page_url = "https://data.drees.solidarites-sante.gouv.fr/explore/dataset/305_les-comptes-de-la-protection-sociale/"
+file_url = "https://data.drees.solidarites-sante.gouv.fr/api/explore/v2.1/catalog/datasets/305_les-comptes-de-la-protection-sociale/attachments/la_protection_sociale_en_france_de_1959_a_2024xlsx"
+filename = "protection.xlsx"
+frequency = "Annuelle (automne)"
+usage = "Prestations de protection sociale par risque, tous régimes."
+limits = ["Périmètre plus large que la Sécurité sociale : État, collectivités, organismes privés et employeurs inclus.", "Le fichier téléchargé en octobre 2026 couvre 2024, année semi-définitive. Prochaine édition annoncée en décembre 2026."]
+licence = "lo2"
+kind = "file"
+
+[[sources]]
+id = "green-budget"
+data_date = "2026-12-31"
+short_name = "Budget vert"
+name = "PLF 2026, budget vert"
+publisher = "Direction du Budget"
+page_url = "https://data.economie.gouv.fr/explore/dataset/plf-2026-budget-vert/"
+file_url = "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/plf-2026-budget-vert/exports/csv"
+filename = "green.csv"
+frequency = "Annuelle"
+usage = "Crédits proposés et cotation environnementale du PLF 2026."
+limits = ["Projet de budget, distinct des crédits votés et des dépenses exécutées.", "Périmètre propre au budget vert, contributions aux pensions retraitées et prélèvements sur recettes inclus."]
+licence = "lo2"
+kind = "file"
+
+[[sources]]
+id = "insee-levies"
+data_date = "2025-12-31"
+short_name = "Insee"
+name = "Prélèvements obligatoires, tableaux 3.216 et 3.217 des comptes de la Nation 2025"
+publisher = "Insee"
+page_url = "https://www.insee.fr/fr/statistiques/8988845?sommaire=8988934"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "files"
+usage = "Prélèvements obligatoires par bénéficiaire et principaux impôts."
+limits = ["Comptabilité nationale, milliards d’euros convertis en euros.", "Les principaux impôts ne sont pas une liste exhaustive des prélèvements."]
+[sources.files]
+"beneficiaries.xlsx" = "https://www.insee.fr/fr/statistiques/fichier/8988845/t_3216_fr.xlsx"
+"taxes.xlsx" = "https://www.insee.fr/fr/statistiques/fichier/8988845/t_3217_fr.xlsx"
+
+[licences.eurostat]
+name = "Réutilisation des données Eurostat"
+url = "https://ec.europa.eu/eurostat/about-us/policies/copyright"
+
+[[sources]]
+id = "eurostat-finances"
+short_name = "Eurostat"
+name = "Finances publiques européennes, comptes annuels et dette trimestrielle"
+publisher = "Eurostat"
+page_url = "https://ec.europa.eu/eurostat/web/government-finance-statistics/database"
+licence = "eurostat"
+frequency = "Trimestrielle"
+kind = "files"
+usage = "Comparaison harmonisée en points de PIB et dette de Maastricht."
+limits = ["Administrations publiques S13, données révisables.", "La dette de Maastricht est brute et consolidée, pas une situation patrimoniale nette."]
+[sources.files]
+"main.json" = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/gov_10a_main?lang=FR&freq=A&unit=PC_GDP&sector=S13&na_item=TE&na_item=TR&sinceTimePeriod=2024&geo=FR&geo=DE&geo=IT&geo=ES&geo=NL&geo=EU27_2020"
+"edp.json" = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/gov_10dd_edpt1?lang=FR&freq=A&unit=PC_GDP&sector=S13&na_item=B9&na_item=GD&sinceTimePeriod=2024&geo=FR&geo=DE&geo=IT&geo=ES&geo=NL&geo=EU27_2020"
+"functions.json" = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/gov_10a_exp?lang=FR&freq=A&unit=PC_GDP&sector=S13&na_item=TE&sinceTimePeriod=2024&geo=FR&geo=DE&geo=IT&geo=ES&geo=NL&geo=EU27_2020"
+"quarterly.json" = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/gov_10q_ggdebt?lang=FR&freq=Q&unit=PC_GDP&unit=MIO_EUR&sector=S13&na_item=GD&geo=FR&sinceTimePeriod=2025-Q1"
+
+[[sources]]
+id = "state-ministries"
+data_date = "2025-12-31"
+short_name = "DGFiP"
+name = "Nomenclature des missions et programmes 2025"
+publisher = "DGFiP"
+page_url = "https://data.economie.gouv.fr/explore/dataset/balances_des_comptes_etat/"
+file_url = "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/balances_des_comptes_etat/attachments/nomenclature_missions_et_programmes_2025xlsx"
+filename = "ministries.xlsx"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Rattachement des programmes exécutés en 2025 à leur ministère."
+limits = ["Nomenclature de gestion 2025, indépendante des réorganisations ministérielles ultérieures."]
+
+[freshness.daily]
+retrieval_days = 3
+data_days = 14
+[freshness.monthly]
+retrieval_days = 45
+data_days = 100
+[freshness.quarterly]
+retrieval_days = 100
+data_days = 200
+[freshness.annual]
+retrieval_days = 400
+data_days = 550
+[freshness.occasional]
+retrieval_days = 0
+data_days = 0
+
+[licences.crpa]
+name = "Réutilisation d'informations publiques (CRPA, art. L321-1 et L322-1)"
+url = "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000031366350/LEGISCTA000031367750/"
+
+[[sources]]
+id = "dss-branches-2026"
+data_date = "2025-11-12"
+short_name = "DSS, PLFSS 2026"
+name = "PLFSS 2026, annexe 3, équilibre des finances sociales"
+publisher = "Direction de la sécurité sociale"
+page_url = "https://www.securite-sociale.fr/home/la-secu-en-detail/loi-de-financement/annees-passees/plfss-2026.html"
+file_url = "https://www.securite-sociale.fr/files/live/sites/SSFR/files/medias/PLFSS/2026/Annexe%203%20PLFSS%202026%20Tableaux%20donn%C3%A9es%20.xlsx"
+licence = "crpa"
+frequency = "Annuelle"
+kind = "file"
+filename = "annexe3.xlsx"
+usage = "Recettes, dépenses et soldes des cinq branches des régimes de base."
+limits = ["Édition du projet de loi d'octobre 2025 : les prévisions ne sont pas les comptes exécutés ni les montants finalement votés.", "Les transferts entre branches sont éliminés du total consolidé. Le FSV est présenté séparément."]
+
+[[sources]]
+id = "dss-ondam-2026"
+data_date = "2025-10-29"
+short_name = "DSS, ONDAM"
+name = "PLFSS 2026, annexe 5, ONDAM et dépenses de santé"
+publisher = "Direction de la sécurité sociale"
+page_url = "https://www.securite-sociale.fr/home/la-secu-en-detail/loi-de-financement/annees-passees/plfss-2026.html"
+file_url = "https://www.securite-sociale.fr/files/live/sites/SSFR/files/medias/PLFSS/2026/Annexe%205%20Tableaux%20PLFSS%202026%20%281%29.xlsx"
+licence = "crpa"
+frequency = "Annuelle"
+kind = "file"
+filename = "annexe5.xlsx"
+usage = "Objectif national des dépenses d'assurance maladie, périmètre distinct des comptes de la branche maladie."
+limits = ["L'ONDAM couvre des dépenses de plusieurs branches et ne correspond pas à toutes les dépenses de la branche maladie."]
+
+[[sources]]
+id = "dss-branches-2027"
+data_date = "2026-10-09"
+short_name = "DSS, PLFSS 2027"
+name = "PLFSS 2027, annexe 3, équilibre des finances sociales"
+publisher = "Direction de la sécurité sociale"
+page_url = "https://www.securite-sociale.fr/la-secu-en-detail/loi-de-financement/annee-en-cours"
+file_url = "https://www.securite-sociale.fr/files/live/sites/SSFR/files/medias/PLFSS/2027/PLFSS2027-Annexe3-VDEF.pdf"
+licence = "crpa"
+frequency = "Annuelle"
+kind = "file"
+filename = "annexe3.pdf"
+usage = "Résultats 2025 et prévisions 2026 et 2027, régimes obligatoires de base."
+limits = ["Projet présenté en octobre 2026, non voté. Les prévisions après mesures diffèrent de celles de la CCSS avant mesures.", "Les charges et produits totaux sont consolidés : la somme brute des branches contient des transferts internes."]
+
+[[sources]]
+id = "ccss-octobre-2026"
+short_name = "CCSS, octobre 2026"
+name = "Comptes de la Sécurité sociale, résultats 2025, prévisions 2026 et 2027"
+publisher = "Commission des comptes de la Sécurité sociale"
+page_url = "https://www.securite-sociale.fr/home/la-secu-en-detail/comptes-statistiques-et-etudes-de-la-s%C3%A9curit%C3%A9-sociale/rapports-a-la-commission-des-comptes-de-la-securite-sociale.html"
+file_url = "https://www.securite-sociale.fr/files/live/sites/SSFR/files/medias/CCSS/2026/CCSS-octobre-2026_assemble_VDEF.pdf"
+licence = "crpa"
+frequency = "Annuelle (rapport d'octobre)"
+kind = "file"
+filename = "rapport.pdf"
+usage = "Référence et contrôle des comptes des branches avant les mesures du PLFSS 2027."
+limits = ["Prévisions tendancielles avant mesures : ne pas les confondre avec le projet de loi."]
+
+[[sources]]
+id = "drees-sante-financeurs"
+short_name = "DREES, santé"
+name = "Les comptes de la santé, répartition par financeur"
+publisher = "DREES"
+page_url = "https://data.drees.solidarites-sante.gouv.fr/explore/dataset/cns_financement/"
+file_url = "https://data.drees.solidarites-sante.gouv.fr/api/explore/v2.1/catalog/datasets/cns_financement/exports/csv"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+filename = "financeurs.csv"
+usage = "Dépenses de santé par financeur, comptes thématiques DREES."
+limits = ["Inclut des financeurs privés. Ce périmètre ne correspond ni à la branche maladie ni à l'ONDAM."]
+
+[[sources]]
+id = "drees-retraites"
+short_name = "DREES, retraites"
+name = "Enquête annuelle auprès des caisses de retraite (EACR)"
+publisher = "DREES"
+page_url = "https://data.drees.solidarites-sante.gouv.fr/explore/dataset/donnes_eacr/"
+file_url = "https://data.drees.solidarites-sante.gouv.fr/api/v2/catalog/datasets/donnes_eacr/attachments/62_eacr_diffusee_part_1_version_du_26_mai_2026_xlsx"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+filename = "retraites.xlsx"
+usage = "Pensions des régimes obligatoires de base et complémentaires."
+limits = ["Les régimes complémentaires ne sont pas inclus dans la branche vieillesse LFSS. Les effectifs par caisse ne s'additionnent pas : une personne peut relever de plusieurs caisses."]
+
+[[sources]]
+id = "cnaf-depenses"
+short_name = "CNAF"
+name = "Dépenses tous régimes, National"
+publisher = "Caisse nationale des allocations familiales"
+page_url = "https://data.caf.fr/explore/dataset/dep_tr_nat/"
+file_url = "https://data.caf.fr/api/explore/v2.1/catalog/datasets/dep_tr_nat/exports/csv"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+filename = "famille.csv"
+usage = "Prestations familiales et sociales versées par les caisses, tous régimes, France entière."
+limits = ["Inclut des prestations gérées pour d'autres financeurs (aides au logement, RSA) : ce n'est pas la dépense de la seule branche famille."]
+
+[[sources]]
+id = "unedic-finances"
+short_name = "Unédic"
+name = "Dépenses et recettes de l'Assurance chômage"
+publisher = "Unédic"
+page_url = "https://data.unedic.org/explore/dataset/financement-de-l-assurance-chomage/"
+file_url = "https://data.unedic.org/api/explore/v2.1/catalog/datasets/financement-de-l-assurance-chomage/exports/csv"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+filename = "chomage.csv"
+usage = "Recettes, dépenses et solde de l'assurance chômage, hors cinq branches de la Sécurité sociale."
+limits = ["L'assurance chômage est gérée par l'Unédic et ne fait pas partie des cinq branches des régimes de base."]
+
+[[sources]]
+id = "lfi-2026-jorf"
+short_name = "Journal officiel"
+name = "Loi n° 2026-103 du 19 février 2026 de finances pour 2026"
+publisher = "DILA, Légifrance"
+page_url = "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000053508155"
+licence = "lo2"
+frequency = "Ponctuelle"
+kind = "reference"
+data_date = "2026-02-20"
+vintage = "JORF du 20 février 2026"
+usage = "Texte promulgué, cité avec le texte adopté de l'Assemblée nationale utilisé pour les calculs."
+limits = ["Référence juridique : les crédits de paiement sont extraits du texte adopté par l'Assemblée nationale."]
+
+
+[licences.lo1]
+name = "Licence Ouverte / Open Licence"
+url = "https://www.etalab.gouv.fr/wp-content/uploads/2014/05/Licence_Ouverte.pdf"
+
+[[sources]]
+id = "boamp"
+short_name = "BOAMP"
+name = "Avis de marché avec une date limite de réponse future"
+publisher = "Direction de l'information légale et administrative (DILA)"
+page_url = "https://www.data.gouv.fr/datasets/boamp"
+file_url = "https://boamp-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/boamp/exports/json?where=datelimitereponse+%3E+now%28%29+and+nature+%3D+%27APPEL_OFFRE%27+and+etat+%21%3D+%27ANNULE%27&select=idweb%2Cobjet%2Cdateparution%2Cdatelimitereponse%2Cprocedure_libelle%2Cdonnees%2Cetat%2Ccontractfolderid&order_by=dateparution+desc"
+record_url = "https://www.boamp.fr/pages/avis/?q=idweb:{id}"
+licence = "lo1"
+frequency = "Quotidienne, deux fois par jour"
+filename = "open-notices.json"
+usage = "Appels d'offres dont l'échéance n'est pas passée."
+limits = ["Photographie à la date de collecte. Vérifiez l'avis officiel et ses rectificatifs.", "Un avis n'est pas un marché attribué. Plusieurs avis peuvent concerner une même consultation.", "Les contacts personnels ne sont pas republiés. Les acheteurs ne sont nommés qu'après identification d'une personne morale diffusible dans Sirene."]
+kind = "file"
+
+[[sources]]
+id = "approch"
+short_name = "APProch"
+name = "Projets d'achats publics"
+publisher = "Direction des achats de l'État (DAE)"
+page_url = "https://data.economie.gouv.fr/explore/dataset/projets-dachats-publics/"
+file_url = "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/projets-dachats-publics/exports/json"
+record_url = "https://data.economie.gouv.fr/explore/dataset/projets-dachats-publics/table/?refine.code={id}"
+licence = "lo2"
+frequency = "Trimestrielle annoncée, flux actualisé quotidiennement"
+filename = "projects.json"
+usage = "Projets ouverts avec une publication prévue à partir de la collecte."
+limits = ["Programmation volontaire, prévisionnelle, non exhaustive et non engageante.", "Les projets sans date future ne sont pas présentés comme des achats à venir.", "Les champs de contacts, descriptions libres et liens de consultation ne sont pas republiés."]
+kind = "file"
+
+[[sources]]
+id = "competition-sanctions"
+short_name = "Autorité de la concurrence"
+name = "Entreprises sanctionnées financièrement depuis 2009"
+publisher = "Autorité de la concurrence"
+page_url = "https://www.data.gouv.fr/datasets/entreprises-sanctionnees-financierement-par-lautorite-de-la-concurrence-depuis-2009"
+file_url = "https://www.data.gouv.fr/api/1/datasets/r/4a21efdb-e11b-4f5e-9b77-df5790899453"
+licence = "lo2"
+frequency = "Quotidienne"
+filename = "sanctions.csv"
+record_url = "https://www.autoritedelaconcurrence.fr/fr/liste-des-decisions-et-avis?search_api_fulltext={id}"
+usage = "Sanctions prononcées, avant appels et recours, toutes activités confondues."
+limits = ["Les sanctions ne concernent pas toutes la commande publique et ne prouvent pas une exclusion des marchés.", "Le montant total est compté une seule fois par décision.", "Une sanction individuelle peut être solidaire : les lignes ne doivent pas être additionnées.", "Seules les dénominations exactement et uniquement rapprochées d'une personne morale diffusible de Sirene sont nommées. Les autres lignes sont anonymisées."]
+kind = "file"
+
+[[sources]]
+id = "decp-publication-method"
+short_name = "Délais DECP"
+name = "Publication des données essentielles et dictionnaire du format consolidé"
+publisher = "Direction des affaires juridiques et Colin Maudry"
+page_url = "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045739606"
+code_url = "https://github.com/ColinMaudry/decp-processing/blob/main/reference/schema_base.json"
+licence = "lo2"
+frequency = "Selon réglementation"
+kind = "reference"
+usage = "Seuil de 40 000 euros HT et définition des dates."
+limits = ["La date déclarée n'est pas une preuve indépendante de première mise en ligne.", "Deux mois calendaires après la notification."]
+
+
+[licences.lo]
+name = "Licence Ouverte / Open Licence"
+url = "https://www.data.gouv.fr/pages/legal/licences/etalab-2-0"
+
+[licences.eu-reuse]
+name = "Réutilisation Commission européenne, décision 2011/833/UE"
+url = "https://eur-lex.europa.eu/eli/dec/2011/833/oj"
+
+[[sources]]
+id = "hatvp-agora"
+short_name = "HATVP AGORA"
+name = "Répertoire des représentants d’intérêts, vues séparées CSV"
+publisher = "Haute Autorité pour la transparence de la vie publique"
+page_url = "https://www.data.gouv.fr/datasets/repertoire-des-representants-dinterets-fichiers-en-vues-separees"
+licence = "lo"
+frequency = "Quotidienne"
+kind = "file"
+usage = "Organisations, exercices, fourchettes de dépenses et catégories d’institutions ciblées."
+limits = ["Personnes physiques, dirigeants, collaborateurs, clients et champs de texte libre exclus.", "La date de publication n’est pas la date de l’action. Les trimestres décrivent les publications.", "Les activités sont des fiches déclaratives, pas un nombre de rendez-vous.", "Les fourchettes ne sont pas additionnées ni converties en dépenses exactes."]
+file_url = "https://www.hatvp.fr/agora/opendata/csv/Vues_Separees_CSV.zip"
+filename = "agora.zip"
+record_url = "https://www.hatvp.fr/fiche-organisation/?organisation={identifier}"
+
+[[sources]]
+id = "hatvp-defaults"
+short_name = "HATVP, défauts"
+name = "Liste officielle des entités en défaut de déclaration"
+publisher = "Haute Autorité pour la transparence de la vie publique"
+page_url = "https://www.hatvp.fr/le-repertoire/liste-des-entites-enregistrees/?filter=defaut"
+licence = "public-info"
+frequency = "Quotidienne"
+kind = "file"
+file_url = "https://www.hatvp.fr/agora/stock.json"
+filename = "stock.json"
+usage = "Liste officielle actualisée des entités en défaut."
+limits = ["Troisième liste du fichier officiel stock.json utilisé par l’annuaire HATVP. État à la date de récupération, pas une condamnation."]
+
+[[sources]]
+id = "eu-transparency"
+short_name = "Registre UE"
+name = "Registre de transparence de l’Union européenne, organisations"
+publisher = "Commission européenne, Parlement européen et Conseil de l’UE"
+page_url = "https://data.europa.eu/data/datasets/transparency-register?locale=fr"
+licence = "eu-reuse"
+frequency = "Quotidienne"
+kind = "file"
+usage = "Organisations dont le siège est en France, coûts déclarés et domaines d’intérêt."
+limits = ["Coûts du dernier exercice déclaré par chaque organisation, années variables.", "Personnes physiques et champs libres exclus.", "Rapprochement par nom normalisé identique, pays France et unicité des deux côtés. Ce n’est pas un identifiant légal."]
+file_url = "https://ec.europa.eu/transparencyregister/public/files/ODP/download/XML/latest"
+filename = "register.xml"
+record_url = "https://transparency-register.europa.eu/searchregister-or-update/organisation-detail_en?id={identifier}"
+
+[[sources]]
+id = "cnccfp-parties"
+short_name = "CNCCFP"
+name = "Comptes des partis et groupements politiques, exercices 2021 à 2024"
+publisher = "Commission nationale des comptes de campagne et des financements politiques"
+page_url = "https://www.data.gouv.fr/datasets/comptes-des-partis-et-groupements-politiques"
+licence = "lo"
+frequency = "Annuelle"
+kind = "files"
+usage = "Ressources par origine et aide publique comptabilisée par parti."
+limits = ["Comptes déposés, y compris non certifiés ou tardifs, pas la totalité des partis enregistrés. Comptes hors euros ou dont l’exercice ne correspond pas au fichier exclus.", "Cumul non consolidé : transferts et périmètres peuvent créer des doubles comptes.", "Aide inscrite aux comptes, distincte de l’enveloppe annuelle fixée par décret.", "Aucun nom de donateur ou de responsable de parti n’est repris."]
+[sources.files]
+"2021.csv" = "https://static.data.gouv.fr/resources/comptes-des-partis-et-groupements-politiques/20260210-151846/comptes-partis-exercice-2021.csv"
+"2022.csv" = "https://static.data.gouv.fr/resources/comptes-des-partis-et-groupements-politiques/20260210-121141/comptes-partis-exercice-2022.csv"
+"2023.csv" = "https://static.data.gouv.fr/resources/comptes-des-partis-et-groupements-politiques/20260210-120352/comptes-partis-exercice-2023.csv"
+"2024.csv" = "https://static.data.gouv.fr/resources/comptes-des-partis-et-groupements-politiques/20260210-110641/comptes-partis-exercice-2024.csv"
+
+[[sources]]
+id = "cnccfp-status"
+short_name = "CNCCFP, obligations"
+name = "Liste officielle des partis et respect des obligations, exercice 2024"
+publisher = "Commission nationale des comptes de campagne et des financements politiques"
+page_url = "https://liste.cnccfp.fr/liste_partis.php"
+licence = "public-info"
+frequency = "Quotidienne"
+kind = "file"
+usage = "Perte de l’aide publique expressément publiée, date de fin et motif."
+limits = ["Une absence d’aide ou une décision de non-respect seule ne prouvent pas une privation d’aide.", "Seuls les champs relatifs aux personnes morales et aux décisions sont repris."]
+file_url = "https://liste.cnccfp.fr/liste_partis.php"
+filename = "parties.html"
+
+[[sources]]
+id = "jorf-party-aid"
+short_name = "JORF"
+name = "Décret n° 2024-77 du 2 février 2024 relatif à l’aide publique aux partis"
+publisher = "Journal officiel de la République française"
+page_url = "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000049085148"
+licence = "public-info"
+frequency = "Annuelle"
+kind = "reference"
+usage = "Référence juridique de la répartition annuelle de l’aide publique."
+limits = ["Les montants du décret ne sont pas assimilés aux aides comptabilisées par les partis."]
+
+[licences.public-info]
+name = "Informations publiques, CRPA L321-1 (sans licence spécifique affichée)"
+url = "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000033219044"
+
+
+[[sources]]
+id = "jorfsimple"
+short_name = "Journal officiel"
+name = "Journal officiel"
+publisher = "DILA"
+page_url = "https://echanges.dila.gouv.fr/OPENDATA/JORFSIMPLE/"
+file_url = "https://echanges.dila.gouv.fr/OPENDATA/JORFSIMPLE/"
+record_url = "https://www.legifrance.gouv.fr/jorf/id/{id}"
+licence = "lo2"
+frequency = "Quotidienne"
+kind = "files"
+filename = "jorf"
+usage = "Documents officiels et structures administratives."
+limits = ["Métadonnées et liens officiels uniquement. Les actes protégés et les champs personnels des annuaires sont exclus."]
+delivery_pattern = "JORFSIMPLE"
+rolling_days = 50
+
+[[sources]]
+id = "dole"
+short_name = "DOLE"
+name = "DOLE"
+publisher = "DILA / Secrétariat général du Gouvernement"
+page_url = "https://www.data.gouv.fr/datasets/dole-les-dossiers-legislatifs"
+file_url = "https://echanges.dila.gouv.fr/OPENDATA/DOLE/"
+record_url = "https://www.vie-publique.fr/dossierlegislatif/{id}"
+licence = "lo2"
+frequency = "Quotidienne"
+kind = "files"
+filename = "dole"
+usage = "Documents officiels et structures administratives."
+limits = ["Métadonnées et liens officiels uniquement. Les actes protégés et les champs personnels des annuaires sont exclus."]
+delivery_pattern = "DOLE"
+rolling_days = 0
+
+[[sources]]
+id = "an-dossiers"
+short_name = "Assemblée nationale"
+name = "Assemblée nationale"
+publisher = "Assemblée nationale"
+page_url = "https://data.assemblee-nationale.fr/travaux-parlementaires/dossiers-legislatifs"
+file_url = "https://data.assemblee-nationale.fr/static/openData/repository/17/loi/dossiers_legislatifs/Dossiers_Legislatifs.json.zip"
+record_url = "https://www.assemblee-nationale.fr/dyn/17/dossiers/{id}"
+licence = "lo-an"
+frequency = "Quotidienne"
+kind = "file"
+filename = "dossiers.zip"
+usage = "Documents officiels et structures administratives."
+limits = ["Métadonnées et liens officiels uniquement. Les actes protégés et les champs personnels des annuaires sont exclus."]
+
+[[sources]]
+id = "senat-dosleg"
+short_name = "DOSLEG Sénat"
+name = "DOSLEG Sénat"
+publisher = "Sénat"
+page_url = "https://data.senat.fr/dosleg/"
+file_url = "https://data.senat.fr/data/dosleg/dosleg.zip"
+record_url = "https://www.senat.fr/dossier-legislatif/{id}.html"
+licence = "lo2"
+frequency = "Quotidienne"
+kind = "file"
+filename = "dosleg.zip"
+usage = "Documents officiels et structures administratives."
+limits = ["Métadonnées et liens officiels uniquement. Les actes protégés et les champs personnels des annuaires sont exclus."]
+
+[[sources]]
+id = "annuaire-etat"
+short_name = "Annuaire DILA"
+name = "Annuaire DILA"
+publisher = "DILA / Service-Public"
+page_url = "https://www.data.gouv.fr/dataservices/api-annuaire-de-ladministration-et-des-services-publics"
+file_url = "https://api-lannuaire.service-public.gouv.fr/api/explore/v2.1/catalog/datasets/api-lannuaire-administration/exports/json?where=type_organisme%3D%27Pr%C3%A9fecture%2C%20sous-pr%C3%A9fecture%27&select=id,nom,sigle,categorie,type_organisme,pivot,code_insee_commune,siren,siret,url_service_public,date_modification,statut_de_diffusion,hierarchie"
+record_url = "https://lannuaire.service-public.gouv.fr/{id}"
+licence = "lo2"
+frequency = "Quotidienne"
+kind = "file"
+filename = "services.json"
+usage = "Documents officiels et structures administratives."
+limits = ["Métadonnées et liens officiels uniquement. Les actes protégés et les champs personnels des annuaires sont exclus."]
+
+[[sources]]
+id = "roae"
+short_name = "ROAE"
+name = "ROAE"
+publisher = "DILA / Service-Public"
+page_url = "https://www.data.gouv.fr/datasets/referentiel-de-lorganisation-administrative-de-letat"
+file_url = "https://echanges.dila.gouv.fr/OPENDATA/RefOrgaAdminEtat/FluxAnneeCourante/dila_refOrga_admin_Etat_fr_latest.zip"
+record_url = "https://lannuaire.service-public.gouv.fr/{id}"
+licence = "lo2"
+frequency = "Quotidienne"
+kind = "file"
+filename = "roae.zip"
+usage = "Documents officiels et structures administratives."
+limits = ["Métadonnées et liens officiels uniquement. Les actes protégés et les champs personnels des annuaires sont exclus."]
+
+[[sources]]
+id = "annuaire-competence"
+short_name = "Compétence des préfectures"
+name = "Compétence géographique des préfectures, annuaire DILA"
+publisher = "DILA / Service-Public"
+page_url = "https://www.data.gouv.fr/dataservices/api-annuaire-de-ladministration-et-des-services-publics"
+file_url = "https://api-lannuaire.service-public.gouv.fr/api/explore/v2.1/catalog/datasets/api-lannuaire-administration-locale-competence-geographique/exports/json?where=code_type_service_local%3D%27prefecture%27&select=code_insee_commune,code_type_service_local,id_service_local"
+licence = "lo2"
+frequency = "Quotidienne"
+kind = "file"
+filename = "competence.json"
+usage = "Compétence territoriale des préfectures, distincte de leur implantation."
+limits = ["Périmètre du code pivot prefecture uniquement. Les catégories particulières de Paris ne sont pas couvertes."]
+
+[[sources]]
+id = "ofgl-departements"
+short_name = "OFGL"
+name = "Comptes consolidés des départements 2018-2025"
+publisher = "OFGL"
+page_url = "https://data.ofgl.fr/explore/dataset/ofgl-base-departements-consolidee/"
+file_url = "https://data.ofgl.fr/api/explore/v2.1/catalog/datasets/ofgl-base-departements-consolidee/exports/json?where=exer%3E%3Ddate%272018%27+and+agregat+in+%28%22D%C3%A9penses+totales+hors+remb%22%2C%22D%C3%A9penses+de+fonctionnement%22%2C%22D%C3%A9penses+d%27investissement+hors+remb%22%2C%22Recettes+totales+hors+emprunts%22%2C%22Encours+de+dette%22%29&select=exer%2Csiren%2Ccateg%2Cagregat%2Cmontant_bp%2Cmontant_ba%2Cmontant_flux%2Cmontant%2Cptot%2Ceuros_par_habitant%2Cdep_code%2Cdep_name"
+filename = "departements.json"
+record_url = "https://data.ofgl.fr/explore/dataset/ofgl-base-departements-consolidee/table/?refine.siren={siren}&refine.exer={year}"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Comptes consolidés des départements 2018-2025"
+limits = ["Euros courants. Budget principal et annexes, flux internes neutralisés.", "Les niveaux ne sont jamais additionnés : transferts entre collectivités et périmètres particuliers se recoupent.", "Quatre EPCI sans comptes 2025. Géographie OFGL 2025."]
+
+[[sources]]
+id = "ofgl-regions"
+short_name = "OFGL"
+name = "Comptes consolidés des régions 2018-2025"
+publisher = "OFGL"
+page_url = "https://data.ofgl.fr/explore/dataset/ofgl-base-regions-consolidee/"
+file_url = "https://data.ofgl.fr/api/explore/v2.1/catalog/datasets/ofgl-base-regions-consolidee/exports/json?where=exer%3E%3Ddate%272018%27+and+agregat+in+%28%22D%C3%A9penses+totales+hors+remb%22%2C%22D%C3%A9penses+de+fonctionnement%22%2C%22D%C3%A9penses+d%27investissement+hors+remb%22%2C%22Recettes+totales+hors+emprunts%22%2C%22Encours+de+dette%22%29&select=exer%2Csiren%2Ccateg%2Cagregat%2Cmontant_bp%2Cmontant_ba%2Cmontant_flux%2Cmontant%2Cptot%2Ceuros_par_habitant%2Creg_code%2Creg_name"
+filename = "regions.json"
+record_url = "https://data.ofgl.fr/explore/dataset/ofgl-base-regions-consolidee/table/?refine.siren={siren}&refine.exer={year}"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Comptes consolidés des régions 2018-2025"
+limits = ["Euros courants. Budget principal et annexes, flux internes neutralisés.", "Les niveaux ne sont jamais additionnés : transferts entre collectivités et périmètres particuliers se recoupent.", "Quatre EPCI sans comptes 2025. Géographie OFGL 2025."]
+
+[[sources]]
+id = "ofgl-epci"
+short_name = "OFGL"
+name = "Comptes consolidés des groupements à fiscalité propre 2018-2025"
+publisher = "OFGL"
+page_url = "https://data.ofgl.fr/explore/dataset/ofgl-base-gfp-consolidee/"
+file_url = "https://data.ofgl.fr/api/explore/v2.1/catalog/datasets/ofgl-base-gfp-consolidee/exports/json?where=exer%3E%3Ddate%272018%27+and+agregat+in+%28%22D%C3%A9penses+totales+hors+remb%22%2C%22D%C3%A9penses+de+fonctionnement%22%2C%22D%C3%A9penses+d%27investissement+hors+remb%22%2C%22Recettes+totales+hors+emprunts%22%2C%22Encours+de+dette%22%29&select=exer%2Csiren%2Ccateg%2Cagregat%2Cmontant_bp%2Cmontant_ba%2Cmontant_flux%2Cmontant%2Cptot%2Ceuros_par_habitant%2Cepci_code%2Cepci_name%2Csiren_25%2Cnat_juridique%2Clbudg"
+filename = "epci.json"
+record_url = "https://data.ofgl.fr/explore/dataset/ofgl-base-gfp-consolidee/table/?refine.siren={siren}&refine.exer={year}"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Comptes consolidés des groupements à fiscalité propre 2018-2025"
+limits = ["Euros courants. Budget principal et annexes, flux internes neutralisés.", "Les niveaux ne sont jamais additionnés : transferts entre collectivités et périmètres particuliers se recoupent.", "Quatre EPCI sans comptes 2025. Géographie OFGL 2025."]
+
+[[sources]]
+id = "rei-2025"
+short_name = "DGFiP"
+name = "Fiscalité directe locale 2025 : recensement des éléments d’imposition"
+publisher = "DGFiP"
+page_url = "https://www.data.gouv.fr/datasets/impots-locaux-fichier-de-recensement-des-elements-dimposition-a-la-fiscalite-directe-locale-rei-4"
+file_url = "https://data.economie.gouv.fr/api/v2/catalog/datasets/impots-locaux-fichier-de-recensement-des-elements-dimposition-a-la-fiscalite-dir/attachments/rei_2025_fichier_notice_tracezip"
+filename = "rei-2025.zip"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Fiscalité directe locale 2025 : recensement des éléments d’imposition"
+limits = ["Bases en euros, taux en pourcentage. Les taux ne donnent pas le montant payé par un foyer.", "Les bases peuvent différer selon le bénéficiaire. Les cellules non renseignées restent manquantes."]
+
+[[sources]]
+id = "ircom-2025"
+short_name = "DGFiP"
+name = "Impôt sur les revenus de 2024 déclarés en 2025"
+publisher = "DGFiP"
+page_url = "https://www.data.gouv.fr/datasets/limpot-sur-le-revenu-par-collectivite-territoriale-ircom"
+file_url = "https://static.data.gouv.fr/resources/limpot-sur-le-revenu-par-collectivite-territoriale-ircom/20260526-131537/ircom-2025-revenus-2024.zip"
+filename = "ircom-2025.zip"
+licence = "lo1"
+frequency = "Annuelle"
+kind = "file"
+usage = "Impôt sur les revenus de 2024 déclarés en 2025"
+limits = ["Revenus 2024, déclaration 2025. Montants en milliers d’euros convertis en euros (en-tête du classeur).", "Les cellules soumises au secret fiscal restent manquantes, sans reconstitution."]
+
+[[sources]]
+id = "municipales-2026-t1"
+short_name = "Ministère de l’Intérieur"
+name = "Municipales 2026, premier tour"
+publisher = "Ministère de l’Intérieur"
+page_url = "https://www.data.gouv.fr/datasets/elections-municipales-2026-resultats-du-premier-tour"
+licence = "lo2"
+frequency = "À chaque scrutin"
+kind = "files"
+usage = "Municipales 2026, premier tour"
+limits = ["Participation uniquement. Les effectifs incohérents sont exclus et signalés (commune 60400 au premier tour 2026 : 212 votants pour 209 inscrits). Aucun résultat partisan diffusé.", "Second tour : uniquement les communes où un second tour a eu lieu. Les périmètres électoraux sont ceux du scrutin."]
+[sources.files]
+"communes.csv" = "https://static.data.gouv.fr/resources/elections-municipales-2026-resultats-du-premier-tour/20260320-164339/municipales-2026-resultats-communes-2026-03-20.csv"
+
+[[sources]]
+id = "municipales-2026-t2"
+short_name = "Ministère de l’Intérieur"
+name = "Municipales 2026, second tour"
+publisher = "Ministère de l’Intérieur"
+page_url = "https://www.data.gouv.fr/datasets/elections-municipales-2026-resultats-du-second-tour"
+licence = "lo2"
+frequency = "À chaque scrutin"
+kind = "files"
+usage = "Municipales 2026, second tour"
+limits = ["Participation uniquement : inscrits et votants. Aucun résultat de liste ou de candidat diffusé.", "Second tour : uniquement les communes où un second tour a eu lieu. Les périmètres électoraux sont ceux du scrutin."]
+[sources.files]
+"communes.csv" = "https://static.data.gouv.fr/resources/elections-municipales-2026-resultats-du-scond-tour/20260323-180124/municipales-2026-resultats-communes-2026-03-23-16h14.csv"
+
+[[sources]]
+id = "europeennes-2024"
+short_name = "Ministère de l’Intérieur"
+name = "Européennes 2024"
+publisher = "Ministère de l’Intérieur"
+page_url = "https://www.data.gouv.fr/datasets/resultats-des-elections-europeennes-du-9-juin-2024"
+licence = "lo2"
+frequency = "À chaque scrutin"
+kind = "files"
+usage = "Européennes 2024"
+limits = ["Participation uniquement : inscrits et votants. Aucun résultat de liste ou de candidat diffusé.", "Second tour : uniquement les communes où un second tour a eu lieu. Les périmètres électoraux sont ceux du scrutin."]
+[sources.files]
+"communes.csv" = "https://static.data.gouv.fr/resources/resultats-des-elections-europeennes-du-9-juin-2024/20240613-154634/resultats-definitifs-par-commune.csv"
+
+[[sources]]
+id = "legislatives-2024-t1"
+short_name = "Ministère de l’Intérieur"
+name = "Législatives 2024, premier tour"
+publisher = "Ministère de l’Intérieur"
+page_url = "https://www.data.gouv.fr/datasets/elections-legislatives-des-30-juin-et-7-juillet-2024-resultats-definitifs-du-1er-tour"
+licence = "lo2"
+frequency = "À chaque scrutin"
+kind = "files"
+usage = "Législatives 2024, premier tour"
+limits = ["Participation uniquement : inscrits et votants. Aucun résultat de liste ou de candidat diffusé.", "Second tour : uniquement les communes où un second tour a eu lieu. Les périmètres électoraux sont ceux du scrutin."]
+[sources.files]
+"communes.csv" = "https://static.data.gouv.fr/resources/elections-legislatives-des-30-juin-et-7-juillet-2024-resultats-definitifs-du-1er-tour/20240711-075056/resultats-definitifs-par-communes.csv"
+
+[[sources]]
+id = "legislatives-2024-t2"
+short_name = "Ministère de l’Intérieur"
+name = "Législatives 2024, second tour"
+publisher = "Ministère de l’Intérieur"
+page_url = "https://www.data.gouv.fr/datasets/elections-legislatives-des-30-juin-et-7-juillet-2024-resultats-definitifs-du-2nd-tour"
+licence = "lo2"
+frequency = "À chaque scrutin"
+kind = "files"
+usage = "Législatives 2024, second tour"
+limits = ["Participation uniquement : inscrits et votants. Aucun résultat de liste ou de candidat diffusé.", "Second tour : uniquement les communes où un second tour a eu lieu. Les périmètres électoraux sont ceux du scrutin."]
+[sources.files]
+"communes.csv" = "https://static.data.gouv.fr/resources/elections-legislatives-des-30-juin-et-7-juillet-2024-resultats-definitifs-du-2nd-tour/20240710-170606/resultats-definitifs-par-commune.csv"
+"national.csv" = "https://static.data.gouv.fr/resources/elections-legislatives-des-30-juin-et-7-juillet-2024-resultats-definitifs-du-2nd-tour/20240710-170713/resultats-definitifs-france-entiere.csv"
+
+[licences.public-facts]
+name = "Licence non précisée ; faits publics réutilisés sous CRPA L321-1 et L322-1"
+url = "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000031366350/LEGISCTA000031367716/"
+
+[licences.official-reference]
+name = "Publication officielle, licence explicite non identifiée"
+url = "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000031366350/LEGISCTA000031367716/"
+
+[[sources]]
+id = "an-members"
+short_name = "Assemblée nationale"
+name = "Députés en exercice, mandats et organes"
+publisher = "Assemblée nationale"
+page_url = "https://data.assemblee-nationale.fr/acteurs/deputes-en-exercice"
+licence = "lo-an"
+frequency = "Quotidienne"
+kind = "file"
+usage = "Députés en exercice, mandats et organes"
+limits = ["Identité publique et mandats uniquement. Aucune date de naissance, profession, adresse ou identité de collaborateur."]
+file_url = "https://data.assemblee-nationale.fr/static/openData/repository/17/amo/deputes_actifs_mandats_actifs_organes/AMO10_deputes_actifs_mandats_actifs_organes.json.zip"
+filename = "members.zip"
+
+[[sources]]
+id = "an-history"
+short_name = "Assemblée nationale"
+name = "Acteurs et mandats de la XVIIe législature"
+publisher = "Assemblée nationale"
+page_url = "https://data.assemblee-nationale.fr/acteurs/deputes-senateurs-ministres-de-la-legislature"
+licence = "lo-an"
+frequency = "Quotidienne"
+kind = "file"
+usage = "Acteurs et mandats de la XVIIe législature"
+limits = ["Historique des acteurs de la législature 17, pas un répertoire historique exhaustif."]
+file_url = "https://data.assemblee-nationale.fr/static/openData/repository/17/amo/deputes_senateurs_ministres_legislature/AMO20_dep_sen_min_tous_mandats_et_organes.json.zip"
+filename = "history.zip"
+
+[[sources]]
+id = "an-votes"
+short_name = "Assemblée nationale"
+name = "Scrutins publics de la XVIIe législature"
+publisher = "Assemblée nationale"
+page_url = "https://data.assemblee-nationale.fr/travaux-parlementaires/votes"
+licence = "lo-an"
+frequency = "Quotidienne"
+kind = "file"
+usage = "Scrutins publics de la XVIIe législature"
+limits = ["Votes par délégation conservés. Une absence de vote nominatif ne prouve pas une absence physique."]
+file_url = "https://data.assemblee-nationale.fr/static/openData/repository/17/loi/scrutins/Scrutins.json.zip"
+filename = "votes.zip"
+record_url = "https://www.assemblee-nationale.fr/dyn/17/scrutins/{number}"
+
+[[sources]]
+id = "senat-members"
+short_name = "Sénat"
+name = "Sénateurs, mandats et groupes datés"
+publisher = "Sénat"
+page_url = "https://data.senat.fr/les-senateurs/"
+licence = "lo2"
+frequency = "Quotidienne"
+kind = "files"
+usage = "Sénateurs, mandats et groupes datés"
+limits = ["Matricule natif conservé. Dates de naissance et décès, contacts et professions exclus."]
+[sources.files]
+"general.csv" = "https://data.senat.fr/data/senateurs/ODSEN_GENERAL.csv"
+"mandates.csv" = "https://data.senat.fr/data/senateurs/ODSEN_ELUSEN.csv"
+"groups.csv" = "https://data.senat.fr/data/senateurs/ODSEN_HISTOGROUPES.csv"
+
+[[sources]]
+id = "senat-votes"
+short_name = "Sénat"
+name = "Scrutins publics, positions et corrections DOSLEG"
+publisher = "Sénat"
+page_url = "https://data.senat.fr/dosleg/"
+licence = "lo2"
+frequency = "Quotidienne"
+kind = "file"
+usage = "Scrutins publics, positions et corrections DOSLEG"
+limits = ["Le dump SQL est lu comme des données COPY et jamais exécuté. Scrutins depuis le 8 juillet 2024 pour borner le volume. Corrections distinctes du vote comptabilisé."]
+file_url = "https://data.senat.fr/data/dosleg/dosleg.zip"
+filename = "dosleg.zip"
+record_url = "https://www.senat.fr/scrutin-public/{session}/scr{session}-{number}.html"
+
+[[sources]]
+id = "cnccfp-leg2024"
+short_name = "CNCCFP"
+name = "Comptes de campagne des législatives 2024"
+publisher = "CNCCFP"
+page_url = "https://www.data.gouv.fr/datasets/elections-legislatives-generales-des-30-juin-et-7-juillet-2024/"
+licence = "public-facts"
+frequency = "Hebdomadaire, par scrutin"
+kind = "file"
+usage = "Comptes de campagne des législatives 2024"
+limits = ["Licence non précisée par le catalogue. Réutilisation des informations publiques sous CRPA L321-1 et L322-1, avec source et date. Population des comptes publiés, pas tous les candidats. RFE et FT sont fixés, pas attestés payés."]
+file_url = "https://static.data.gouv.fr/resources/elections-legislatives-generales-des-30-juin-et-7-juillet-2024/20250729-150633/comptes-campagne-legislatives-2024.csv"
+filename = "accounts.csv"
+data_date = "2025-07-22"
+
+[[sources]]
+id = "cnccfp-eu2024"
+short_name = "CNCCFP"
+name = "Comptes de campagne des européennes 2024"
+publisher = "CNCCFP"
+page_url = "https://www.data.gouv.fr/datasets/comptes-de-campagne-election-des-representants-au-parlement-europeen-des-8-et-9-juin-2024/"
+licence = "public-facts"
+frequency = "Hebdomadaire, par scrutin"
+kind = "file"
+usage = "Comptes de campagne des européennes 2024"
+limits = ["Licence non précisée. Réutilisation des faits publics sous CRPA L321-1 et L322-1. Lignes déclarées, réformées et rectifiées conservées par compte."]
+file_url = "https://static.data.gouv.fr/resources/comptes-de-campagne-election-des-representants-au-parlement-europeen-des-8-et-9-juin-2024/20250505-074017/publication-tableau-eg-2024-pour-pubjo-titre-1-.xlsx"
+filename = "accounts.xlsx"
+data_date = "2025-04-30"
+
+[[sources]]
+id = "cnccfp-mun2026"
+short_name = "CNCCFP"
+name = "Index partiel des décisions municipales 2026"
+publisher = "CNCCFP"
+page_url = "https://decisions.cnccfp.fr/"
+licence = "public-facts"
+frequency = "Hebdomadaire, par scrutin"
+kind = "files"
+usage = "Index partiel des décisions municipales 2026"
+limits = ["Index publié parcouru sur 26 pages, contrôle national encore partiel. Aucun résultat ou montant déduit du seul index. Les rectifications restent distinctes."]
+record_url = "https://decisions.cnccfp.fr/documents/{document}"
+[sources.files]
+"page-1.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=1"
+"page-2.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=2"
+"page-3.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=3"
+"page-4.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=4"
+"page-5.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=5"
+"page-6.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=6"
+"page-7.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=7"
+"page-8.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=8"
+"page-9.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=9"
+"page-10.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=10"
+"page-11.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=11"
+"page-12.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=12"
+"page-13.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=13"
+"page-14.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=14"
+"page-15.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=15"
+"page-16.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=16"
+"page-17.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=17"
+"page-18.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=18"
+"page-19.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=19"
+"page-20.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=20"
+"page-21.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=21"
+"page-22.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=22"
+"page-23.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=23"
+"page-24.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=24"
+"page-25.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=25"
+"page-26.json" = "https://decisions.cnccfp.fr/ajax/filter-decisions/?type=municipale-generale&annee=2026&sort=asc&paged=26"
+
+[[sources]]
+id = "hatvp-interests"
+short_name = "HATVP"
+name = "Déclarations publiques d’intérêts et d’activités"
+publisher = "HATVP"
+page_url = "https://www.hatvp.fr/open-data/"
+licence = "lo-hatvp"
+frequency = "Quotidienne"
+kind = "files"
+usage = "Déclarations publiques d’intérêts et d’activités"
+limits = ["Seuls DI, DIM, DIA et DIAM livrés et disponibles sont retenus. Exclusion intégrale des déclarations de patrimoine et types inconnus. Conjoint, famille, assistants, contacts, naissance et texte libre exclus. Reconstruction complète à chaque traitement pour retirer les publications supprimées."]
+record_url = "https://www.hatvp.fr/livraison/dossiers/{document}"
+[sources.files]
+"inventory.csv" = "https://www.hatvp.fr/livraison/opendata/liste.csv"
+"declarations.xml" = "https://www.hatvp.fr/livraison/merge/declarations.xml"
+
+[[sources]]
+id = "rne"
+short_name = "Ministère de l’Intérieur"
+name = "Répertoire national des élus, statistiques de mandats"
+publisher = "Ministère de l’Intérieur"
+page_url = "https://www.data.gouv.fr/datasets/repertoire-national-des-elus-1/"
+licence = "lo2"
+frequency = "Trimestrielle"
+kind = "files"
+usage = "Répertoire national des élus, statistiques de mandats"
+limits = ["Lignes de mandats ou fonctions, pas personnes uniques. Naissance et sexe utilisés seulement pour statistiques agrégées, puis supprimés. Noms conservés uniquement pour les maires. Aucun rapprochement automatique par nom seul."]
+[sources.files]
+"ca.csv" = "https://static.data.gouv.fr/resources/repertoire-national-des-elus-1/20260811-154541/elus-conseiller-darrondissement-ca.csv"
+"cm.csv" = "https://static.data.gouv.fr/resources/repertoire-national-des-elus-1/20260811-154802/elus-conseiller-municipal-cm.csv"
+"epci.csv" = "https://static.data.gouv.fr/resources/repertoire-national-des-elus-1/20260811-154854/elus-conseiller-communautaire-epci.csv"
+"cd.csv" = "https://static.data.gouv.fr/resources/repertoire-national-des-elus-1/20260811-154909/elus-conseiller-departemental-cd.csv"
+"cr.csv" = "https://static.data.gouv.fr/resources/repertoire-national-des-elus-1/20260811-154932/elus-conseiller-regional-cr.csv"
+"ma.csv" = "https://static.data.gouv.fr/resources/repertoire-national-des-elus-1/20260811-154945/elus-membre-dune-assemblee-ma.csv"
+"rpe.csv" = "https://static.data.gouv.fr/resources/repertoire-national-des-elus-1/20260811-155000/elus-representant-parlement-europeen-rpe.csv"
+"sen.csv" = "https://static.data.gouv.fr/resources/repertoire-national-des-elus-1/20260811-155016/elus-senateur-sen.csv"
+"dep.csv" = "https://static.data.gouv.fr/resources/repertoire-national-des-elus-1/20260811-155035/elus-depute-dep.csv"
+"mai.csv" = "https://static.data.gouv.fr/resources/repertoire-national-des-elus-1/20260811-155100/elus-maire-mai.csv"
+"consfde.csv" = "https://static.data.gouv.fr/resources/repertoire-national-des-elus-1/20260505-152134/elus-conseillers-des-francais-de-letranger-cons.csv"
+"afe.csv" = "https://static.data.gouv.fr/resources/repertoire-national-des-elus-1/20260505-152148/elus-assemblee-des-francais-de-letranger-afe.csv"
+
+[[sources]]
+id = "cada"
+short_name = "CADA"
+name = "Avis et conseils CADA, métadonnées minimisées"
+publisher = "CADA"
+page_url = "https://www.data.gouv.fr/datasets/avis-et-conseils-de-la-cada/"
+licence = "lo-cada"
+frequency = "Mensuelle, contrôle de publication"
+kind = "file"
+usage = "Avis et conseils CADA, métadonnées minimisées"
+limits = ["Séances jusqu’au 18 avril 2024 dans le fichier vérifié. Ni texte des avis, ni requérant, ni administration en texte libre. Catégories de sens chevauchantes, dénominateur par dossier unique. Sanctions exclues."]
+file_url = "https://static.data.gouv.fr/resources/avis-et-conseils-de-la-cada/20260814-172417/cada-2026-08-14.csv"
+filename = "opinions.csv"
+
+[[sources]]
+id = "an-allowance"
+short_name = "Assemblée nationale"
+name = "Indemnité et crédit collaborateurs des députés"
+publisher = "Assemblée nationale"
+page_url = "https://www.assemblee-nationale.fr/dyn/synthese/deputes-groupes-parlementaires/la-situation-materielle-du-depute"
+licence = "official-reference"
+frequency = "Mensuelle, contrôle de référence"
+kind = "file"
+usage = "Indemnité et crédit collaborateurs des députés"
+limits = ["Valeur de référence datée. Une enveloppe ou un plafond ne décrit pas la dépense personnelle effectivement réalisée."]
+file_url = "https://www.assemblee-nationale.fr/dyn/synthese/deputes-groupes-parlementaires/la-situation-materielle-du-depute"
+filename = "reference.html"
+data_date = "2026-11-02"
+
+[[sources]]
+id = "an-expense"
+short_name = "Assemblée nationale"
+name = "Dotation de fonctionnement parlementaire"
+publisher = "Assemblée nationale"
+page_url = "https://www.assemblee-nationale.fr/dyn/deontologie/fiches-pratiques/frais-de-mandat"
+licence = "official-reference"
+frequency = "Mensuelle, contrôle de référence"
+kind = "file"
+usage = "Dotation de fonctionnement parlementaire"
+limits = ["Valeur de référence datée. Une enveloppe ou un plafond ne décrit pas la dépense personnelle effectivement réalisée."]
+file_url = "https://www.assemblee-nationale.fr/dyn/deontologie/fiches-pratiques/frais-de-mandat"
+filename = "reference.html"
+data_date = "2026-01-01"
+
+[[sources]]
+id = "senat-allowance"
+short_name = "Sénat"
+name = "Indemnité parlementaire des sénateurs"
+publisher = "Sénat"
+page_url = "https://www.senat.fr/connaitre-le-senat/role-et-fonctionnement/lindemnite-parlementaire.html"
+licence = "official-reference"
+frequency = "Mensuelle, contrôle de référence"
+kind = "file"
+usage = "Indemnité parlementaire des sénateurs"
+limits = ["Valeur de référence datée. Une enveloppe ou un plafond ne décrit pas la dépense personnelle effectivement réalisée."]
+file_url = "https://www.senat.fr/connaitre-le-senat/role-et-fonctionnement/lindemnite-parlementaire.html"
+filename = "reference.html"
+data_date = "2026-03-30"
+
+[[sources]]
+id = "senat-expense"
+short_name = "Sénat"
+name = "Avances de frais de mandat des sénateurs"
+publisher = "Sénat"
+page_url = "https://www.senat.fr/connaitre-le-senat/role-et-fonctionnement/les-frais-de-mandat.html"
+licence = "official-reference"
+frequency = "Mensuelle, contrôle de référence"
+kind = "file"
+usage = "Avances de frais de mandat des sénateurs"
+limits = ["Valeur de référence datée. Une enveloppe ou un plafond ne décrit pas la dépense personnelle effectivement réalisée."]
+file_url = "https://www.senat.fr/connaitre-le-senat/role-et-fonctionnement/les-frais-de-mandat.html"
+filename = "reference.html"
+data_date = "2025-01-20"
+
+[[sources]]
+id = "cabinet-staff"
+short_name = "Assemblée nationale"
+name = "Personnels des cabinets ministériels, PLF 2026"
+publisher = "Assemblée nationale"
+page_url = "https://www.assemblee-nationale.fr/dyn/dyn/contenu/visualisation/1090016/file/20-Jaune2026_Cabinets.pdf"
+licence = "official-reference"
+frequency = "Mensuelle, contrôle de référence"
+kind = "file"
+usage = "Personnels des cabinets ministériels, PLF 2026"
+limits = ["Valeur de référence datée. Une enveloppe ou un plafond ne décrit pas la dépense personnelle effectivement réalisée."]
+file_url = "https://www.assemblee-nationale.fr/dyn/dyn/contenu/visualisation/1090016/file/20-Jaune2026_Cabinets.pdf"
+filename = "reference.pdf"
+data_date = "2025-07-01"
+
+[[sources]]
+id = "local-allowance"
+short_name = "DGCL"
+name = "Barèmes des indemnités des élus locaux 2026"
+publisher = "DGCL"
+page_url = "https://www.collectivites-locales.gouv.fr/files/files/1.%20Connaitre%20les%20acteurs%20et%20les%20institutions/2.%20Fonction%20publique%20territoriale/La%20lettre%20FPT/ANNEXE%201%20-%20montants%20plafonds%20indemnit%C3%A9s%20%C3%A9lus%20locaux%202026%20-%20VF.pdf"
+licence = "official-reference"
+frequency = "Mensuelle, contrôle de référence"
+kind = "file"
+usage = "Barèmes des indemnités des élus locaux 2026"
+limits = ["Valeur de référence datée. Une enveloppe ou un plafond ne décrit pas la dépense personnelle effectivement réalisée."]
+file_url = "https://www.collectivites-locales.gouv.fr/files/files/1.%20Connaitre%20les%20acteurs%20et%20les%20institutions/2.%20Fonction%20publique%20territoriale/La%20lettre%20FPT/ANNEXE%201%20-%20montants%20plafonds%20indemnit%C3%A9s%20%C3%A9lus%20locaux%202026%20-%20VF.pdf"
+filename = "reference.pdf"
+data_date = "2026-01-01"
+
+[[sources]]
+id = "presidency-accounts"
+short_name = "Cour des comptes"
+name = "Comptes de la Présidence de la République 2024"
+publisher = "Cour des comptes"
+page_url = "https://www.ccomptes.fr/fr/publications/les-comptes-et-la-gestion-des-services-de-la-presidence-de-la-republique-exercice-2024"
+licence = "official-reference"
+frequency = "Mensuelle, contrôle de référence"
+kind = "file"
+usage = "Comptes de la Présidence de la République 2024"
+limits = ["Valeur de référence datée. Une enveloppe ou un plafond ne décrit pas la dépense personnelle effectivement réalisée."]
+file_url = "https://www.ccomptes.fr/sites/default/files/2025-07/20250716-Comptes-et-gestion-presidence-de-la-Republique-2024.pdf"
+filename = "reference.pdf"
+data_date = "2024-12-31"
+
+[[sources]]
+id = "parliament-access"
+short_name = "Légifrance"
+name = "Régime des frais parlementaires"
+publisher = "Légifrance"
+page_url = "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000705067"
+licence = "official-reference"
+frequency = "Occasionnelle"
+kind = "reference"
+usage = "Régime des frais parlementaires"
+limits = ["Article 4 sexies : contrôle interne des frais. Aucun jeu national vérifié de justificatifs individuels. Les courriers de refus de juin 2026 ne sont pas présents dans ce corpus officiel."]
+
+[[sources]]
+id = "hatvp-person"
+short_name = "HATVP"
+name = "Pages officielles des déclarants"
+publisher = "HATVP"
+page_url = "https://www.hatvp.fr/consulter-les-declarations/"
+record_url = "https://www.hatvp.fr/pages_nominatives/{person}"
+licence = "lo-hatvp"
+frequency = "Quotidienne"
+kind = "reference"
+usage = "Lien vers la page officielle du déclarant, notamment pour les ministres."
+limits = ["Le site ne republie aucune déclaration de patrimoine."]
+
+[licences.lo-hatvp]
+name = "Licence ouverte Etalab (déclarations d’intérêts HATVP)"
+url = "https://www.hatvp.fr/open-data/"
+
+[licences.lo-cada]
+name = "Licence Ouverte / Open Licence (CADA)"
+url = "https://www.data.gouv.fr/datasets/avis-et-conseils-de-la-cada/"
+
+[[sources]]
+id = "dgcl-dotations-2026"
+short_name = "DGCL, dotations 2026"
+name = "Allocations et critères de répartition des dotations aux communes en 2026"
+publisher = "Direction générale des collectivités locales"
+page_url = "https://www.data.gouv.fr/datasets/criteres-de-repartition-des-dotations-versees-par-letat-aux-collectivites-territoriales"
+file_url = "https://www.dotations-dgcl.interieur.gouv.fr/consultation/criteres_repartition.php"
+licence = "crpa"
+frequency = "Annuelle"
+kind = "reference"
+vintage = "Allocations 2026 non récupérées"
+usage = "Référence officielle des allocations, distinctes de la DGF comptabilisée dans les comptes communaux."
+limits = ["Vérification du 2 novembre 2026 : délai HTTPS dépassé, HTTP 503 ; le catalogue DGCL ne fournit que les fichiers 2016-2019.", "Aucun montant 2026 importé. L'absence de licence explicite n'empêche pas la réutilisation sous CRPA avec source et date."]

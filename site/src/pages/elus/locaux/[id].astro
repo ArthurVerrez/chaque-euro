@@ -1,0 +1,44 @@
+---
+import Democracy from "../../../layouts/Democracy.astro";
+import Icon from "../../../components/Icon.astro";
+import PublicTable from "../../../components/PublicTable.astro";
+import Provenance from "../../../components/Provenance.astro";
+import { getLocalExecutive } from "../../../lib/data";
+import { formatDate } from "../../../lib/format";
+const data = await getLocalExecutive(Astro.params.id ?? "");
+if (!data) return Astro.redirect("/404");
+const { executive: e } = data;
+---
+
+<Democracy
+  title={e.display_name}
+  description={`Fonction publique dans le RNE : ${e.role_label}, ${e.territory_label}.`}
+  icon="person"
+  answer={`${e.role_label} · ${e.territory_label} (${e.department_code}). Répertoire du ${formatDate(e.data_date)}. Cette fiche décrit une fonction, sans compter les autres mandats éventuels de la personne.`}
+  provenance={data.provenance}
+  sections={[{ id: "fonction", label: "Fonction publique", icon: "town" }]}
+>
+  <section id="fonction" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="town" />
+        Fonction et territoire
+      </h2>
+    </div>
+    <PublicTable
+      caption="Ligne du répertoire national des élus"
+      columns={["Information", "Valeur"]}
+      rows={[
+        [{ text: "Fonction" }, { text: e.role_label }],
+        [{ text: "Commune" }, { text: e.territory_label, href: `/commune/${e.territory_code}` }],
+        [{ text: "Début de fonction" }, { text: formatDate(e.starts_on) }],
+        [{ text: "Millésime" }, { text: formatDate(e.data_date) }],
+      ]}
+    />
+    <p>
+      <a href="/train-de-vie#locaux">Voir les barèmes légaux des indemnités</a>. Un plafond ne
+      prouve pas le montant réellement perçu par cette personne.
+    </p>
+    <Provenance provenance={data.provenance} />
+  </section>
+</Democracy>

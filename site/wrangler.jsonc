@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "chaque-euro",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+  },
+  "observability": {
+    "enabled": true,
+  },
+  "vars": {
+    "PUBLIC_REPO_URL": "https://github.com/ArthurVerrez/chaque-euro",
+    "CODE_REF": "main",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "chaque-euro",
+    },
+  ],
+}

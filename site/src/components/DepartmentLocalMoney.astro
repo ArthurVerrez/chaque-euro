@@ -1,0 +1,104 @@
+---
+import { getDepartmentLocal } from "../lib/data";
+import { formatEuro, formatEuros, formatNumber } from "../lib/format";
+import Icon from "./Icon.astro";
+import KeyFigures from "./KeyFigures.astro";
+import LineChart from "./LineChart.astro";
+import LocalLevelsExplainer from "./LocalLevelsExplainer.astro";
+import Provenance from "./Provenance.astro";
+import TurnoutSection from "./TurnoutSection.astro";
+
+interface Props {
+  code: string;
+}
+const { code } = Astro.props;
+const data = await getDepartmentLocal(code);
+const euros = (value: number | null) => (value === null ? "n.d." : formatEuros(value));
+const perCapita = (value: number | null) =>
+  value === null ? "par habitant : n.d." : `${formatEuro(value)} par habitant`;
+---
+
+<section class="section" id="conseil" aria-labelledby="titre-conseil">
+  <div class="section-head">
+    <h2 id="titre-conseil">
+      <Icon name="administration" />
+      Les comptes de la collectivité
+    </h2>
+    <p>Le conseil départemental ou la collectivité particulière, séparément des communes.</p>
+  </div>
+  {data.authorities.length ? (
+    data.authorities.map(({ latest, history, provenance }) => (
+      <div class="authority">
+        <h3>
+          <Icon name="administration" size={18} />
+          {latest.name} ({latest.year})
+        </h3>
+        <p class="small muted">
+          {latest.population === null
+            ? "Population non renseignée"
+            : `${formatNumber(latest.population)} habitants`}{" "}
+          · SIREN {latest.siren}
+        </p>
+        <KeyFigures
+          figures={[
+            {
+              icon: "spending",
+              label: "Dépenses",
+              value: euros(latest.spending),
+              note: perCapita(latest.spendingPerCapita),
+              term: "depenses-totales",
+            },
+            {
+              icon: "revenue",
+              label: "Recettes",
+              value: euros(latest.revenue),
+              note: perCapita(latest.revenuePerCapita),
+            },
+            {
+              icon: "debt",
+              label: "Dette au 31 décembre",
+              value: euros(latest.debt),
+              note: perCapita(latest.debtPerCapita),
+              term: "dette",
+            },
+          ]}
+        />
+        <div class="card history">
+          <LineChart
+            caption={`Dépenses et recettes de ${latest.name}, par habitant`}
+            labels={history.map((row) => String(row.year))}
+            series={[
+              { label: "Dépenses", values: history.map((row) => row.spendingPerCapita) },
+              {
+                label: "Recettes",
+                values: history.map((row) => row.revenuePerCapita),
+                muted: true,
+              },
+            ]}
+            format={formatEuro}
+          />
+        </div>
+        <Provenance provenance={provenance} />
+      </div>
+    ))
+  ) : (
+    <p class="muted">Aucun compte correspondant dans les bases OFGL retenues.</p>
+  )}
+  <LocalLevelsExplainer />
+</section>
+
+<TurnoutSection {...data.turnout} />
+
+<style>
+  .authority + .authority {
+    margin-top: 2rem;
+  }
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .history {
+    margin-top: 1rem;
+  }
+</style>

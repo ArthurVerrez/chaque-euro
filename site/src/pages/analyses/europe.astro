@@ -1,0 +1,189 @@
+---
+import Analysis from "../../layouts/Analysis.astro";
+import Section from "../../components/AnalysisSection.astro";
+import LineChart from "../../components/LineChart.astro";
+import BarList from "../../components/BarList.astro";
+import Provenance from "../../components/Provenance.astro";
+import Term from "../../components/Term.astro";
+import { analysis } from "../../lib/analyses";
+import { getEuropeAnalysis } from "../../lib/data";
+import { formatBillions, formatEuro, formatEuros } from "../../lib/format";
+const data = await getEuropeAnalysis();
+const latest = data.years.at(-1)!;
+const headings: Record<string, string> = {
+  "1.": "Marché unique, innovation et numérique",
+  "2.": "Cohésion, résilience et valeurs",
+  "3.": "Ressources naturelles et environnement",
+  "4.": "Migration et frontières",
+  "5.": "Sécurité et défense",
+  "6.": "Voisinage et monde",
+  "7.": "Administration européenne",
+  O: "Hors cadre financier",
+  S: "Mécanismes de solidarité",
+};
+const figures = [
+  {
+    icon: "contribution" as const,
+    label: "Contribution",
+    value: formatBillions(latest.contribution),
+    note: `${latest.year}, douane et ajustements inclus`,
+  },
+  {
+    icon: "grant" as const,
+    label: "Dépensé en France",
+    value: formatBillions(latest.expenditure),
+    note: `${latest.year}, hors fonds de relance`,
+  },
+  {
+    icon: "person" as const,
+    label: "Solde par habitant",
+    value: formatEuro(latest.per_capita),
+    note: `${latest.year}, dépenses moins contribution`,
+  },
+];
+const sections = [
+  { id: "flux", label: "Les flux", icon: "trend" as const },
+  { id: "usages", label: "Les usages", icon: "bars" as const },
+  { id: "solde", label: "Le solde", icon: "scale" as const },
+  { id: "relance", label: "La relance", icon: "grant" as const },
+];
+---
+
+<Analysis
+  article={analysis("europe")}
+  answer={`En ${latest.year}, la France contribue à hauteur de ${formatBillions(latest.contribution)} au budget européen et reçoit ${formatBillions(latest.expenditure)} de dépenses allouées sur son territoire, hors relance. Le solde comptable est de ${formatBillions(latest.balance)}. Il ne mesure pas les effets économiques de l’Union européenne.`}
+  figures={figures}
+  provenance={[data.provenance]}
+  sections={sections}
+>
+  <Section
+    id="flux"
+    title="Ce qui est versé, ce qui est dépensé en France"
+    icon="trend"
+    provenance={data.provenance}
+  >
+    <p>
+      La contribution inclut les ressources fondées sur le revenu national, la TVA, les emballages
+      plastiques, les droits de douane et les ajustements. Les dépenses reçues financent des
+      bénéficiaires et des projets en France, pas uniquement le budget de l’État.
+    </p>
+    <p>
+      Le <Term id="prelevements-sur-recettes">prélèvement sur recettes</Term> inscrit au budget
+      français représente {formatBillions(data.psr)} en 2025. Il exclut les droits de douane
+      collectés pour l’Union. Le graphique utilise une contribution plus large pour comparer des
+      flux de même périmètre.
+    </p>
+    <LineChart
+      slot="chart"
+      caption="France et budget européen, en Md€ courants"
+      labels={data.years.map((row) => String(row.year))}
+      series={[
+        {
+          label: "Contribution, douane incluse",
+          values: data.years.map((row) => row.contribution),
+        },
+        {
+          label: "Dépenses en France, hors relance",
+          values: data.years.map((row) => row.expenditure),
+        },
+      ]}
+      format={formatBillions}
+    />
+  </Section>
+  <Provenance provenance={data.stateProvenance} />
+  <Section
+    id="usages"
+    title="À quoi servent les dépenses européennes en France ?"
+    icon="bars"
+    provenance={data.provenance}
+  >
+    <p>
+      Les ressources naturelles et l’environnement, dont la politique agricole commune, constituent
+      la principale rubrique en {latest.year}. Viennent ensuite le marché unique, l’innovation et le
+      numérique, puis la cohésion et les politiques de résilience.
+    </p>
+    <p>
+      Ces catégories suivent le cadre budgétaire européen. Elles ne correspondent pas aux missions
+      du budget français. L’administration européenne située en France est incluse&#8239;; les
+      dépenses de relance sont présentées dans la section suivante.
+    </p>
+    <BarList
+      slot="chart"
+      caption={`Dépenses allouées à la France en ${latest.year}`}
+      items={data.headings.map((row) => ({
+        icon: "europe",
+        label: headings[row.code] ?? row.label,
+        value: row.amount,
+        display: formatEuros(row.amount),
+      }))}
+    />
+  </Section>
+  <Section
+    id="solde"
+    title="Un solde comptable, avec un périmètre explicite"
+    icon="scale"
+    provenance={data.provenance}
+  >
+    <p>
+      Le calcul est une soustraction : dépenses en France moins contribution. Un solde négatif
+      indique que la France verse davantage qu’elle ne reçoit sur ce périmètre. En {latest.year},
+      l’écart est de {formatBillions(-latest.balance)}, soit {formatEuro(-latest.per_capita)} par
+      habitant.
+    </p>
+    <p>
+      Ce ratio est un ordre de grandeur collectif. Ce n’est ni votre facture, ni une mesure des
+      avantages de l’adhésion. Les échanges sur le marché unique, les effets transfrontaliers et les
+      biens publics européens restent hors de ce calcul.
+    </p>
+    <LineChart
+      slot="chart"
+      caption="Solde comptable par habitant, en euros courants"
+      labels={data.years.map((row) => String(row.year))}
+      series={[
+        { label: "Dépenses moins contribution", values: data.years.map((row) => row.per_capita) },
+      ]}
+      format={formatEuro}
+    />
+  </Section>
+  <Section
+    id="relance"
+    title="NextGenerationEU reste à part"
+    icon="grant"
+    provenance={data.provenance}
+  >
+    <p>
+      Le plan de relance NextGenerationEU est financé par des emprunts européens. La Commission le
+      présente séparément du budget ordinaire. Le mélanger aux retours ordinaires changerait le sens
+      du solde précédent.
+    </p>
+    <p>
+      En {latest.year}, le fichier retrace {formatBillions(latest.ngeu)} de dépenses NGEU allouées
+      en France. Ce flux annuel ne doit pas être confondu avec l’enveloppe pluriannuelle d’un plan,
+      ni avec la date d’annonce d’un versement.
+    </p>
+    <LineChart
+      slot="chart"
+      caption="Dépenses NextGenerationEU en France, en Md€"
+      labels={data.years.filter((row) => row.year >= 2021).map((row) => String(row.year))}
+      series={[
+        {
+          label: "NGEU, dépense annuelle",
+          values: data.years.filter((row) => row.year >= 2021).map((row) => row.ngeu),
+        },
+      ]}
+      format={formatBillions}
+    />
+  </Section>
+  <div slot="method">
+    <p>
+      Le solde affiché est comptable, administration et douane incluses. Le « solde opérationnel »
+      de la Commission utilise d’autres conventions, dont l’exclusion de l’administration et une
+      correction des contributions. Les deux indicateurs ne sont pas interchangeables.
+    </p>
+    <p>
+      Population : France au 1er janvier de l’année, Insee, publiée en milliers. Les règles de
+      ressources propres et les rubriques changent selon les cadres financiers. La Commission
+      avertit que l’allocation géographique ne mesure qu’une partie des effets de l’Union.
+    </p>
+  </div>
+</Analysis>

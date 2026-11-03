@@ -1,0 +1,97 @@
+---
+import type { getProcurementCompetition } from "../lib/data";
+import { formatNumber, formatPercent } from "../lib/format";
+import BarList from "./BarList.astro";
+import Explainer from "./Explainer.astro";
+import Icon from "./Icon.astro";
+import KeyFigures from "./KeyFigures.astro";
+import Provenance from "./Provenance.astro";
+import Term from "./Term.astro";
+
+interface Props {
+  data: Awaited<ReturnType<typeof getProcurementCompetition>>;
+}
+const { data } = Astro.props;
+const { total, known, single_bid: single } = data.summary;
+const rate = known ? formatPercent(single / known) : "Non calculable";
+---
+
+<section class="section" id="concurrence" aria-labelledby="titre-concurrence">
+  <div class="section-head">
+    <h2 id="titre-concurrence">
+      <Icon name="compare" /> Les marchés avec une seule offre
+    </h2>
+    <p>Marchés notifiés depuis 2024, parmi les nombres d’offres connus.</p>
+  </div>
+  <KeyFigures
+    figures={[
+      {
+        icon: "percent",
+        label: "Une seule offre",
+        value: rate,
+        note: `${formatNumber(single)} sur ${formatNumber(known)} marchés renseignés`,
+      },
+      {
+        icon: "count",
+        label: "Couverture du nombre d’offres",
+        value: total ? formatPercent(known / total) : "Non calculable",
+        note: `${formatNumber(known)} sur ${formatNumber(total)} marchés publiés`,
+      },
+    ]}
+  />
+  {(data.buyers.length > 0 || data.sectors.length > 0) && (
+    <div class="grid two">
+      <div class="card">
+        <BarList
+          caption="Par acheteur, les dix périmètres les plus renseignés"
+          items={data.buyers.map((row) => ({
+            icon: "buyer",
+            label: row.name,
+            href: `/organisation/${row.label}#concurrence`,
+            value: row.known ? row.single_bid / row.known : 0,
+            display: row.known ? formatPercent(row.single_bid / row.known) : "Non calculable",
+            note: `${formatNumber(row.single_bid)} sur ${formatNumber(row.known)} marchés renseignés`,
+          }))}
+        />
+      </div>
+      <div class="card">
+        <p>
+          Familles d’achat selon le <Term id="cpv">CPV</Term>.
+        </p>
+        <BarList
+          caption="Par famille d’achat, les douze plus renseignées"
+          items={data.sectors.map((row) => ({
+            icon: "contract",
+            label: row.name,
+            value: row.known ? row.single_bid / row.known : 0,
+            display: row.known ? formatPercent(row.single_bid / row.known) : "Non calculable",
+            note: `${formatNumber(row.single_bid)} sur ${formatNumber(row.known)} marchés renseignés`,
+          }))}
+        />
+      </div>
+    </div>
+  )}
+  <Explainer title="Comment lire cet indicateur">
+    <p>
+      Une offre unique décrit le nombre déclaré de propositions reçues. Elle ne prouve ni une
+      irrégularité ni une absence de mise en concurrence. Le type d’achat, le territoire et les
+      conditions du marché influencent le nombre de réponses.
+    </p>
+    <p>
+      Les nombres absents, nuls ou contradictoires sont exclus du pourcentage. La couverture indique
+      la part des contrats publiés dont le nombre est exploitable. Les marchés jamais publiés ne
+      sont pas mesurés. Les familles CPV regroupent les achats par leurs deux premiers chiffres,
+      sans décrire l’activité économique du titulaire.
+    </p>
+  </Explainer>
+  <Provenance provenance={data.provenance} />
+</section>
+
+<style>
+  .grid {
+    margin: 1.5rem 0;
+  }
+  .explainer {
+    margin-top: 1rem;
+  }
+</style>

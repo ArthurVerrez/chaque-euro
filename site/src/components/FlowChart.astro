@@ -1,0 +1,423 @@
+---
+import type { Flow, FlowPart } from "../lib/flows";
+import { formatEuros } from "../lib/format";
+import Icon from "./Icon.astro";
+
+interface Props {
+  caption: string;
+  flow: Flow;
+}
+
+const { caption, flow } = Astro.props;
+const NODE = 16;
+const GAP = 14;
+const PAD = 24;
+const OFFSET = 22;
+
+type Side = "left" | "right";
+
+interface Chart {
+  name: "wide" | "narrow";
+  width: number;
+  height: number;
+  top: number;
+  label: number;
+  columns: { parts: FlowPart[]; x: number; side?: Side }[];
+  hubLabel?: boolean;
+}
+
+const NARROW_LABEL = 84;
+const narrowHeight = (parts: FlowPart[]) => parts.length * NARROW_LABEL + 8 + PAD;
+
+const charts: Chart[] = [
+  {
+    name: "wide",
+    width: 1000,
+    height: 720,
+    top: 40,
+    label: 64,
+    hubLabel: true,
+    columns: [
+      { parts: flow.inflows, x: 272, side: "left" },
+      { parts: [flow.hub], x: 492 },
+      { parts: flow.outflows, x: 712, side: "right" },
+    ],
+  },
+  {
+    name: "narrow",
+    width: 360,
+    height: narrowHeight(flow.inflows),
+    top: 8,
+    label: NARROW_LABEL,
+    columns: [
+      { parts: flow.inflows, x: 194, side: "left" },
+      { parts: [flow.hub], x: 344 },
+    ],
+  },
+  {
+    name: "narrow",
+    width: 360,
+    height: narrowHeight(flow.outflows),
+    top: 8,
+    label: NARROW_LABEL,
+    columns: [
+      { parts: [flow.hub], x: 0 },
+      { parts: flow.outflows, x: 150, side: "right" },
+    ],
+  },
+];
+
+const total = (parts: FlowPart[]) => parts.reduce((sum, part) => sum + part.value, 0);
+
+const fit = ({ height, top, columns }: Chart) =>
+  Math.min(
+    ...columns.map(
+      ({ parts }) => (height - top - PAD - GAP * (parts.length - 1)) / (total(parts) || 1),
+    ),
+  );
+
+function layout(chart: Chart) {
+  const { width, height, top, label, columns, hubLabel } = chart;
+  const scale = Math.min(...charts.filter(({ name }) => name === chart.name).map(fit));
+  const size = (part: FlowPart) => Math.max(part.value * scale, 2);
+  const boxes = columns.map(({ parts, x }) => {
+    const span = parts.reduce((sum, part) => sum + size(part), 0) + GAP * (parts.length - 1);
+    let y = top + (height - top - PAD - span) / 2;
+    return parts.map((part) => {
+      const box = { part, x, y, height: size(part) };
+      y += box.height + GAP;
+      return box;
+    });
+  });
+  const band = (x0: number, y0: number, x1: number, y1: number, thickness: number) => {
+    const mid = (x0 + x1) / 2;
+    return `M${x0} ${y0}C${mid} ${y0} ${mid} ${y1} ${x1} ${y1}L${x1} ${y1 + thickness}C${mid} ${y1 + thickness} ${mid} ${y0 + thickness} ${x0} ${y0 + thickness}Z`;
+  };
+  const bands = boxes.slice(1).flatMap((right, index) => {
+    const left = boxes[index] ?? [];
+    const intoHub = right[0]?.part === flow.hub;
+    const [hub] = intoHub ? right : left;
+    let offset = hub?.y ?? 0;
+    return (intoHub ? left : right).map(({ part, x, y }) => {
+      const thickness = part.value * scale;
+      const d = intoHub
+        ? band(x + NODE, y, hub?.x ?? 0, offset, thickness)
+        : band((hub?.x ?? 0) + NODE, offset, x, y, thickness);
+      offset += thickness;
+      return { part, d };
+    });
+  });
+  const percent = (value: number) => `${(value / width) * 100}%`;
+  const labels = columns.flatMap(({ side, x }, index) => {
+    const column = boxes[index] ?? [];
+    if (!side) return [];
+    const ys = column.map(({ y, height: span }) => y + span / 2);
+    ys.forEach((y, i) => (ys[i] = Math.max(y, i > 0 ? (ys[i - 1] ?? 0) + label : label / 2)));
+    for (let i = ys.length - 1; i >= 0; i--) {
+      ys[i] = Math.min(
+        ys[i] ?? 0,
+        i < ys.length - 1 ? (ys[i + 1] ?? 0) - label : height - label / 2,
+      );
+    }
+    return column.map(({ part, y, height: span }, i) => {
+      const anchor = y + span / 2;
+      const at = ys[i] ?? 0;
+      const [from, to] =
+        side === "left" ? [x - 3, x - OFFSET + 3] : [x + NODE + 3, x + NODE + OFFSET - 3];
+      return {
+        part,
+        side,
+        leader: Math.abs(anchor - at) > 6 ? `M${from} ${anchor}L${to} ${at}` : undefined,
+        style: `top: ${(at / height) * 100}%; ${
+          side === "left"
+            ? `right: ${percent(width - x + OFFSET)}`
+            : `left: ${percent(x + NODE + OFFSET)}`
+        }`,
+      };
+    });
+  });
+  const hub = boxes.flat().find((box) => box.part === flow.hub);
+  return {
+    boxes: boxes.flat(),
+    bands,
+    labels,
+    hub:
+      hubLabel && hub
+        ? `top: ${(hub.y / height) * 100}%; left: ${percent(hub.x + NODE / 2)}`
+        : undefined,
+  };
+}
+
+const views = charts.map((chart) => ({ chart, ...layout(chart) }));
+---
+
+<figure class="flow">
+  <figcaption>
+    <Icon name="flow" size={18} />
+    {caption}
+  </figcaption>
+  {views.map(({ chart, boxes, bands, labels, hub }, index) => (
+    <Fragment>
+      {index === 2 && (
+        <div class="label hub total" aria-hidden="true">
+          <span class="icon">
+            <Icon name={flow.hub.icon} size={16} />
+          </span>
+          <span class="text">
+            <strong class="num">{formatEuros(flow.hub.value)}</strong>
+            <span class="name">{flow.hub.label}</span>
+          </span>
+        </div>
+      )}
+      <div class:list={["canvas", chart.name]} aria-hidden="true">
+        <svg viewBox={`0 0 ${chart.width} ${chart.height}`}>
+          {bands.map(({ part, d }) => (
+            <path class:list={["band", part.tone]} d={d}>
+              <title>
+                  {part.label} : {formatEuros(part.value)}
+                </title>
+            </path>
+          ))}
+          {boxes.map(({ part, x, y, height }) => (
+            <rect
+              class:list={["node", part.tone]}
+              x={x}
+              y={y}
+              width={NODE}
+              height={height}
+              rx="3"
+            />
+          ))}
+          {labels.map(({ leader }) => leader && <path class="leader" d={leader} />)}
+        </svg>
+        {labels.map(({ part, side, style }) => (
+          <div class:list={["label", side, part.tone]} style={style}>
+            <span class="icon">
+              <Icon name={part.icon} size={16} />
+            </span>
+            <span class="text">
+              <strong class="num">{formatEuros(part.value)}</strong>
+              <span class="name">{part.label}</span>
+            </span>
+          </div>
+        ))}
+        {hub && (
+          <div class="label hub center" style={hub}>
+            <span class="icon">
+              <Icon name={flow.hub.icon} size={16} />
+            </span>
+            <span class="text">
+              <strong class="num">{formatEuros(flow.hub.value)}</strong>
+              <span class="name">{flow.hub.label}</span>
+            </span>
+          </div>
+        )}
+      </div>
+    </Fragment>
+  ))}
+  <div class="visually-hidden">
+    <table>
+      <caption>{caption}</caption>
+      {[
+        { title: "D'où vient l'argent", parts: flow.inflows },
+        { title: "Où va l'argent", parts: flow.outflows },
+      ].map((group) => (
+        <tbody>
+          <tr>
+            <th scope="rowgroup" colspan="2">
+              {group.title}
+            </th>
+          </tr>
+          {group.parts.map((part) => (
+            <tr>
+              <th scope="row">{part.label}</th>
+              <td>{formatEuros(part.value)}</td>
+            </tr>
+          ))}
+        </tbody>
+      ))}
+    </table>
+  </div>
+</figure>
+
+<style>
+  .flow {
+    margin: 0;
+    container-type: inline-size;
+  }
+
+  figcaption {
+    margin-bottom: 0.5rem;
+  }
+
+  .canvas {
+    position: relative;
+  }
+
+  .narrow,
+  .label.total {
+    display: none;
+  }
+
+  @container (max-width: 56rem) {
+    .wide {
+      display: none;
+    }
+
+    .narrow {
+      display: block;
+      max-width: 30rem;
+      margin-inline: auto;
+    }
+
+    .label.total {
+      display: flex;
+      position: static;
+      transform: none;
+      max-width: none;
+      justify-content: center;
+      margin: 0.5rem 0;
+    }
+
+    .narrow .label {
+      flex-wrap: wrap;
+      max-width: 52%;
+      gap: 0.125rem 0.375rem;
+    }
+
+    .narrow .text {
+      display: contents;
+    }
+
+    .narrow .name {
+      flex-basis: 100%;
+    }
+
+    .narrow .icon {
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 8px;
+    }
+
+    .narrow strong {
+      font-size: 1rem;
+    }
+
+    .narrow .name {
+      font-size: 0.8125rem;
+    }
+  }
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .band {
+    opacity: 0.32;
+    transition: opacity 0.15s ease;
+  }
+
+  .leader {
+    fill: none;
+    stroke: var(--border-strong);
+    stroke-width: 1.5;
+  }
+
+  .band:hover {
+    opacity: 0.6;
+  }
+
+  .band.in,
+  .node.in {
+    fill: var(--series-1);
+  }
+
+  .band.out,
+  .node.out {
+    fill: var(--series-3);
+  }
+
+  .band.transfer,
+  .node.transfer {
+    fill: var(--series-7);
+  }
+
+  .band.gap,
+  .node.gap {
+    fill: var(--series-other);
+  }
+
+  .node.hub {
+    fill: var(--navy-900);
+  }
+
+  .label {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 25%;
+    transform: translateY(-50%);
+    line-height: 1.2;
+  }
+
+  .label.left {
+    flex-direction: row-reverse;
+    text-align: right;
+  }
+
+  .label.center {
+    max-width: 30%;
+    transform: translate(-50%, calc(-100% - 0.75rem));
+  }
+
+  .icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 10px;
+    color: #fff;
+  }
+
+  .in .icon {
+    background: var(--series-1);
+  }
+
+  .out .icon {
+    background: var(--series-3);
+  }
+
+  .transfer .icon {
+    background: var(--series-7);
+  }
+
+  .gap .icon {
+    background: var(--text-muted);
+  }
+
+  .hub .icon {
+    background: var(--navy-900);
+  }
+
+  .text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  strong {
+    font-size: 1.125rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--navy-900);
+  }
+
+  .name {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+  }
+</style>

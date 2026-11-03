@@ -1,0 +1,142 @@
+---
+import Icon from "./Icon.astro";
+import type { Analysis } from "../lib/analyses";
+
+interface Props {
+  article: Analysis;
+  featured?: boolean;
+}
+
+const { article, featured = false } = Astro.props;
+---
+
+<a
+  class:list={["analysis-card", { featured }]}
+  href={`/analyses/${article.slug}`}
+  style={`--accent: ${article.accent}`}
+>
+  <span class="chip" aria-hidden="true">
+    <Icon name={article.icon} size={featured ? 28 : 22} />
+  </span>
+  <span class="kicker">
+    <Icon name="analysis" size={14} />
+    Analyse
+  </span>
+  <span class="title">{article.title}</span>
+  <span class="summary">{article.summary}</span>
+  <span class="read">
+    Lire l'analyse
+    <span aria-hidden="true">→</span>
+  </span>
+</a>
+
+<style>
+  .analysis-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    height: 100%;
+    padding: 1.5rem 1.5rem 1.375rem;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    color: var(--text);
+    text-decoration: none;
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .analysis-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 4px;
+    background: var(--accent);
+  }
+
+  .analysis-card:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 2px 4px rgb(15 23 42 / 5%),
+      0 18px 36px -14px rgb(15 23 42 / 22%);
+  }
+
+  .chip {
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--accent) 14%, white);
+    color: var(--accent);
+  }
+
+  .kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .title {
+    font-size: 1.3125rem;
+    font-weight: 750;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: var(--navy-900);
+    text-wrap: balance;
+  }
+
+  .summary {
+    color: var(--text-secondary);
+    font-size: 0.9875rem;
+    line-height: 1.55;
+  }
+
+  .read {
+    display: inline-flex;
+    gap: 0.35rem;
+    margin-top: auto;
+    padding-top: 0.75rem;
+    color: var(--link);
+    font-size: 0.9375rem;
+    font-weight: 650;
+  }
+
+  .featured {
+    padding: 2rem;
+    background:
+      radial-gradient(
+        40rem 18rem at 100% 0%,
+        color-mix(in srgb, var(--accent) 16%, transparent),
+        transparent 70%
+      ),
+      var(--surface);
+  }
+
+  .featured .chip {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 16px;
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 10px 24px -10px var(--accent);
+  }
+
+  .featured .title {
+    font-size: clamp(1.625rem, 1.2rem + 1.4vw, 2.25rem);
+  }
+
+  .featured .summary {
+    font-size: 1.0625rem;
+  }
+</style>

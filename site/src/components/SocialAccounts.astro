@@ -1,0 +1,302 @@
+---
+import type { getSocialAccounts } from "../lib/data";
+import { formatBillions, formatEuro, formatNumber } from "../lib/format";
+import BranchAccounts from "./BranchAccounts.astro";
+import BarList from "./BarList.astro";
+import Explainer from "./Explainer.astro";
+import Icon from "./Icon.astro";
+import KeyFigures from "./KeyFigures.astro";
+import LineChart from "./LineChart.astro";
+import Provenance from "./Provenance.astro";
+import Term from "./Term.astro";
+
+interface Props {
+  accounts: Awaited<ReturnType<typeof getSocialAccounts>>;
+}
+const { accounts } = Astro.props;
+const observed = accounts.branches.filter((row) => row.source_id === "ccss-octobre-2026");
+const years = [...new Set(observed.map((row) => row.year))];
+const lastResult = Math.max(
+  ...observed.filter((row) => row.stage === "Résultat").map((row) => row.year),
+);
+const requestedYear = Number(Astro.url.searchParams.get("exercice-social"));
+const year = years.includes(requestedYear) ? requestedYear : lastResult;
+const selected = observed.filter((row) => row.year === year);
+const branchRows = selected.filter((row) => !["total", "total_fsv", "fsv"].includes(row.branch));
+const totals = selected
+  .filter((row) => ["total", "total_fsv", "fsv"].includes(row.branch))
+  .sort(
+    (a, b) =>
+      ["total", "fsv", "total_fsv"].indexOf(a.branch) -
+      ["total", "fsv", "total_fsv"].indexOf(b.branch),
+  );
+const projected = accounts.branches.filter((row) => row.source_id === "dss-branches-2027");
+const archive = accounts.branches.filter((row) => row.source_id === "dss-branches-2026");
+const healthTotal = accounts.health.rows.find((row) => row.code === "f000");
+const pension = accounts.pensions.rows.find((row) => row.sex === "Ensemble");
+const familyTotal = accounts.family.rows.find(
+  (row) => row.label === "Total Prestations légales directes",
+);
+const unemployment = accounts.unemployment.rows.at(-1);
+const ondamYear = Math.max(...accounts.ondam.rows.map((row) => row.year));
+const ondam = accounts.ondam.rows.filter((row) => row.year === ondamYear);
+---
+
+<section class="section" id="branches" aria-labelledby="titre-branches">
+  <div class="section-head">
+    <h2 id="titre-branches">
+      <Icon name="socialSecurity" />
+      Les cinq branches
+    </h2>
+    <p>
+      Les <Term id="branche-securite-sociale">branches de la Sécurité sociale</Term> couvrent cinq
+      risques. Leurs comptes sont distincts du périmètre Insee présenté plus haut.
+    </p>
+  </div>
+  <Explainer title="Trois cadres comptables à distinguer">
+    <p>
+      Les comptes des branches suivent les régimes obligatoires de base dans les lois de financement
+      de la Sécurité sociale (LFSS). Ils excluent les retraites complémentaires et l'assurance
+      chômage.
+    </p>
+    <p>
+      Les comptes nationaux Insee regroupent les administrations de sécurité sociale, dont l'Unédic,
+      les régimes complémentaires obligatoires et les hôpitaux publics. Ils retraitent les
+      opérations selon leurs propres règles.
+    </p>
+    <p>
+      Les comptes thématiques DREES décrivent la santé ou la protection sociale, y compris des
+      financeurs privés. Les données CNAF décrivent des prestations gérées, parfois pour l'État ou
+      les départements. Vous ne devez ni additionner ces blocs ni comparer leurs totaux comme s'ils
+      couvraient les mêmes dépenses.
+    </p>
+  </Explainer>
+  <form method="get" action="#branches" class="year-picker">
+    <label for="exercice-social">
+      <Icon name="calendar" size={18} /> Année des comptes
+    </label>
+    <select name="exercice-social" id="exercice-social">
+      {years.map((entry) => (
+        <option value={entry} selected={entry === year}>
+          {entry}
+          {entry > lastResult ? " (prévision avant mesures)" : " (résultat)"}
+        </option>
+      ))}
+    </select>
+    <button type="submit" class="button">
+      Afficher
+    </button>
+  </form>
+  <p class="small">
+    {selected[0]?.stage}, rapport CCSS d'octobre 2026. Les prévisions ne sont pas des dépenses
+    constatées.
+  </p>
+  <div class="card">
+    <BranchAccounts
+      rows={[...branchRows, ...totals]}
+      caption={`Recettes, dépenses et soldes en ${year}`}
+    />
+  </div>
+  <Explainer title="Pourquoi la somme des dépenses des branches dépasse le total">
+    <p>
+      Les branches se versent de l'argent. Le total publié retire ces transferts internes : il est
+      consolidé. Les soldes des cinq branches s'additionnent au solde des régimes de base, aux
+      arrondis près. Jusqu'en 2025, le Fonds de solidarité vieillesse (FSV) figure séparément et son
+      solde s'ajoute à celui des régimes de base. Il est supprimé à partir de 2026.
+    </p>
+  </Explainer>
+  <Provenance provenance={accounts.branchProvenance.ccss} />
+  <Explainer title="Le projet pour 2027, après les mesures proposées">
+    <p>
+      PLFSS 2027, présenté en octobre 2026, non voté. Cette version intègre les mesures du projet et
+      diffère des prévisions avant mesures de la CCSS.
+    </p>
+    <BranchAccounts rows={projected} caption="Projet 2027, après mesures" />
+    <Provenance provenance={accounts.branchProvenance.project} />
+  </Explainer>
+  <Explainer title="L'ancienne prévision pour 2026, publiée en octobre 2025">
+    <p>
+      Annexe 3 du PLFSS 2026 : prévision du projet initial, antérieure au vote et aux révisions de
+      2026.
+    </p>
+    <BranchAccounts rows={archive} caption="Projet initial pour 2026, version d'octobre 2025" />
+    <Provenance provenance={accounts.branchProvenance.archive} />
+  </Explainer>
+</section>
+
+<section class="section" id="sante" aria-labelledby="titre-sante">
+  <div class="section-head">
+    <h2 id="titre-sante">
+      <Icon name="health" />
+      Qui finance la santé ?
+    </h2>
+    <p>
+      Dépense courante de santé au sens international, {healthTotal?.year} :{" "}
+      {formatBillions(healthTotal?.amount ?? 0)}, financeurs publics et privés.
+    </p>
+  </div>
+  <div class="card">
+    <BarList
+      caption={`Dépenses de santé par financeur en ${healthTotal?.year}`}
+      items={accounts.health.rows
+        .filter((row) => row.code !== "f000")
+        .map((row) => ({
+          label: row.label,
+          value: row.amount,
+          display: formatBillions(row.amount),
+        }))}
+    />
+  </div>
+  <Provenance provenance={accounts.health.provenance} />
+  <Explainer title="L'ONDAM, un objectif dans un autre périmètre">
+    <p>
+      L'<Term id="ondam">ONDAM</Term> concerne plusieurs branches. Dans l'annexe 5 du projet initial
+      pour {ondamYear}, son montant proposé était de{" "}
+      {formatBillions(ondam.find((row) => row.code === "total")?.amount ?? 0)}. Cette version
+      d'octobre 2025 est une archive, pas l'objectif finalement voté ni son exécution.
+    </p>
+    <BarList
+      caption={`ONDAM proposé pour ${ondamYear}, version d'octobre 2025`}
+      items={ondam
+        .filter((row) => row.code !== "total")
+        .map((row) => ({
+          label: row.label,
+          value: row.amount,
+          display: formatBillions(row.amount),
+        }))}
+    />
+    <Provenance provenance={accounts.ondam.provenance} />
+  </Explainer>
+</section>
+
+{pension && (
+  <section class="section" id="retraites" aria-labelledby="titre-retraites">
+    <div class="section-head">
+      <h2 id="titre-retraites">
+        <Icon name="people" />
+        Les pensions de retraite
+      </h2>
+      <p>
+        DREES, {pension.year}, régimes de base et complémentaires obligatoires, résidents en France
+        et à l'étranger.
+      </p>
+    </div>
+    <KeyFigures
+      figures={[
+        {
+          icon: "people",
+          label: "Retraités de droit direct",
+          value: formatNumber(pension.recipients),
+          note: `fin ${pension.year}, tous régimes`,
+        },
+        {
+          icon: "euro",
+          label: "Pension moyenne de droit direct",
+          value: formatEuro(pension.monthly_pension),
+          note: "brute par mois, hors réversion et majoration pour enfants",
+        },
+      ]}
+    />
+    <Explainer title="Une pension moyenne ne mesure pas la dépense annuelle">
+      <p>
+        Le droit direct est acquis par votre propre activité professionnelle. Une pension de
+        réversion découle des droits d'une personne décédée. Cette moyenne porte sur les pensions de
+        droit direct tous régimes. Multiplier l'effectif de fin d'année par la pension mensuelle ne
+        reconstitue pas les dépenses annuelles de la branche vieillesse.
+      </p>
+    </Explainer>
+    <Provenance provenance={accounts.pensions.provenance} />
+  </section>
+)}
+
+{familyTotal && (
+  <section class="section" id="famille" aria-labelledby="titre-famille">
+    <div class="section-head">
+      <h2 id="titre-famille">
+        <Icon name="socialSecurity" />
+        Les prestations gérées par les caisses
+      </h2>
+      <p>
+        {formatBillions(familyTotal.amount)} de prestations légales directes en {familyTotal.year},
+        tous régimes, France entière. Ce total inclut des prestations financées par l'État et les
+        départements.
+      </p>
+    </div>
+    <div class="card">
+      <BarList
+        caption={`Principales prestations gérées en ${familyTotal.year}`}
+        items={accounts.family.rows
+          .filter((row) => row !== familyTotal)
+          .map((row) => ({
+            label: row.label,
+            value: row.amount,
+            display: formatBillions(row.amount),
+          }))}
+      />
+    </div>
+    <Provenance provenance={accounts.family.provenance} />
+  </section>
+)}
+
+{unemployment && (
+  <section class="section" id="chomage" aria-labelledby="titre-chomage">
+    <div class="section-head">
+      <h2 id="titre-chomage">
+        <Icon name="unemployment" />
+        L'assurance chômage, à côté des cinq branches
+      </h2>
+      <p>
+        Unédic, {unemployment.year}. Ces comptes ne sont pas inclus dans le total des cinq branches.
+      </p>
+    </div>
+    <KeyFigures
+      figures={[
+        { icon: "revenue", label: "Recettes", value: formatBillions(unemployment.revenue) },
+        { icon: "spending", label: "Dépenses", value: formatBillions(unemployment.spending) },
+        {
+          icon: "scale",
+          label: "Solde technique",
+          value: `${unemployment.balance < 0 ? "−" : "+"}${formatBillions(Math.abs(unemployment.balance))}`,
+          note: "recettes moins dépenses, arrondis publiés",
+        },
+      ]}
+    />
+    <div class="card">
+      <LineChart
+        caption="Recettes et dépenses de l'assurance chômage, euros courants"
+        labels={accounts.unemployment.rows.map((row) => String(row.year))}
+        series={[
+          { label: "Recettes", values: accounts.unemployment.rows.map((row) => row.revenue) },
+          { label: "Dépenses", values: accounts.unemployment.rows.map((row) => row.spending) },
+        ]}
+        format={formatBillions}
+      />
+    </div>
+    <Provenance provenance={accounts.unemployment.provenance} />
+  </section>
+)}
+
+<style>
+  .year-picker {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+  }
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  select {
+    min-width: 0;
+    max-width: 100%;
+    padding: 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+  }
+</style>

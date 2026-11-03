@@ -1,0 +1,757 @@
+---
+import BudgetLegislation from "../components/BudgetLegislation.astro";
+import Answer from "../components/Answer.astro";
+import BarList, { type BarItem } from "../components/BarList.astro";
+import Icon from "../components/Icon.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import Explainer from "../components/Explainer.astro";
+import FlowChart from "../components/FlowChart.astro";
+import KeyFigures, { type Figure } from "../components/KeyFigures.astro";
+import LineChart from "../components/LineChart.astro";
+import Term from "../components/Term.astro";
+import Provenance from "../components/Provenance.astro";
+import ShareBar from "../components/ShareBar.astro";
+import Toc from "../components/Toc.astro";
+import Base from "../layouts/Base.astro";
+import { getStateBudget, getStateExecution, type PublicSector } from "../lib/data";
+import { stateFlow } from "../lib/flows";
+import {
+  formatEuro,
+  formatEuros,
+  formatNumber,
+  formatPercent,
+  formatBillions,
+} from "../lib/format";
+
+const [budget, execution] = await Promise.all([getStateBudget(), getStateExecution()]);
+const monthlyYear = Math.max(...execution.monthly.rows.map((row) => row.year));
+const latestMonth = execution.monthly.rows.filter((row) => row.year === monthlyYear).at(-1)!;
+const months = [
+  "Janv.",
+  "Févr.",
+  "Mars",
+  "Avr.",
+  "Mai",
+  "Juin",
+  "Juil.",
+  "Août",
+  "Sept.",
+  "Oct.",
+  "Nov.",
+  "Déc.",
+].slice(0, latestMonth.month);
+const monthlyYears = [...new Set(execution.monthly.rows.map((row) => row.year))];
+const monthlySeries = (metric: "spending" | "revenue" | "balance") =>
+  monthlyYears.map((year) => ({
+    label: String(year),
+    values: months.map(
+      (_, index) =>
+        execution.monthly.rows.find((row) => row.year === year && row.month === index + 1)?.[
+          metric
+        ] ?? null,
+    ),
+  }));
+const amountBars = (rows: { label: string; amount: number }[]): BarItem[] =>
+  rows.map((row) => ({
+    label: row.label,
+    value: row.amount,
+    display: formatBillions(row.amount),
+  }));
+const assets = execution.assets.row;
+const max = Math.max(...budget.missions.map((mission) => mission.spent));
+const refunds = budget.missions.find(
+  (mission) => mission.name === "Remboursements et dégrèvements",
+);
+const parts = [
+  ...budget.missions.slice(0, 6).map((mission) => ({
+    label: mission.name,
+    value: mission.spent,
+    href: `#mission-${budget.missions.indexOf(mission)}`,
+  })),
+  {
+    label: `Les ${budget.missions.length - 6} autres missions`,
+    value: budget.missions.slice(6).reduce((sum, mission) => sum + mission.spent, 0),
+    other: true,
+  },
+];
+const topShare = parts.slice(0, 6).reduce((sum, part) => sum + part.value, 0) / budget.spent;
+const { revenue } = budget;
+const flow = stateFlow(budget);
+const deficit = budget.spent - revenue.net;
+const revenueParts = flow.inflows.filter((part) => part.tone === "in");
+const revenueGroups = [...new Set(revenue.lines.map((line) => line.category))].map((category) => {
+  const lines = revenue.lines.filter((line) => line.category === category);
+  return { category, lines, total: lines.reduce((sum, line) => sum + line.amount, 0) };
+});
+const taxShare =
+  revenueParts.slice(0, 4).reduce((sum, part) => sum + part.value, 0) / revenue.gross;
+const figures = [
+  {
+    icon: "euro" as const,
+    label: "Dépenses",
+    term: "credits-paiement" as const,
+    value: formatEuros(budget.spent),
+    note: `crédits consommés en ${budget.year}`,
+  },
+  {
+    icon: "revenue" as const,
+    label: "Recettes",
+    value: formatEuros(revenue.net),
+    note: `en ${budget.year}, après reversements`,
+  },
+  {
+    icon: "debt" as const,
+    label: "Déficit",
+    term: "deficit" as const,
+    value: formatEuros(deficit),
+    note: "financé par l'emprunt",
+  },
+  {
+    icon: "people" as const,
+    label: "Par ménage",
+    term: "menage" as const,
+    value: formatEuro(budget.perHousehold),
+    note: `${formatNumber(budget.households)} ménages (Insee)`,
+  },
+];
+const FIRST_YEAR = 2000;
+const { next, publicFinances } = budget;
+const sector = (code: string) => publicFinances.sectors.find((entry) => entry.code === code);
+const recent = (entry: PublicSector | undefined) =>
+  entry?.years.filter((year) => year.year >= FIRST_YEAR) ?? [];
+const state = recent(sector("S13111"));
+const total = sector("S13")?.years.at(-1);
+const scope: BarItem[] = [
+  {
+    icon: "state",
+    label: "Budget de l'État",
+    note: "voté par le Parlement",
+    value: budget.spent,
+    display: formatEuros(budget.spent),
+  },
+  {
+    icon: "euro",
+    label: "Tout l'argent public",
+    note: "avec Sécurité sociale, collectivités, opérateurs",
+    value: total?.spending ?? 0,
+    display: formatEuros(total?.spending ?? 0),
+    strong: true,
+  },
+];
+const nextChange = next.voted / budget.spent - 1;
+const nextFigures: Figure[] = [
+  {
+    icon: "calendar",
+    label: `Voté pour ${next.year}`,
+    term: "loi-de-finances",
+    value: formatEuros(next.voted),
+    note: "crédits de paiement",
+  },
+  { icon: "euro", label: `Dépensé en ${budget.year}`, value: formatEuros(budget.spent) },
+  {
+    icon: "trend",
+    label: "Évolution",
+    value: `${nextChange < 0 ? "−" : "+"}${formatPercent(Math.abs(nextChange))}`,
+  },
+];
+const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spent)}, soit ${formatEuro(budget.perHousehold)} par ménage, pour ${formatEuros(revenue.net)} de recettes.`;
+---
+
+<Base title="Le budget de l'État, mission par mission" description={answer}>
+  <header class="page-head" id="en-bref">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Budget de l'État" }]} />
+      <p class="badges">
+        <span class="badge">
+          <Icon name="state" size={14} />
+          Budget général · exécution {budget.year}
+        </span>
+      </p>
+      <div class="entity">
+        <Icon name="state" />
+        <h1>Où va le budget de l'État&nbsp;?</h1>
+      </div>
+      <Answer text={answer} />
+      <KeyFigures figures={figures} />
+      <Provenance provenance={budget.provenance} />
+    </div>
+  </header>
+  <Toc
+    items={[
+      { href: "#en-bref", label: "En bref", icon: "info" },
+      { href: "#annee-en-cours", label: "L’année en cours", icon: "calendar" },
+      { href: "#nature", label: "Par nature", icon: "layers" },
+      { href: "#ministeres", label: "Par ministère", icon: "state" },
+      { href: "#bilan", label: "Bilan de l’État", icon: "scale" },
+      { href: "#budget-vert", label: "Budget vert", icon: "ecology" },
+      { href: "#perimetre", label: "Et le reste ?", icon: "euro" },
+      { href: "#circuit", label: "Recettes et dépenses", icon: "flow" },
+      { href: "#recettes", label: "D'où vient l'argent", icon: "revenue" },
+      { href: "#repartition", label: "Sur 100 €", icon: "share" },
+      { href: "#missions", label: "Mission par mission", icon: "layers" },
+      { href: "#evolution", label: "Année par année", icon: "trend" },
+      { href: "#budget-2026", label: `Budget ${next.year}`, icon: "calendar" },
+    ]}
+  />
+
+  <div class="container">
+    <section class="section" id="annee-en-cours" aria-labelledby="titre-annee-en-cours">
+      <div class="section-head">
+        <h2 id="titre-annee-en-cours">
+          <Icon name="calendar" />
+          L'année en cours
+        </h2>
+        <p>
+          Exécution provisoire {monthlyYear}, cumulée de janvier à {months.at(-1)?.toLowerCase()}.
+        </p>
+      </div>
+      <KeyFigures
+        figures={[
+          {
+            icon: "spending",
+            label: "Dépenses nettes",
+            value: formatBillions(latestMonth.spending),
+            note: "budget général",
+          },
+          {
+            icon: "revenue",
+            label: "Recettes nettes",
+            value: formatBillions(latestMonth.revenue),
+            note: "avant prélèvements et fonds de concours",
+          },
+          {
+            icon: "debt",
+            label: "Solde budgétaire",
+            value: formatBillions(latestMonth.balance),
+            note: "comptes spéciaux inclus",
+          },
+        ]}
+      />
+      {[
+        { metric: "spending" as const, caption: "Dépenses nettes cumulées" },
+        { metric: "revenue" as const, caption: "Recettes nettes cumulées" },
+        { metric: "balance" as const, caption: "Solde budgétaire cumulé" },
+      ].map(({ metric, caption }) => (
+        <div class="card">
+          <LineChart
+            caption={caption}
+            labels={months}
+            series={monthlySeries(metric)}
+            format={formatBillions}
+          />
+        </div>
+      ))}
+      <Explainer title="Des cumuls provisoires, pas les comptes annuels">
+        <p>
+          Chaque point additionne les opérations depuis janvier. Les années sont comparées au même
+          mois. Le solde inclut les prélèvements sur recettes, fonds de concours, comptes spéciaux
+          et budgets annexes : il ne se déduit pas des deux premiers chiffres seuls. Les comptes
+          2025 présentés ailleurs sur cette page restent distincts.
+        </p>
+      </Explainer>
+      <Provenance provenance={execution.monthly.provenance} />
+    </section>
+    <section class="section" id="nature" aria-labelledby="titre-nature">
+      <div class="section-head">
+        <h2 id="titre-nature">
+          <Icon name="layers" />
+          Par nature de dépense
+        </h2>
+        <p>
+          Exécution 2025 par <Term id="titre-budgetaire">titre budgétaire</Term>, remboursements
+          d'impôts inclus.
+        </p>
+      </div>
+      <div class="card">
+        <BarList
+          caption="Crédits de paiement consommés en 2025"
+          items={amountBars(execution.titles.rows)}
+        />
+      </div>
+      <Provenance provenance={execution.titles.provenance} />
+    </section>
+    <section class="section" id="ministeres" aria-labelledby="titre-ministeres">
+      <div class="section-head">
+        <h2 id="titre-ministeres">
+          <Icon name="state" />
+          Par ministère
+        </h2>
+        <p>Exécution 2025 selon les ministères de gestion de cette année.</p>
+      </div>
+      <div class="card">
+        <BarList
+          caption="Budget général exécuté en 2025"
+          items={amountBars(execution.ministries.rows)}
+        />
+      </div>
+      <Explainer title="Le périmètre de ce classement">
+        <p>
+          Les programmes sont rattachés à la nomenclature DGFiP 2025. Les remboursements et
+          dégrèvements sont inclus dans le ministère responsable ; ils correspondent à des impôts
+          rendus aux contribuables. Les pouvoirs publics restent un poste distinct.
+        </p>
+      </Explainer>
+      <Provenance provenance={execution.ministries.provenance} />
+    </section>
+    {assets && (
+      <section class="section" id="bilan" aria-labelledby="titre-bilan">
+        <div class="section-head">
+          <h2 id="titre-bilan">
+            <Icon name="scale" />
+            Le bilan de l'État
+          </h2>
+          <p>Valeurs comptables au 31 décembre {assets.year}, État seul.</p>
+        </div>
+        <KeyFigures
+          figures={[
+            {
+              icon: "building",
+              label: "Actif",
+              term: "actif-etat",
+              value: formatBillions(assets.assets),
+            },
+            {
+              icon: "debt",
+              label: "Passif",
+              term: "passif-etat",
+              value: formatBillions(assets.liabilities),
+            },
+            {
+              icon: "scale",
+              label: "Situation nette",
+              term: "situation-nette",
+              value: formatBillions(assets.net_position),
+            },
+          ]}
+        />
+        <Explainer title="Ce que le bilan permet de lire">
+          <p>
+            La situation nette est l'actif moins le passif. Les engagements hors bilan sont exclus.
+            Le droit de lever l'impôt n'est pas comptabilisé comme un actif. Ce bilan ne mesure ni
+            la richesse nationale ni la dette de Maastricht de toutes les administrations.
+          </p>
+        </Explainer>
+        <Provenance provenance={execution.assets.provenance} />
+      </section>
+    )}
+    <section class="section" id="budget-vert" aria-labelledby="titre-budget-vert">
+      <div class="section-head">
+        <h2 id="titre-budget-vert">
+          <Icon name="ecology" />
+          Le budget vert
+        </h2>
+        <p>
+          <Term id="budget-vert">Cotation environnementale</Term> des crédits proposés au PLF 2026.
+        </p>
+      </div>
+      <div class="card">
+        <BarList
+          caption="Crédits budgétaires proposés, PLF 2026"
+          items={amountBars(
+            execution.green.rows.map((row) => ({
+              ...row,
+              label: row.label === "NC" ? "Non coté" : row.label,
+            })),
+          )}
+        />
+      </div>
+      <Explainer title="Un périmètre propre au budget vert">
+        <p>
+          Ces montants sont des propositions du PLF 2026. Ils ne sont ni les dépenses exécutées
+          2025, ni le budget finalement voté. Le fichier retraite les contributions aux pensions et
+          comprend des prélèvements sur recettes. Les taxes affectées et dépenses fiscales sont
+          exclues ici. Les cotations portent sur six objectifs ; une cotation neutre ne signifie pas
+          une dépense inutile.
+        </p>
+      </Explainer>
+      <Provenance provenance={execution.green.provenance} />
+    </section>
+    <section class="section" id="perimetre" aria-labelledby="titre-perimetre">
+      <div class="section-head">
+        <h2 id="titre-perimetre">
+          <Icon name="euro" />
+          Une partie de l'argent public
+        </h2>
+        <p>
+          La Sécurité sociale, les collectivités et les opérateurs de l'État ont chacun leur budget.
+        </p>
+      </div>
+      <div class="card">
+        <BarList caption={`Dépenses ${budget.year}`} items={scope} />
+      </div>
+      <p class="after-chart">
+        <a class="more" href="/argent-public">
+          Tout l'argent public
+        </a>
+      </p>
+      <Provenance provenance={budget.provenance} />
+      <Provenance provenance={publicFinances.provenance} />
+    </section>
+
+    <section class="section" id="circuit" aria-labelledby="titre-circuit">
+      <div class="section-head">
+        <h2 id="titre-circuit">
+          <Icon name="flow" />
+          De l'impôt à la dépense
+        </h2>
+      </div>
+      <div class="card">
+        <FlowChart
+          caption={`Recettes et dépenses du budget général en ${budget.year}`}
+          flow={flow}
+        />
+      </div>
+      <div class="explain">
+        <Explainer title="Comment lire ce graphique">
+          <p>
+            Les impôts sont comptés avant remboursements. Les impôts rendus figurent à droite, dans
+            «&nbsp;Remboursements et dégrèvements&nbsp;».
+          </p>
+          <p>
+            Les <Term id="prelevements-sur-recettes">prélèvements sur recettes</Term> sont reversés
+            avant toute dépense. Le <Term id="deficit">déficit</Term> est financé par l'emprunt.
+          </p>
+        </Explainer>
+      </div>
+      <Provenance provenance={revenue.provenance} />
+      <Provenance provenance={budget.provenance} />
+      <Explainer title="Pourquoi on ne peut pas suivre un euro d'impôt jusqu'à une dépense">
+        <p>
+          Avec la <Term id="non-affectation">non-affectation des recettes</Term>, les impôts
+          alimentent un budget commun. Le graphique montre les recettes et les dépenses de
+          l'ensemble du budget, sans attribuer un impôt à un service précis. La loi prévoit des
+          exceptions, notamment les taxes affectées, les comptes spéciaux et les fonds de concours.
+        </p>
+      </Explainer>
+    </section>
+
+    <section class="section" id="recettes" aria-labelledby="titre-recettes">
+      <div class="section-head">
+        <h2 id="titre-recettes">
+          <Icon name="revenue" />
+          D'où vient l'argent de l'État
+        </h2>
+        <p>Quatre impôts apportent {formatPercent(taxShare)} des recettes.</p>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <ShareBar
+            caption={`Sur 100 € encaissés par l'État en ${budget.year}`}
+            whole="recettes du budget général, avant reversements"
+            parts={revenueParts}
+          />
+        </div>
+        <div class="card">
+          <table>
+            <caption class="table-caption">Impôt par impôt</caption>
+            <thead>
+              <tr>
+                <th scope="col">Recette</th>
+                <th scope="col" class="num">
+                  Encaissé
+                </th>
+              </tr>
+            </thead>
+            {revenueGroups.map((group) => (
+              <tbody>
+                <tr class="group">
+                  <th scope="rowgroup">{group.category}</th>
+                  <td class="num">{formatEuros(group.total)}</td>
+                </tr>
+                {group.lines.map((line) => (
+                  <tr>
+                    <td>{line.name}</td>
+                    <td class="num">{formatEuros(line.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            ))}
+          </table>
+        </div>
+      </div>
+      <div class="explain">
+        <Explainer title="Les autres recettes">
+          <p>
+            Dividendes, amendes, ventes de biens et services. Les{" "}
+            <Term id="fonds-de-concours">fonds de concours</Term> financent une dépense précise.
+          </p>
+        </Explainer>
+      </div>
+      <Provenance provenance={revenue.provenance} />
+    </section>
+
+    <section class="section" id="repartition" aria-labelledby="titre-repartition">
+      <div class="section-head">
+        <h2 id="titre-repartition">
+          <Icon name="share" />
+          Sur 100 € dépensés par l'État
+        </h2>
+        <p>Les six plus grandes missions représentent {formatPercent(topShare)} des dépenses.</p>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <ShareBar
+            caption={`Dépenses du budget général en ${budget.year}`}
+            whole="dépenses du budget général"
+            parts={parts}
+          />
+        </div>
+        <Explainer title={"Qu'est-ce qu'une mission\u00a0?"}>
+          <p>
+            Le <Term id="budget-general">budget général</Term> de l'État est découpé en missions
+            (une grande politique publique, comme l'enseignement scolaire ou la défense),
+            elles-mêmes divisées en <Term id="programme">programmes</Term> confiés à un ministère.
+          </p>
+          {refunds && (
+            <p>
+              La mission «&nbsp;
+              <Term id="remboursements-degrevements">Remboursements et dégrèvements</Term>&nbsp;» (
+              {formatEuros(refunds.spent)}) correspond surtout à des impôts rendus aux contribuables
+              et aux entreprises.
+            </p>
+          )}
+        </Explainer>
+      </div>
+      <Provenance provenance={budget.provenance} />
+    </section>
+
+    <section class="section" id="missions" aria-labelledby="titre-missions">
+      <div class="section-head">
+        <h2 id="titre-missions">
+          <Icon name="layers" />
+          Mission par mission
+        </h2>
+        <p>Ouvrez une mission pour voir ses programmes.</p>
+      </div>
+      <ol class="missions card">
+        {budget.missions.map((mission, index) => (
+          <li id={`mission-${index}`}>
+            <details>
+              <summary>
+                <span class="rank num">{index + 1}</span>
+                <span class="name">
+                  <Icon name="layers" size={16} />
+                  {mission.name}
+                </span>
+                <span class="figures num">
+                  <strong>{formatEuros(mission.spent)}</strong>
+                  <span class="per">{formatEuro(mission.perHousehold)} par ménage</span>
+                  <span class="per">
+                    {next.year} : {formatEuros(mission.nextVoted)}
+                  </span>
+                </span>
+                <span class="track" aria-hidden="true">
+                  <span
+                    class="fill"
+                    style={`width: ${Math.max((mission.spent / max) * 100, 0.5)}%`}
+                  />
+                </span>
+              </summary>
+              <table>
+                <caption class="visually-hidden">Programmes de la mission {mission.name}</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Programme</th>
+                    <th scope="col" class="num">
+                      Dépensé
+                    </th>
+                    <th scope="col" class="num hide-small">
+                      Par ménage
+                    </th>
+                    <th scope="col" class="num hide-small">
+                      Dont personnel
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mission.programmes.map((programme) => (
+                    <tr>
+                      <td>
+                        {programme.name}
+                        <span class="muted small block">Programme&nbsp;{programme.code}</span>
+                      </td>
+                      <td class="num">{formatEuros(programme.spent)}</td>
+                      <td class="num hide-small">{formatEuro(programme.perHousehold)}</td>
+                      <td class="num hide-small">
+                        {programme.spent > 0
+                          ? formatPercent(programme.personnel / programme.spent)
+                          : "n.d."}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
+          </li>
+        ))}
+      </ol>
+      <Provenance provenance={budget.provenance} />
+    </section>
+
+    <section class="section" id="evolution" aria-labelledby="titre-evolution">
+      <div class="section-head">
+        <h2 id="titre-evolution">
+          <Icon name="trend" />
+          D'une année à l'autre
+        </h2>
+        <p>
+          L'État en <Term id="comptabilite-nationale">comptabilité nationale</Term>, depuis{" "}
+          {FIRST_YEAR}.
+        </p>
+      </div>
+      <div class="card">
+        <LineChart
+          caption="Dépenses et recettes de l'État"
+          labels={state.map((year) => String(year.year))}
+          series={[
+            { label: "Dépenses", values: state.map((year) => year.spending) },
+            { label: "Recettes", values: state.map((year) => year.revenue) },
+          ]}
+          format={formatEuros}
+        />
+      </div>
+      <Provenance provenance={publicFinances.provenance} />
+    </section>
+
+    <section class="section" id="budget-2026" aria-labelledby="titre-budget-2026">
+      <div class="section-head">
+        <h2 id="titre-budget-2026">
+          <Icon name="calendar" />
+          Le budget voté pour {next.year}
+        </h2>
+        <p>
+          <a href="#missions">Mission par mission</a>, en regard de {budget.year}.
+        </p>
+      </div>
+      <KeyFigures figures={nextFigures} />
+      <Provenance provenance={next.provenance} />
+    </section>
+  </div>
+  <BudgetLegislation family="État" />
+</Base>
+
+<style>
+  .missions {
+    list-style: none;
+    margin: 0;
+    padding: 0.5rem 1.25rem;
+  }
+
+  .missions > li + li {
+    border-top: 1px solid var(--border);
+  }
+
+  summary {
+    display: grid;
+    grid-template-columns: 2rem 1fr auto;
+    gap: 0.25rem 0.75rem;
+    align-items: baseline;
+    padding: 0.875rem 0;
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .rank {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+  }
+
+  .name {
+    min-width: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .name :global(svg) {
+    margin-right: 0.375rem;
+    vertical-align: -0.15em;
+  }
+
+  .name::after {
+    content: " +";
+    color: var(--link);
+    font-weight: 700;
+  }
+
+  details[open] .name::after {
+    content: " −";
+  }
+
+  .figures {
+    text-align: right;
+  }
+
+  .per {
+    display: block;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+  }
+
+  .track {
+    grid-column: 2 / -1;
+    height: 10px;
+    background: var(--bar-track);
+    border-radius: 4px;
+  }
+
+  .fill {
+    display: block;
+    height: 100%;
+    background: var(--bar);
+    border-radius: 0 4px 4px 0;
+  }
+
+  @media (max-width: 40rem) {
+    summary {
+      grid-template-columns: 1.5rem 1fr;
+    }
+
+    .figures {
+      grid-column: 2;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0 0.75rem;
+      text-align: left;
+    }
+  }
+
+  table {
+    margin: 0 0 1rem;
+  }
+
+  .block {
+    display: block;
+  }
+
+  .explain {
+    margin: 1.5rem 0 0;
+  }
+
+  #annee-en-cours > .card {
+    margin-top: 1rem;
+  }
+
+  .chart {
+    margin-top: 1.5rem;
+  }
+
+  .after-chart {
+    margin: 1rem 0 0;
+  }
+
+  .group > * {
+    font-weight: 700;
+    color: var(--navy-900);
+    background: var(--navy-50);
+  }
+
+  .name :global(svg) {
+    margin-right: 0.375rem;
+    vertical-align: -0.2em;
+    color: var(--navy-800);
+  }
+</style>

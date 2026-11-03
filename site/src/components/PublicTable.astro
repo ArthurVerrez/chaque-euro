@@ -1,0 +1,104 @@
+---
+interface Props {
+  caption: string;
+  columns: string[];
+  rows: { text: string; href?: string | null }[][];
+}
+const { caption, columns, rows } = Astro.props;
+---
+
+<div class="card public-table">
+  <table>
+    <caption>{caption}</caption>
+    <thead>
+      <tr>
+        {columns.map((label) => (
+          <th scope="col">{label}</th>
+        ))}
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((row) => (
+        <tr>
+          {row.map((cell, index) => (
+            <td data-label={columns[index]}>
+              {cell.href ? <a href={cell.href}>{cell.text}</a> : cell.text}
+            </td>
+          ))}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  {rows.length === 0 && <p class="empty">Aucun résultat pour ces filtres.</p>}
+</div>
+<style>
+  .public-table {
+    padding: 0;
+    overflow: hidden;
+    min-width: 0;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 0.9375rem;
+  }
+  caption {
+    text-align: left;
+    font-weight: 650;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  th,
+  td {
+    padding: 0.85rem 1rem;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border);
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  th {
+    background: var(--navy-50);
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+  }
+  tr:last-child td {
+    border-bottom: 0;
+  }
+  .empty {
+    padding: 1rem;
+  }
+  @media (max-width: 48rem) {
+    table,
+    caption,
+    tbody,
+    tr,
+    td {
+      display: block;
+    }
+    thead {
+      display: none;
+    }
+    tr {
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    tr:last-child {
+      border-bottom: 0;
+    }
+    td {
+      padding: 0.4rem 0;
+      border: 0;
+      display: grid;
+      grid-template-columns: minmax(5rem, 0.85fr) minmax(0, 1.5fr);
+      gap: 0.65rem;
+    }
+    td::before {
+      content: attr(data-label);
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+  }
+</style>

@@ -1,0 +1,351 @@
+---
+import Answer from "../components/Answer.astro";
+import BarList from "../components/BarList.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import ColumnChart from "../components/ColumnChart.astro";
+import Explainer from "../components/Explainer.astro";
+import Icon from "../components/Icon.astro";
+import KeyFigures from "../components/KeyFigures.astro";
+import Provenance from "../components/Provenance.astro";
+import Term from "../components/Term.astro";
+import Toc from "../components/Toc.astro";
+import Base from "../layouts/Base.astro";
+import { getPoliticalFinance } from "../lib/data";
+import { formatDate, formatEuros, formatNumber, formatPercent } from "../lib/format";
+const data = await getPoliticalFinance(Astro.url.searchParams.get("parti"));
+const party = data.selected;
+const total = data.accounts.reduce((n, r) => n + r.resources, 0);
+const aid = data.accounts.reduce((n, r) => n + r.public_aid, 0);
+const alerts = data.accounts.filter((r) => r.majority_public);
+const discrepancies = data.accounts.filter((r) => !r.reconciled);
+const years = [2021, 2022, 2023, 2024].map((year) => ({
+  year,
+  amount: data.history.filter((r) => r.year === year).reduce((n, r) => n + r.public_aid, 0),
+}));
+const resources = [
+  { label: "Cotisations des adhérents", value: party.members },
+  { label: "Dons de personnes physiques, total agrégé", value: party.donations },
+  { label: "Cotisations des élus", value: party.elected },
+  { label: "Aide publique, première fraction", value: party.public_first },
+  { label: "Aide publique, seconde fraction", value: party.public_second },
+  { label: "Autres aides publiques", value: party.public_other },
+  { label: "Autres produits", value: party.other_resources },
+];
+const sections = [
+  { href: "#parti", label: "Par parti", icon: "politicalFinance" as const },
+  { href: "#historique", label: "Aide 2021 à 2024", icon: "calendar" as const },
+  { href: "#comptes", label: "Comptes 2024", icon: "list" as const },
+  { href: "#alertes", label: "Aide majoritaire", icon: "percent" as const },
+  { href: "#privation", label: "Perte de l’aide", icon: "info" as const },
+];
+---
+
+<Base
+  title="Le financement des partis politiques"
+  description="Comptes officiels des partis en 2024, ressources par origine et aide publique comptabilisée de 2021 à 2024."
+>
+  <header class="page-head">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Financement politique" }]} />
+      <div class="entity">
+        <Icon name="politicalFinance" />
+        <h1>Le financement des partis politiques</h1>
+      </div>
+      <Answer
+        text={`La CNCCFP publie ${formatNumber(data.accounts.length)} comptes de partis pour 2024. Ils déclarent ${formatEuros(total)} de produits, avant consolidation entre partis.`}
+      />
+      <KeyFigures
+        figures={[
+          {
+            icon: "politicalFinance",
+            label: "Comptes publiés",
+            value: formatNumber(data.accounts.length),
+            note: "Exercice 2024, en euros",
+          },
+          {
+            icon: "revenue",
+            label: "Produits déclarés",
+            value: formatEuros(total),
+            note: "Cumul non consolidé, 2024",
+          },
+          {
+            icon: "grant",
+            label: "Aides inscrites aux comptes",
+            value: formatEuros(aid),
+            note: "Cumul non consolidé, 2024",
+            term: "aide-partis",
+          },
+          {
+            icon: "percent",
+            label: "Aide publique majoritaire",
+            value: formatNumber(alerts.length),
+            note: "Plus de 50 % des produits, comptes rapprochés",
+          },
+        ]}
+      />
+      <Provenance provenance={data.provenance} />
+    </div>
+  </header>
+  <Toc items={sections} />
+  <div class="container">
+    <p>
+      <a href="/campagnes">
+        <Icon name="campaign" /> Consulter les comptes de campagne
+      </a>
+    </p>
+  </div>
+  <div class="container">
+    <section class="section" id="parti">
+      <div class="section-head">
+        <h2>
+          <Icon name="politicalFinance" /> Les ressources d’un parti
+        </h2>
+        <p>Comptes d’ensemble déposés auprès de la CNCCFP, exercice 2024.</p>
+      </div>
+      <form method="get">
+        <label for="parti-select">Choisir un parti</label>
+        <div class="controls">
+          <select id="parti-select" name="parti">
+            {[...data.accounts]
+              .sort((a, b) => a.name.localeCompare(b.name, "fr"))
+              .map((row) => (
+                <option value={row.code} selected={row.code === party.code}>
+                  {row.name}
+                </option>
+              ))}
+          </select>
+          <button type="submit" class="button">
+            Afficher
+          </button>
+        </div>
+      </form>
+      <div class="card">
+        <BarList
+          caption={party.name}
+          items={resources.map((r) => ({
+            ...r,
+            value: Math.max(0, r.value),
+            display: formatEuros(r.value),
+            icon: "revenue",
+          }))}
+        />
+        {!party.reconciled && (
+          <p>
+            Les composantes et le total publiés diffèrent de{" "}
+            {formatEuros(party.component_difference)}. Ce compte est exclu des alertes de majorité
+            publique.
+          </p>
+        )}
+      </div>
+      <Provenance provenance={data.provenance} />
+    </section>
+    <section class="section" id="historique">
+      <div class="section-head">
+        <h2>
+          <Icon name="calendar" /> L’aide publique inscrite aux comptes depuis 2021
+        </h2>
+        <p>Montants comptabilisés, deux fractions et autres aides publiques.</p>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <ColumnChart
+            caption={party.name}
+            unit="Euros"
+            columns={data.selectedHistory.map((r) => ({
+              label: String(r.year),
+              value: r.public_aid,
+              display: formatEuros(r.public_aid),
+              detail: formatEuros(r.public_aid),
+            }))}
+          />
+          {data.selectedHistory.length < 4 && (
+            <p class="small muted">Les exercices absents ne valent pas zéro.</p>
+          )}
+        </div>
+        <div class="card">
+          <ColumnChart
+            caption="Cumul des comptes disponibles, non consolidé"
+            unit="Euros"
+            columns={years.map((r) => ({
+              label: String(r.year),
+              value: r.amount,
+              display: formatEuros(r.amount),
+              detail: formatEuros(r.amount),
+            }))}
+          />
+        </div>
+      </div>
+      <Explainer title="Pourquoi ce cumul diffère du décret d’aide publique">
+        <p>
+          Les comptes d’ensemble et les transferts entre formations peuvent faire compter plusieurs
+          fois un même financement. Le nombre de comptes disponibles varie aussi selon l’exercice.
+          Le cumul ne mesure pas la dépense nationale de l’État. Deux comptes en francs CFP et un
+          compte sans monnaie sont exclus de 2023.
+        </p>
+        <p>
+          Le <a href={data.decree.pageUrl}>{data.decree.name}</a> fixe la répartition légale de
+          l’aide de 2024. C’est une référence distincte des montants inscrits dans les comptes.
+        </p>
+      </Explainer>
+      <Provenance provenance={data.provenance} />
+    </section>
+    <section class="section" id="comptes">
+      <div class="section-head">
+        <h2>
+          <Icon name="list" /> Les comptes publiés pour 2024
+        </h2>
+        <p>Les quinze principaux produits déclarés, sans consolidation entre partis.</p>
+      </div>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Parti</th>
+              <th scope="col">Produits</th>
+              <th scope="col">Aide publique</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.accounts.slice(0, 15).map((r) => (
+              <tr>
+                <td>
+                  <a href={`?parti=${r.code}#parti`}>{r.name}</a>
+                  {!r.reconciled && (
+                    <span class="small muted block">Écart dans les composantes publiées</span>
+                  )}
+                </td>
+                <td>{formatEuros(r.resources)}</td>
+                <td>{formatEuros(r.public_aid)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p class="small">
+          <a href="/telechargements#democratie">Télécharger tous les comptes retenus</a>
+        </p>
+      </div>
+      <Explainer title="Les contrôles arithmétiques">
+        <p>
+          La somme des composantes des produits est comparée au total déclaré.{" "}
+          {formatNumber(discrepancies.length)} comptes de 2024 présentent un écart supérieur à un
+          euro :{" "}
+          {discrepancies
+            .map((r) => `${r.name} (${formatEuros(r.component_difference)})`)
+            .join(" ; ") || "aucun"}
+          . Les montants officiels sont conservés et les comptes concernés sont exclus des alertes.
+        </p>
+      </Explainer>
+      <Provenance provenance={data.provenance} />
+    </section>
+    <section class="section" id="alertes">
+      <div class="section-head">
+        <h2>
+          <Icon name="percent" /> Une majorité des produits issue de l’aide publique
+        </h2>
+        <p>
+          Seuil de lecture : plus de 50 % des produits 2024. Ce constat n’est pas une irrégularité.
+        </p>
+      </div>
+      <div class="card">
+        <BarList
+          caption="Part de l’aide publique dans les produits déclarés"
+          items={alerts.map((r) => ({
+            label: r.name,
+            value: (100 * r.public_aid) / r.resources,
+            display: formatPercent((100 * r.public_aid) / r.resources),
+            href: `?parti=${r.code}#parti`,
+            icon: "politicalFinance",
+          }))}
+        />
+      </div>
+      <Explainer title="Ce qui entre dans ce ratio">
+        <p>
+          Le numérateur comprend les deux fractions de l’<Term id="aide-partis">aide publique</Term>{" "}
+          et les autres aides publiques déclarées. Le dénominateur est le total des produits du
+          compte de résultat, y compris les produits financiers et exceptionnels. Une cotisation
+          d’élu reste une catégorie distincte.
+        </p>
+      </Explainer>
+      <Provenance provenance={data.provenance} />
+    </section>
+    <section class="section" id="privation">
+      <div class="section-head">
+        <h2>
+          <Icon name="info" /> Les pertes du bénéfice de l’aide publique publiées
+        </h2>
+        <p>Décisions relatives à 2024, dates de fin expressément renseignées par la CNCCFP.</p>
+      </div>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Parti</th>
+              <th scope="col">Motif CNCCFP</th>
+              <th scope="col">Fin publiée</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.losses.map((r) => (
+              <tr>
+                <td>{r.name}</td>
+                <td>{r.reason}</td>
+                <td>{formatDate(r.until_date)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Explainer title="Comment lire cette liste">
+        <p>
+          Les codes sont ceux de la CNCCFP. Une absence d’aide dans un compte ou une décision de
+          non-respect sans date de perte d’aide ne suffit pas à figurer ici. La situation est celle
+          du fichier officiel à la date de récupération.
+        </p>
+      </Explainer>
+      <Provenance provenance={data.lossesProvenance} />
+    </section>
+  </div>
+</Base>
+<style>
+  .block {
+    display: block;
+  }
+  form {
+    margin-bottom: 1rem;
+  }
+  label {
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  .controls {
+    display: flex;
+    gap: 0.5rem;
+  }
+  select {
+    min-width: 0;
+    flex: 1;
+  }
+  table {
+    table-layout: fixed;
+  }
+  th:first-child {
+    width: 46%;
+  }
+  td {
+    overflow-wrap: anywhere;
+    vertical-align: top;
+  }
+  @media (max-width: 500px) {
+    .controls {
+      flex-wrap: wrap;
+    }
+    select {
+      width: 100%;
+      flex-basis: 100%;
+    }
+    th,
+    td {
+      padding: 0.75rem 0.4rem;
+    }
+  }
+</style>

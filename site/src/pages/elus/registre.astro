@@ -1,0 +1,124 @@
+---
+import Democracy from "../../layouts/Democracy.astro";
+import Icon from "../../components/Icon.astro";
+import PublicTable from "../../components/PublicTable.astro";
+import PublicPagination from "../../components/PublicPagination.astro";
+import Provenance from "../../components/Provenance.astro";
+import BarList from "../../components/BarList.astro";
+import { getElectedRegister } from "../../lib/data";
+import { pageNumber, registerLabels } from "../../lib/democracy";
+import { formatDate, formatNumber } from "../../lib/format";
+const params = Astro.url.searchParams;
+const q = params.get("q") ?? "";
+const page = pageNumber(params.get("page"));
+const data = await getElectedRegister(q, page);
+const department = params.get("departement") ?? "";
+const stats = data.statistics.filter((r) => !department || r.department_code === department);
+const sum = (key: "mandate_kind" | "sex" | "age_band" | "department_code") =>
+  Object.entries(
+    stats.reduce<Record<string, number>>((a, r) => {
+      a[r[key]] = (a[r[key]] ?? 0) + r.records;
+      return a;
+    }, {}),
+  );
+const items = (key: "mandate_kind" | "sex" | "age_band" | "department_code") =>
+  sum(key).map(([label, value]) => ({
+    icon: "elected" as const,
+    label: key === "mandate_kind" ? (registerLabels[label] ?? label) : label,
+    value,
+    display: formatNumber(value),
+  }));
+---
+
+<Democracy
+  title="Répertoire national des élus"
+  description="Répartition des mandats du RNE et répertoire minimisé des maires, millésimes 2026."
+  icon="elected"
+  answer="Le RNE contient des lignes de mandats et de fonctions. Une même personne peut apparaître plusieurs fois. Les statistiques ci-dessous ne sont donc pas un nombre de personnes uniques."
+  figures={[
+    {
+      icon: "list",
+      label: "Lignes de mandats ou fonctions",
+      value: formatNumber(stats.reduce((n, r) => n + r.records, 0)),
+      note: department ? `Département ${department}` : "Douze catégories du RNE",
+    },
+    {
+      icon: "town",
+      label: "Lignes de maires",
+      value: formatNumber(
+        data.statistics.filter((r) => r.mandate_kind === "mai").reduce((n, r) => n + r.records, 0),
+      ),
+      note: "Millésime du 11 août 2026",
+    },
+  ]}
+  provenance={data.provenance}
+  sections={[
+    { id: "repartition", label: "Répartition", icon: "bars" },
+    { id: "maires", label: "Maires", icon: "town" },
+  ]}
+>
+  <section id="repartition" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="bars" />
+        Répartitions par mandat
+      </h2>
+    </div>
+    <form class="filters" method="get">
+      <label>
+        Code département
+        <input name="departement" value={department} />
+      </label>
+      <button type="submit">Filtrer les statistiques</button>
+    </form>
+    <div class="reference-grid">
+      <BarList caption="Type de mandat ou fonction" items={items("mandate_kind")} />
+      <BarList caption="Sexe, uniquement agrégé" items={items("sex")} />
+      <BarList caption="Âge au millésime du fichier, uniquement agrégé" items={items("age_band")} />
+    </div>
+    <details>
+      <summary>Répartition par département</summary>
+      <PublicTable
+        caption="Lignes de mandats ou fonctions, toutes catégories RNE"
+        columns={["Code département", "Lignes"]}
+        rows={sum("department_code")
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([code, value]) => [{ text: code }, { text: formatNumber(value) }])}
+      />
+    </details>
+    <p class="small muted">
+      Millésime d’août 2026, sauf AFE et conseillers consulaires : mai 2026. Pour les parlementaires
+      en exercice, consultez les répertoires AN et Sénat plus récents.
+    </p>
+    <Provenance provenance={data.provenance} />
+  </section>
+  <section id="maires" class="section">
+    <div class="section-head">
+      <h2>
+        <Icon name="town" />
+        Maires : fonctions publiques
+      </h2>
+    </div>
+    <form class="filters" method="get">
+      <label>
+        Nom ou commune
+        <input name="q" type="search" value={q} />
+      </label>
+      <button type="submit">Rechercher</button>
+    </form>
+    <PublicTable
+      caption="Identité publique, commune et date de fonction, sans naissance ni contact"
+      columns={["Nom", "Commune", "Début de fonction"]}
+      rows={data.executives.map((r) => [
+        { text: r.display_name, href: `/elus/locaux/${r.id}` },
+        {
+          text: `${r.territory_label} · ${r.department_code}`,
+          href: `/commune/${r.territory_code}`,
+        },
+        { text: formatDate(r.starts_on) },
+      ])}
+    />
+    <PublicPagination page={page} count={data.count} />
+    <Provenance provenance={data.provenance} />
+  </section>
+</Democracy>

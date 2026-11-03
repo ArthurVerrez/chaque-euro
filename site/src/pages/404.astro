@@ -1,0 +1,16 @@
+---
+import SearchForm from "../components/SearchForm.astro";
+import Base from "../layouts/Base.astro";
+---
+
+<Base title="Page introuvable" description="Cette page n'existe pas." noindex>
+  <header class="page-head">
+    <div class="container">
+      <h1>Page introuvable</h1>
+      <p class="lead">
+        Cette adresse ne correspond à aucune page. Cherchez une organisation ou une commune :
+      </p>
+      <SearchForm />
+    </div>
+  </header>
+</Base>
