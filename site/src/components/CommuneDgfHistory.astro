@@ -23,6 +23,7 @@ const data = await getCommuneDgfHistory();
   <div class="card">
     <LineChart
       caption="DGF comptabilisée par les communes, 2018-2025"
+      maxLabels={4}
       labels={data.history.map((row) => String(row.year))}
       series={[{ label: "DGF des communes", values: data.history.map((row) => row.amount) }]}
       format={formatEuros}
@@ -34,9 +35,9 @@ const data = await getCommuneDgfHistory();
       DGF des départements ni des intercommunalités. La couverture varie avec les comptes publiés.
     </p>
     <p>
-      Les attributions DGCL 2026 ne sont pas intégrées : le téléchargement DGCL était indisponible
-      lors de la vérification du 2 novembre 2026. Les comptes exécutés 2025 ne sont pas présentés
-      comme des allocations 2026.
+      Les attributions DGCL 2026 ne sont pas intégrées : le portail DGCL était en maintenance et
+      l’ancien téléchargement indisponible lors de la vérification du 4 novembre 2026. Les comptes
+      exécutés 2025 ne sont pas présentés comme des allocations 2026.
     </p>
   </Explainer>
   <Provenance provenance={data.provenance} />

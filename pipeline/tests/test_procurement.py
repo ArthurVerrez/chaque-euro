@@ -281,3 +281,81 @@ class ProcurementCompetitionTests(unittest.TestCase):
                     "select 1 from procurement_competition where label='222222222'"
                 ).fetchone()
             )
+
+
+class OrganisationOrderingTests(unittest.TestCase):
+    def test_tied_selections_labels_and_identifiers_ignore_input_order(self) -> None:
+        with duckdb.connect() as con:
+            con.execute("""
+                create table contract_rows as
+                select 'c' || lpad(i::varchar, 2, '0') as uid,
+                    'b' || lpad(i::varchar, 2, '0') as buyer_siren,
+                    'holder' as holder_siren, date '2025-01-01' as notified_on,
+                    'Z' as subject, case when i < 6 then 'Z' else 'A' end as holder_activity,
+                    'source-z' as source_url
+                from range(12) t(i);
+                insert into contract_rows select contract_rows.* replace (
+                    'other' || i as holder_siren, 'A' as subject,
+                    null as holder_activity, 'source-a' as source_url
+                ) from contract_rows cross join range(8) t(i) where uid = 'c00';
+                create table contract_amounts as
+                select uid, count(*) as holders, 10.0 as amount, 10.0 as declared_amount,
+                    null::varchar as amount_flag, false as amount_estimated, true as counted
+                from contract_rows group by uid;
+                create table identities as
+                select siren, siren as label, true as public, '5710' as legal_category,
+                    true as active
+                from (select buyer_siren as siren from contract_rows
+                    union select holder_siren from contract_rows);
+                create macro holder_label(siren, label) as label;
+                create macro org_kind(category) as 'Société';
+                create table grant_rows as select 'holder' as siren, 2025 as year,
+                    code as programme_code, 100.0 as amount, code as purpose
+                from (values ('2'), ('1')) t(code);
+                create table plrg_programmes as
+                select programme_code, programme_code as programme from grant_rows;
+                create table procurement_recent_uids (uid varchar);
+                create table boamp_input (buyer_id varchar);
+                create table approch_input (siren_de_l_entite_acheteuse varchar);
+                create table sanction_matches (siren varchar);
+            """)
+            for reverse in (False, True):
+                with self.subTest(reverse=reverse):
+                    if reverse:
+                        con.execute(
+                            "create or replace table contract_rows as "
+                            "select * from contract_rows order by uid desc, subject desc"
+                        )
+                        con.execute(
+                            "create or replace table grant_rows as "
+                            "select * from grant_rows order by programme_code"
+                        )
+                    con.execute((SQL / "40_orgs.sql").read_text())
+                    self.assertEqual(
+                        con.execute(
+                            "select uid from org_contract_uids where siren='holder' order by uid"
+                        ).fetchall(),
+                        [(f"c{i:02}",) for i in range(9)],
+                    )
+                    self.assertEqual(
+                        con.execute(
+                            "select counterpart_siren from org_counterparts "
+                            "where siren='holder' order by rank"
+                        ).fetchall(),
+                        [(f"b{i:02}",) for i in range(1, 9)],
+                    )
+                    self.assertEqual(
+                        con.execute("select activity from orgs where siren='holder'").fetchone(),
+                        ("A",),
+                    )
+                    self.assertEqual(
+                        con.execute("select programme_code from grants order by id").fetchall(),
+                        [("1",), ("2",)],
+                    )
+                    self.assertEqual(
+                        con.execute(
+                            "select subject, url from contracts c join source_files f "
+                            "on f.id=c.source_file_id where uid='c00'"
+                        ).fetchone(),
+                        ("A", "source-a"),
+                    )

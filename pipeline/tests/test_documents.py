@@ -187,6 +187,56 @@ class OfficialDocumentsTest(unittest.TestCase):
         rows = copy_rows(str(path), {"loi"})["loi"]
         self.assertEqual(rows, [{"id": "1", "title": "Texte\tavec\nretour\\fin", "empty": None}])
 
+    def test_directory_names_only_president_and_government_in_public_roles(self) -> None:
+        services = [
+            {
+                "id": str(index),
+                "nom": "Institution publique",
+                "type_organisme": "Administration centrale (ou Ministère)",
+                "statut_de_diffusion": "true",
+                "affectation_personne": [
+                    {
+                        "fonction": role,
+                        "personne": {"prenom": "Prénom", "nom": "Public", "naissance": "secret"},
+                    }
+                ],
+            }
+            for index, role in enumerate(
+                (
+                    "Président de la République",
+                    "Premier ministre",
+                    "Ministre",
+                    "Ministre déléguée",
+                    "Garde des Sceaux, ministre",
+                    "Directeur de cabinet du ministre",
+                    "Président du conseil",
+                    "Ancien ministre",
+                )
+            )
+        ]
+        services.append({**services[0], "id": "hidden", "statut_de_diffusion": "false"})
+        services.append({**services[0], "id": "draft", "version_type": "Projet"})
+        services.append(
+            {
+                **services[0],
+                "id": "vacant",
+                "affectation_personne": [{"fonction": "Ministre", "personne": {}}],
+            }
+        )
+        path = self.path / "services.json"
+        path.write_text(json.dumps(services))
+        rows = administrative_rows(str(path), self.sources["roae"])["administrations"]
+        self.assertEqual([row[0] for row in rows if row[-2]], [str(i) for i in range(5)])
+        self.assertNotIn("secret", str(rows))
+        self.assertFalse(
+            any(
+                row[-2]
+                for row in administrative_rows(str(path), self.sources["annuaire-etat"])[
+                    "administrations"
+                ]
+            )
+        )
+
     def test_directory_excludes_people_and_non_diffusible_services(self) -> None:
         path = self.path / "services.json"
         path.write_text(

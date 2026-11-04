@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import type { ConstituencyGeometry } from "./constituencies";
 import { NBSP } from "./format";
 import { pageNumber } from "./democracy";
 import { normalizeSearch, searchTopics } from "./topics";
@@ -16,10 +17,18 @@ export interface Source {
   licence: { name: string; url: string };
   frequency: string;
   dataDate: string | null;
-  freshness: "à jour" | "à surveiller" | "en attente d’une nouvelle édition";
+  freshness:
+    | "à jour"
+    | "à surveiller"
+    | "en attente d’une nouvelle édition"
+    | "référence"
+    | "date non précisée";
+  downloadExpected: boolean;
   usage: string;
   limits: string[];
   retrievedAt: string | null;
+  checkedAt: string | null;
+  refreshFailed: boolean;
   publishedAt: string | null;
   coverage: string | null;
   rows: number | null;
@@ -145,6 +154,9 @@ export interface OrganisationGroup {
     siren: string;
     name: string;
     parentSiren: string | null;
+    parentKind: "root" | "direct" | "ultimate";
+    evidence: SourceCitation;
+    reference: string;
     amounts: Record<GroupMeasure, GroupAmount | null>;
   }[];
   totals: Record<GroupMeasure, GroupAmount | null>;
@@ -163,14 +175,14 @@ export async function getOrganisationGroup(siren: string): Promise<OrganisationG
          order by m.parent_siren is not null,
            exists (select 1 from org_group_amounts a
              where a.group_siren = m.group_siren and a.siren = m.siren
-               and a.year = cast(substr(g.as_of, 1, 4) as integer)) desc,
+               and a.year = g.amount_year) desc,
            m.name`,
       )
       .bind(siren),
     db()
       .prepare(
         `select a.* from org_group_amounts a join org_groups g on g.siren = a.group_siren
-         where a.group_siren in (${groupFilter}) and a.year = cast(substr(g.as_of, 1, 4) as integer)`,
+         where a.group_siren in (${groupFilter}) and a.year = g.amount_year`,
       )
       .bind(siren),
     db().prepare(SOURCES_QUERY),
@@ -208,24 +220,28 @@ export async function getOrganisationGroup(siren: string): Promise<OrganisationG
       ]),
     ),
   ];
-  const references = [
-    ...new Set(
-      memberRows.flatMap((row) => [
-        `${index.get(row["source_id"] as string).shortName} : ${row["source_ref"] as string}`,
-        `${index.get(row["identifier_source_id"] as string).shortName} : ${row["identifier_ref"] as string}`,
-      ]),
-    ),
-  ].join(" ; ");
   return {
     siren: group["siren"] as string,
     name: group["name"] as string,
     asOf: group["as_of"] as string,
-    year: Number((group["as_of"] as string).slice(0, 4)),
+    year: group["amount_year"] as number,
     analysisPath: group["analysis_path"] as string | null,
     members: memberRows.map((row) => ({
       siren: row["siren"] as string,
       name: row["name"] as string,
       parentSiren: row["parent_siren"] as string | null,
+      parentKind: row["parent_kind"] as "root" | "direct" | "ultimate",
+      evidence:
+        row["identifier_source_id"] === "gleif-entities"
+          ? index.cite("gleif-entities", {
+              lei: row["identifier_ref"] as string,
+            })
+          : index.cite(row["source_id"] as string),
+      reference:
+        row["identifier_source_id"] !== "gleif-entities" &&
+        row["identifier_ref"] !== row["source_ref"]
+          ? `${row["source_ref"] as string} ; identité : ${index.get(row["identifier_source_id"] as string).shortName}, ${row["identifier_ref"] as string}`
+          : (row["source_ref"] as string),
       amounts: Object.fromEntries(
         GROUP_MEASURES.map((measure) => [
           measure,
@@ -238,12 +254,14 @@ export async function getOrganisationGroup(siren: string): Promise<OrganisationG
     totals,
     provenance: index.provenance(
       [...evidence.map((id) => index.cite(id)), index.cite("sirene")],
-      `Liens de contrôle expressément publiés, identifiants vérifiés. Aucun rapprochement par nom. ${references}. Les identités diffusables proviennent de Sirene. Périmètre partiel au 31 décembre 2025.`,
-      "pipeline/sql/38_organisation_groups.sql",
+      `Liens expressément publiés, identifiants vérifiés. Aucun rapprochement par nom. Les identités diffusables proviennent de Sirene. Périmètre partiel au ${group["as_of"] as string}. Les liens GLEIF portent sur la consolidation comptable ultime, avec au moins deux organisations de notre base. Le périmètre SNCF issu des comptes annuels est conservé en priorité. Les groupes à mère étrangère ne sont pas couverts ici.`,
+      group["analysis_path"]
+        ? "pipeline/sql/38_organisation_groups.sql"
+        : "pipeline/sql/40a_organisation_gleif_groups.sql",
     ),
     moneyProvenance: index.provenance(
       [index.cite("decp"), index.cite("jaune-associations")],
-      "Somme des seules entités listées, par mesure et année civile. Les marchés sont rattachés à leur notification initiale ; le montant est partagé entre cotitulaires. Montants non exploitables exclus, estimations conservées. Les versements restent dans leur année propre. Aucune somme entre marchés remportés, marchés attribués et versements. Le périmètre 2025 est appliqué aux données de 2025, sans reconstitution des dates d'entrée et de sortie. Les flux entre entités du groupe ne sont pas éliminés. Une absence de ligne ne prouve pas un montant nul.",
+      `Somme des seules entités listées, par mesure et année civile. Les marchés sont rattachés à leur notification initiale ; le montant est partagé entre cotitulaires. Montants non exploitables exclus, estimations conservées. Les versements restent dans leur année propre. Aucune somme entre marchés remportés, marchés attribués et versements. Le périmètre du ${group["as_of"] as string} est appliqué aux données de ${group["amount_year"] as number}, sans reconstitution des dates d'entrée et de sortie. Les flux entre entités du groupe ne sont pas éliminés. Une absence de ligne ne prouve pas un montant nul.`,
       "pipeline/sql/40a_organisation_group_amounts.sql",
     ),
   };
@@ -413,7 +431,7 @@ export interface StateBudget {
 }
 
 export interface SearchResult {
-  group: "Thèmes" | "Élus" | "Communes" | "Organisations";
+  group: "Thèmes" | "Responsables publics" | "Élus" | "Communes" | "Organisations";
   icon: IconName;
   kind: string;
   name: string;
@@ -511,6 +529,9 @@ interface SourceRow {
   usage: string;
   limits: string;
   retrieved_at: string | null;
+  checked_at: string | null;
+  refresh_error: string | null;
+  download_expected: number;
   published_at: string | null;
   coverage: string | null;
   rows: number | null;
@@ -521,13 +542,17 @@ interface SourceRow {
 function toSource(row: SourceRow): Source {
   const age = (date: string | null) =>
     date ? (Date.now() - new Date(date).getTime()) / 86400000 : Infinity;
-  const freshness: Source["freshness"] = !row.freshness_retrieval_days
-    ? "en attente d’une nouvelle édition"
-    : age(row.retrieved_at) > row.freshness_retrieval_days || !row.data_date
-      ? "à surveiller"
-      : age(row.data_date) > row.freshness_data_days
-        ? "en attente d’une nouvelle édition"
-        : "à jour";
+  const freshness: Source["freshness"] = row.refresh_error
+    ? "à surveiller"
+    : !row.download_expected
+      ? "référence"
+      : row.freshness_retrieval_days > 0 && age(row.checked_at) > row.freshness_retrieval_days
+        ? "à surveiller"
+        : !row.data_date
+          ? "date non précisée"
+          : row.freshness_data_days > 0 && age(row.data_date) > row.freshness_data_days
+            ? "en attente d’une nouvelle édition"
+            : "à jour";
   return {
     id: row.id,
     shortName: row.short_name,
@@ -541,9 +566,12 @@ function toSource(row: SourceRow): Source {
     frequency: row.frequency,
     dataDate: row.data_date,
     freshness,
+    downloadExpected: Boolean(row.download_expected),
     usage: row.usage,
     limits: JSON.parse(row.limits) as string[],
     retrievedAt: row.retrieved_at,
+    checkedAt: row.checked_at,
+    refreshFailed: Boolean(row.refresh_error),
     publishedAt: row.published_at,
     coverage: row.coverage,
     rows: row.rows,
@@ -1428,7 +1456,7 @@ export async function search(query: string): Promise<SearchResult[]> {
   if (!match) return [];
   const { results } = await db()
     .prepare(
-      "select name, kind, ref, detail, weight from search where search match ?1 order by rank limit 80",
+      "select name, kind, ref, detail, weight from search where search match ?1 order by kind = 'Responsable public' desc, rank limit 80",
     )
     .bind(match)
     .all<{ name: string; kind: string; ref: string; detail: string; weight: number }>();
@@ -1437,21 +1465,37 @@ export async function search(query: string): Promise<SearchResult[]> {
     .sort(
       (a, b) =>
         Number(normalizeSearch(b.name) === normalized) -
-          Number(normalizeSearch(a.name) === normalized) || b.weight - a.weight,
+          Number(normalizeSearch(a.name) === normalized) ||
+        Number(b.kind === "Responsable public") - Number(a.kind === "Responsable public") ||
+        b.weight - a.weight,
     )
     .slice(0, 20)
     .map((row) => ({
-      group: row.kind === "Commune" ? "Communes" : row.kind === "Élu" ? "Élus" : "Organisations",
-      icon: row.kind === "Élu" ? "elected" : kindIcon(row.kind),
+      group:
+        row.kind === "Commune"
+          ? "Communes"
+          : row.kind === "Responsable public"
+            ? "Responsables publics"
+            : row.kind === "Élu"
+              ? "Élus"
+              : "Organisations",
+      icon:
+        row.kind === "Responsable public"
+          ? "state"
+          : row.kind === "Élu"
+            ? "elected"
+            : kindIcon(row.kind),
       kind: row.kind,
       name: row.name,
       detail: row.detail,
       href:
         row.kind === "Commune"
           ? `/commune/${row.ref}`
-          : row.kind === "Élu"
-            ? `/elus/${row.ref}`
-            : `/organisation/${row.ref}`,
+          : row.kind === "Responsable public"
+            ? `/administrations/${row.ref}`
+            : row.kind === "Élu"
+              ? `/elus/${row.ref}`
+              : `/organisation/${row.ref}`,
     }));
   const topics: SearchResult[] = searchTopics(query).map((topic) => ({
     group: "Thèmes",
@@ -1461,7 +1505,7 @@ export async function search(query: string): Promise<SearchResult[]> {
     icon: topic.icon,
     detail: "",
   }));
-  const order = ["Thèmes", "Élus", "Communes", "Organisations"];
+  const order = ["Thèmes", "Responsables publics", "Élus", "Communes", "Organisations"];
   return [...topics, ...entities].sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group));
 }
 
@@ -2752,6 +2796,8 @@ export interface Administration {
   acronym: string | null;
   category: string;
   organism_type: string | null;
+  head_name: string | null;
+  head_role: string | null;
   siren: string | null;
   commune_code: string | null;
   record_url: string | null;
@@ -2771,6 +2817,9 @@ export async function getAdministrations(params: URLSearchParams) {
     filters.push("category = ?");
     values.push(params.get("categorie")!);
   }
+  if (params.get("gouvernement") === "1") {
+    filters.push("head_name is not null and head_role != 'Président de la République'");
+  }
   const where = filters.length ? `where ${filters.join(" and ")}` : "";
   const [rows, total, categories, provenance] = await Promise.all([
     db()
@@ -2788,7 +2837,7 @@ export async function getAdministrations(params: URLSearchParams) {
       .all<DocumentCount>(),
     documentProvenance(
       ["roae", "annuaire-etat"],
-      "ROAE national et préfectures/sous-préfectures de l'annuaire DILA, dédupliqués par UUID. Seuls nom, sigle, catégorie, identifiants institutionnels, rattachements et lien officiel sont publiés. Aucun annuaire de personnes. La présence d'un service ne prouve ni compétence territoriale ni budget propre. Les ministères et directions sont repérés par leur nom, pas par le type générique Administration centrale.",
+      "ROAE national et préfectures/sous-préfectures de l'annuaire DILA, dédupliqués par UUID. Seuls nom, sigle, catégorie, identifiants institutionnels, rattachements et lien officiel sont publiés. Seuls le président de la République et les membres du gouvernement du ROAE sont nommés dans leur rôle public. La présence d'un service ne prouve ni compétence territoriale ni budget propre. Les ministères et directions sont repérés par leur nom, pas par le type générique Administration centrale.",
       "pipeline/sql/67_administrations.sql",
     ),
   ]);
@@ -2828,7 +2877,7 @@ export async function getAdministration(id: string) {
       .all<{ insee: string; name: string }>(),
     documentProvenance(
       [row.source_id, "annuaire-competence"],
-      "Fiche institutionnelle diffusée par DILA, sans responsables, coordonnées nominatives ni champs libres. Les liens d'organisation conservent les rattachements multiples. Un identifiant SIREN absent reste absent.",
+      "Fiche institutionnelle diffusée par DILA. Seuls le président de la République et les membres du gouvernement sont nommés dans leur rôle public, à la date de la source. Les autres responsables, les coordonnées et les champs libres sont exclus. Les liens d'organisation conservent les rattachements multiples. Un identifiant SIREN absent reste absent.",
       "pipeline/sql/67_administrations.sql",
     ),
   ]);
@@ -3770,6 +3819,41 @@ export interface CommuneChoice {
   departmentName: string;
 }
 
+export async function getAddressLookup() {
+  const sources = await democracySources();
+  return {
+    endpoint: sources.get("ban-geocoding").recordUrl,
+    provenance: sources.provenance(
+      [sources.cite("ban-geocoding"), sources.cite("insee-constituency-contours")],
+      "Géocodage BAN confirmé par le visiteur, puis calcul dans son navigateur. Contours officiels Insee simplifiés : résultat indicatif, jamais une preuve de rattachement électoral. Aucun résultat à moins de 200 mètres d’une limite ; ce seuil de prudence ne garantit pas la précision des contours. Communes non partagées : table de correspondance Insee, sans polygones.",
+      "pipeline/sql/59_constituency_shapes.sql",
+    ),
+  };
+}
+
+export async function getAddressConstituencies(insee: string) {
+  const [local, lookup] = await Promise.all([getCommuneRepresentatives(insee), getAddressLookup()]);
+  const split = new Set(local.deputies.map((deputy) => deputy.constituency)).size > 1;
+  const shapes = split
+    ? await democracyRows<{ constituency: number; geometry: string }>(
+        "select constituency,geometry from constituency_shapes where insee=? order by constituency",
+        [insee],
+      )
+    : [];
+  return {
+    commune: local.commune,
+    deputies: local.deputies,
+    shapes: shapes.map((shape) => ({
+      constituency: shape.constituency,
+      geometry: JSON.parse(shape.geometry) as ConstituencyGeometry,
+    })),
+    provenance: {
+      ...lookup.provenance,
+      citations: [...local.provenance.citations, ...lookup.provenance.citations],
+    },
+  };
+}
+
 export async function getCommuneRepresentatives(query: string) {
   const match = ftsQuery(query);
   const communes = !match
@@ -3830,42 +3914,49 @@ export async function getCommuneRepresentatives(query: string) {
 }
 
 export async function getCommuneFunctions(insee: string, year: number) {
-  const [rows, sources] = await Promise.all([
+  const [rows, years, sources] = await Promise.all([
     democracyRows<
       Omit<FinanceLine, "amount"> & { amount: number | null; peers: number; nomenclature: string }
     >(
       `with budget as (
-         select distinct nomenclature from commune_functions where insee=?1 and year=?2
+         select distinct nomenclature,section from commune_functions where insee=?1 and year=?2
        ), labels as (
-         select l.* from commune_function_labels l join budget b using(nomenclature)
-         union all select nomenclature,'unallocated','Sans ventilation par service',999 from budget
+         select l.*,b.section from commune_function_labels l join budget b using(nomenclature)
+         union all select nomenclature,'unallocated','Sans ventilation par service',999,section from budget
        )
-       select l.function_code as item,l.label,'fonction' as section,l.nomenclature,
+       select l.function_code as item,l.label,l.section,l.nomenclature,
          f.amount,f.per_capita as perCapita,
          s.median_per_capita as median,
          coalesce(s.communes,0) as peers
        from labels l left join commune_functions f on f.insee=?1 and f.year=?2
-         and f.nomenclature=l.nomenclature and f.function_code=l.function_code
+         and f.nomenclature=l.nomenclature and f.section=l.section and f.function_code=l.function_code
        left join commune_years y on y.insee=f.insee and y.year=f.year
        left join commune_function_strata s on s.stratum=y.stratum and s.year=f.year
-         and s.nomenclature=f.nomenclature and s.function_code=f.function_code
-       order by l.sort`,
+         and s.nomenclature=f.nomenclature and s.section=f.section and s.function_code=f.function_code
+       order by l.section,l.sort`,
       [insee, year],
+    ),
+    democracyRows<{ year: number }>(
+      "select distinct year from commune_functions where insee=? order by year desc",
+      [insee],
     ),
     democracySources(),
   ]);
   return {
     year,
+    insee,
+    years: years.map((row) => row.year),
     lines: rows.flatMap((r) => (r.amount === null ? [] : [{ ...r, amount: r.amount }])),
-    unavailable: rows.filter((r) => r.amount === null).map((r) => r.label),
+    unavailable: [...new Set(rows.filter((r) => r.amount === null).map((r) => r.label))],
     provenance: sources.provenance(
       [
-        sources.cite("dgfip-fonctions-2025"),
+        sources.cite(`dgfip-fonctions-${year === 2024 ? 2024 : 2025}`),
+        sources.cite("cgct-fonctions-2025"),
         sources.cite("ofgl-communes", { insee, year }),
         sources.cite("dgfip-fonctions-notice"),
         sources.cite("dgcl-nomenclatures"),
       ],
-      "Budget principal uniquement. Somme des opérations budgétaires au débit des comptes de classe 6, nettes des annulations, opérations d’ordre comprises. Hors investissement et budgets annexes. En M57 votée par fonction, le préfixe de chapitre 93 est retiré ; les autres chapitres spéciaux restent sans ventilation par service. Regroupement au plus long préfixe M14 ou M57. Division par la population OFGL de la même année. Médiane sur les communes publiant le service, de même strate, année et nomenclature, à partir de cinq communes. Paris comprend aussi les dépenses départementales : son périmètre diffère de celui des autres communes. Les absences ne sont pas remplacées par zéro.",
+      "Budget principal uniquement. Opérations budgétaires au débit nettes des annulations, opérations d’ordre comprises. Fonctionnement : classe 6. Investissement en équipements et immobilisations : comptes 20 à 23, subventions d’équipement comprises. Hors remboursements de dette, actifs financiers, opérations pour compte de tiers et budgets annexes. Ces immobilisations ne représentent pas toute la section d’investissement. En M57 votée par fonction, les préfixes de chapitre 90 et 93 sont retirés ; les autres chapitres spéciaux restent sans ventilation par service. Regroupement au plus long préfixe M14 ou M57. Division par la population OFGL de la même année. Médiane sur les communes publiant le service, de même strate, année, section et nomenclature, à partir de cinq communes. Paris comprend aussi les dépenses départementales : son périmètre diffère de celui des autres communes. Les absences ne sont pas remplacées par zéro.",
       "pipeline/sql/58_commune_functions.sql",
     ),
   };

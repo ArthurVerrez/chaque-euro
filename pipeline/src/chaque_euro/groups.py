@@ -102,3 +102,8 @@ def validate(con: duckdb.DuckDBPyConnection) -> None:
     ).fetchone()
     if count != (12,):
         raise ValueError("SNCF 2025: expected 12 public legal entities")
+    duplicate = con.execute(
+        "select siren from org_group_members group by siren having count(*) > 1 limit 1"
+    ).fetchone()
+    if duplicate:
+        raise ValueError("Organisation assigned to more than one documented group")

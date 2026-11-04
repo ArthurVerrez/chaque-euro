@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Chaque Euro</title>
+    <style>
+      @font-face {
+        font-family: Inter;
+        src: url("../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2");
+        font-weight: 100 900;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        width: 1200px;
+        height: 630px;
+        background: #f5f7fb;
+        color: #0d2149;
+        font-family: Inter, sans-serif;
+      }
+      main {
+        height: 100%;
+        padding: 72px 80px;
+        border-top: 12px solid #0d2149;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+      }
+      .brand img {
+        width: 96px;
+        height: 96px;
+      }
+      .brand span {
+        font-size: 42px;
+        font-weight: 750;
+        letter-spacing: -1.5px;
+      }
+      h1 {
+        margin: 60px 0 24px;
+        font-size: 76px;
+        line-height: 1.1;
+        font-weight: 750;
+        letter-spacing: -3px;
+      }
+      p {
+        margin: 0;
+        max-width: 900px;
+        font-size: 32px;
+        line-height: 1.5;
+        color: #3b4556;
+      }
+      .line {
+        width: 72px;
+        height: 5px;
+        margin-top: 48px;
+        background: #2a78d6;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand"><img src="../public/logo.svg" alt="" /><span>Chaque Euro</span></div>
+      <h1>Où va l’argent public&nbsp;?</h1>
+      <p>Votre commune, l’État, vos élus : des chiffres sourcés.</p>
+      <div class="line"></div>
+    </main>
+  </body>
+</html>

@@ -15,7 +15,7 @@ const params = Astro.url.searchParams;
 
 <Base
   title="Les administrations de l'État"
-  description="Ministères, directions et services territoriaux, sans annuaire de personnes."
+  description="Ministères, membres du gouvernement, directions et services territoriaux, selon la DILA."
 >
   <DocumentContent>
     <header class="page-head">
@@ -61,6 +61,15 @@ const params = Astro.url.searchParams;
               ))}
             </select>
           </label>
+          <label class="document-checkbox">
+            <input
+              type="checkbox"
+              name="gouvernement"
+              value="1"
+              checked={params.get("gouvernement") === "1"}
+            />
+            Membres du gouvernement
+          </label>
           <button type="submit">Filtrer</button>
           <a href="/administrations">Réinitialiser</a>
         </form>
@@ -76,6 +85,11 @@ const params = Astro.url.searchParams;
               <h3>
                 <a href={`/administrations/${row.id}`}>{row.name_public}</a>
               </h3>
+              {row.head_name && (
+                <p>
+                  {row.head_name} · {row.head_role}
+                </p>
+              )}
             </li>
           ))}
         </ol>

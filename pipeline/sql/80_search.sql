@@ -3,7 +3,7 @@ select
     name,
     kind,
     siren as ref,
-    coalesce(activity, '') as detail,
+    coalesce(activity::varchar, '') as detail,
     won_amount + awarded_amount + grants_amount as weight
 from orgs
 union all
@@ -30,4 +30,8 @@ select
         group_label
     ),
     active
-from public_people;
+from public_people
+union all
+select head_name, 'Responsable public', id,
+    head_role || ' · ' || name_public, 2
+from administrations where head_name is not null;

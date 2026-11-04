@@ -1,0 +1,211 @@
+---
+import Explainer from "./Explainer.astro";
+import Icon from "./Icon.astro";
+import Provenance from "./Provenance.astro";
+import Term from "./Term.astro";
+import { getAddressLookup } from "../lib/data";
+
+const lookup = await getAddressLookup();
+---
+
+<div id="address-lookup" data-geocoder={lookup.endpoint} hidden>
+  <form class="filters" aria-describedby="address-privacy">
+    <label>
+      Votre adresse
+      <input
+        id="deputy-address"
+        type="text"
+        placeholder="Numéro, rue et commune"
+        autocomplete="off"
+        maxlength="200"
+        required
+      />
+    </label>
+    <button type="submit">Chercher par adresse</button>
+  </form>
+  <p id="address-privacy" class="small muted">
+    Votre adresse est envoyée au service d’adresses de l’État et n’est pas conservée par Chaque
+    Euro.
+  </p>
+  <p id="address-status" role="status" aria-atomic="true" tabindex="-1"></p>
+  <ul id="address-choices" class="chips" aria-label="Adresses proposées"></ul>
+  <div id="address-result" hidden>
+    <h3>
+      <Icon name="elected" size={20} /> Député correspondant
+    </h3>
+    <p id="address-deputy"></p>
+    <p id="address-certainty" class="small muted"></p>
+  </div>
+  <p>
+    <a id="address-commune" hidden>
+      Voir les représentants de la commune
+    </a>
+  </p>
+  <Explainer title="Précision et sources">
+    <p>
+      Vous confirmez l’adresse proposée par la Base Adresse Nationale. Seul le code de la commune
+      parvient à Chaque Euro. Le point géocodé et le calcul restent dans votre navigateur.
+    </p>
+    <p>
+      Pour les communes partagées entre plusieurs{" "}
+      <Term id="circonscription-legislative">circonscriptions législatives</Term>, le résultat est
+      indicatif : les contours officiels de l’Insee sont simplifiés. Aucun député n’est désigné à
+      moins de 200 mètres d’une limite. Ce seuil de prudence ne garantit pas la précision des
+      contours. Pour confirmer votre rattachement, consultez votre mairie. Sans JavaScript ou si le
+      service est indisponible, utilisez la recherche par commune.
+    </p>
+    <Provenance provenance={lookup.provenance} />
+  </Explainer>
+</div>
+
+<script>
+  import { communeCode, constituencyAt, type Position } from "../lib/constituencies";
+  import type { getAddressConstituencies } from "../lib/data";
+
+  interface AddressFeature {
+    geometry: { type: string; coordinates: Position };
+    properties: { label: string; citycode: string; score: number; type: string };
+  }
+
+  const root = document.querySelector<HTMLElement>("#address-lookup");
+  const form = root?.querySelector("form");
+  const input = root?.querySelector<HTMLInputElement>("#deputy-address");
+  const submit = form?.querySelector("button");
+  const status = root?.querySelector<HTMLElement>("#address-status");
+  const choices = root?.querySelector<HTMLElement>("#address-choices");
+  const result = root?.querySelector<HTMLElement>("#address-result");
+  const deputy = root?.querySelector<HTMLElement>("#address-deputy");
+  const certainty = root?.querySelector<HTMLElement>("#address-certainty");
+  const commune = root?.querySelector<HTMLAnchorElement>("#address-commune");
+  const endpoint = root?.dataset.geocoder;
+
+  if (
+    root &&
+    form &&
+    input &&
+    submit &&
+    status &&
+    choices &&
+    result &&
+    deputy &&
+    certainty &&
+    commune &&
+    endpoint
+  ) {
+    let request = 0;
+
+    const selectAddress = async (feature: AddressFeature) => {
+      const current = ++request;
+      choices.replaceChildren();
+      status.textContent = "Recherche de la circonscription…";
+      status.focus();
+      submit.disabled = true;
+      const code = communeCode(feature.properties.citycode);
+      try {
+        const response = await fetch(`/elus/circonscriptions/${code}.json`, {
+          signal: AbortSignal.timeout(12000),
+        });
+        if (!response.ok) throw new Error();
+        const local: Awaited<ReturnType<typeof getAddressConstituencies>> = await response.json();
+        if (current !== request) return;
+        const numbers = new Set(local.deputies.map((person) => person.constituency));
+        const split = numbers.size > 1;
+        const complete =
+          numbers.size === new Set(local.shapes.map((shape) => shape.constituency)).size;
+        const number = split
+          ? complete
+            ? constituencyAt(feature.geometry.coordinates, local.shapes)
+            : null
+          : local.deputies[0]?.constituency;
+        const people = local.deputies.filter((person) => person.constituency === number);
+        commune.href = `/elus?commune=${code}#trouver`;
+        commune.hidden = false;
+        const person = people[0];
+        if (people.length !== 1 || !person?.id || !person.name) {
+          status.textContent =
+            "Cette adresse ne permet pas de désigner un député avec assez de précision. Consultez les représentants de votre commune ou votre mairie.";
+          return;
+        }
+        const link = document.createElement("a");
+        link.href = `/elus/${person.id}`;
+        link.textContent = person.name;
+        deputy.replaceChildren(
+          link,
+          ` · ${number}${number === 1 ? "re" : "e"} circonscription (${local.commune?.department})`,
+        );
+        certainty.textContent = split
+          ? "Résultat indicatif selon les contours simplifiés de l’Insee."
+          : "Commune rattachée à une seule circonscription selon l’Insee.";
+        result.hidden = false;
+        status.classList.add("visually-hidden");
+        status.textContent = `${person.name}, ${number}${number === 1 ? "re" : "e"} circonscription. ${certainty.textContent}`;
+        link.focus();
+        choices.replaceChildren();
+      } catch {
+        if (current === request)
+          status.textContent = "Recherche indisponible. Utilisez la recherche par commune.";
+      } finally {
+        if (current === request) submit.disabled = false;
+      }
+    };
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const current = ++request;
+      status.classList.remove("visually-hidden");
+      result.hidden = true;
+      commune.hidden = true;
+      choices.replaceChildren();
+      status.textContent = "Recherche de l’adresse…";
+      submit.disabled = true;
+      const url = new URL(endpoint);
+      url.search = new URLSearchParams({
+        q: input.value.trim(),
+        index: "address",
+        limit: "5",
+        autocomplete: "0",
+      }).toString();
+      try {
+        const response = await fetch(url, {
+          credentials: "omit",
+          referrerPolicy: "no-referrer",
+          cache: "no-store",
+          signal: AbortSignal.timeout(12000),
+        });
+        if (!response.ok) throw new Error();
+        const data: { features?: AddressFeature[] } = await response.json();
+        if (current !== request) return;
+        const features = (data.features ?? []).filter(
+          (feature) =>
+            feature.properties?.type === "housenumber" &&
+            feature.properties.score >= 0.65 &&
+            typeof feature.properties.label === "string" &&
+            /^[0-9][0-9AB][0-9]{3}$/.test(feature.properties.citycode) &&
+            feature.geometry?.type === "Point" &&
+            feature.geometry.coordinates.length === 2 &&
+            feature.geometry.coordinates.every(Number.isFinite),
+        );
+        status.textContent = features.length
+          ? "Confirmez votre adresse parmi les propositions."
+          : "Adresse non trouvée avec assez de précision. Ajoutez le numéro, la rue et la commune, ou recherchez par commune.";
+        for (const feature of features) {
+          const item = document.createElement("li");
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = feature.properties.label;
+          button.addEventListener("click", () => void selectAddress(feature));
+          item.appendChild(button);
+          choices.appendChild(item);
+        }
+        choices.querySelector("button")?.focus();
+      } catch {
+        if (current === request)
+          status.textContent =
+            "Service d’adresses indisponible. Utilisez la recherche par commune.";
+      } finally {
+        if (current === request) submit.disabled = false;
+      }
+    });
+    root.hidden = false;
+  }
+</script>

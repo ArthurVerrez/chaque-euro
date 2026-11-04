@@ -32,13 +32,17 @@ create or replace table commune_function_rows as
 with normalized as (
     select exer::integer as year, ident, siren,
         case when starts_with(nomen, 'M57') then 'M57' else nomen end as nomenclature,
-        case when starts_with(nomen, 'M57') and starts_with(fonction, '93')
+        case when starts_with(compte, '6') then 'fonctionnement'
+            else 'investissement' end as section,
+        case when starts_with(nomen, 'M57')
+            and (starts_with(fonction, '93') or starts_with(fonction, '90'))
             then nullif(substr(fonction, 3), '')
             when starts_with(nomen, 'M57') and regexp_matches(fonction, '^9[0-9]')
             then null else fonction end as function_code,
         obnetdeb::double as amount
-    from read_csv(getvariable('commune_functions_path'), all_varchar=true)
-    where cbudg='1' and (nomen in ('M14', 'M57', 'M57A')) and starts_with(compte, '6')
+    from read_csv(getvariable('commune_functions_path'), all_varchar=true, union_by_name=true)
+    where cbudg='1' and (nomen in ('M14', 'M57', 'M57A'))
+        and (starts_with(compte, '6') or regexp_matches(compte, '^2[0-3]'))
 ), labelled as (
     select r.*, l.function_code as service_code
     from normalized r left join lateral (
@@ -50,19 +54,19 @@ with normalized as (
 select * from labelled;
 
 create or replace table commune_functions as
-select c.insee, r.year, r.nomenclature,
+select c.insee, r.year, r.nomenclature, r.section,
     coalesce(r.service_code, 'unallocated') as function_code,
     sum(r.amount) as amount,
     sum(r.amount)/nullif(y.population,0) as per_capita
 from commune_function_rows r
-join communes c on c.siren=r.siren
+join (select distinct insee,year,siren from ofgl_rows) c on c.siren=r.siren and c.year=r.year
 join commune_years y on y.insee=c.insee and y.year=r.year
 where exists (select 1 from commune_function_rows v where v.siren=r.siren
-    and v.year=r.year and v.service_code is not null)
-group by c.insee,r.year,r.nomenclature,r.service_code,y.population;
+    and v.year=r.year and v.section=r.section and v.service_code is not null)
+group by c.insee,r.year,r.nomenclature,r.section,r.service_code,y.population;
 
 create or replace table commune_function_strata as
-select y.stratum, f.year, f.nomenclature, f.function_code,
+select y.stratum, f.year, f.nomenclature, f.section, f.function_code,
     case when count(*)>=5 then median(f.per_capita) end as median_per_capita,
     count(*) as communes
 from commune_functions f join commune_years y using(insee,year)

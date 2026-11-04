@@ -22,7 +22,10 @@ CREATE TABLE sources (
   value REAL,
   data_date TEXT,
   freshness_retrieval_days INTEGER NOT NULL,
-  freshness_data_days INTEGER NOT NULL
+  freshness_data_days INTEGER NOT NULL,
+  checked_at TEXT,
+  refresh_error TEXT,
+  download_expected INTEGER NOT NULL
 );
 
 CREATE TABLE source_urls (source_id TEXT NOT NULL, url TEXT NOT NULL);
@@ -436,7 +439,7 @@ CREATE TABLE legislative_file_refs (file_id TEXT, source_id TEXT, external_id TE
 CREATE TABLE legislative_events (id TEXT, file_id TEXT, parent_id TEXT, chamber TEXT, label_public TEXT, event_at TEXT, temporal_status TEXT, outcome TEXT, source_order INTEGER, record_url TEXT, source_id TEXT, PRIMARY KEY (id));
 CREATE TABLE legislative_documents (id TEXT, file_id TEXT, event_id TEXT, kind TEXT, title_public TEXT, record_url TEXT, source_id TEXT, PRIMARY KEY (id));
 CREATE TABLE budget_legislation (file_id TEXT, fiscal_year INTEGER, law_kind TEXT, budget_family TEXT, match_method TEXT, PRIMARY KEY (file_id, fiscal_year, law_kind));
-CREATE TABLE administrations (id TEXT, name_public TEXT, acronym TEXT, category TEXT, organism_type TEXT, siren TEXT, commune_code TEXT, record_url TEXT, source_modified_at TEXT, source_id TEXT, PRIMARY KEY (id));
+CREATE TABLE administrations (id TEXT, name_public TEXT, acronym TEXT, category TEXT, organism_type TEXT, siren TEXT, commune_code TEXT, record_url TEXT, source_modified_at TEXT, source_id TEXT, head_name TEXT, head_role TEXT, PRIMARY KEY (id));
 CREATE TABLE administration_relations (parent_id TEXT, child_id TEXT, relation_type TEXT, source_id TEXT, PRIMARY KEY (parent_id, child_id, relation_type, source_id));
 CREATE INDEX official_texts_publication ON official_texts (publication_date, nature, ministry_label);
 CREATE INDEX legislative_events_file ON legislative_events (file_id);
@@ -775,7 +778,8 @@ CREATE TABLE org_groups (
   siren TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   as_of TEXT NOT NULL,
-  analysis_path TEXT
+  analysis_path TEXT,
+  amount_year INTEGER NOT NULL
 );
 
 CREATE TABLE org_group_members (
@@ -790,6 +794,7 @@ CREATE TABLE org_group_members (
   source_ref TEXT NOT NULL,
   identifier_source_id TEXT NOT NULL,
   identifier_ref TEXT NOT NULL,
+  parent_kind TEXT NOT NULL,
   PRIMARY KEY (group_siren, siren)
 ) WITHOUT ROWID;
 CREATE INDEX org_group_members_siren ON org_group_members(siren);
@@ -814,6 +819,15 @@ CREATE TABLE commune_constituencies (
 );
 CREATE UNIQUE INDEX commune_constituencies_id ON commune_constituencies(insee, department_code, constituency);
 
+CREATE TABLE constituency_shapes (
+  insee TEXT NOT NULL,
+  department_code TEXT NOT NULL,
+  constituency INTEGER NOT NULL,
+  geometry TEXT NOT NULL,
+  source_id TEXT NOT NULL,
+  PRIMARY KEY (insee, department_code, constituency)
+) WITHOUT ROWID;
+
 CREATE TABLE mandate_constituencies (
   mandate_id TEXT,
   department_code TEXT,
@@ -835,18 +849,20 @@ CREATE TABLE commune_functions (
   insee TEXT,
   year INTEGER,
   nomenclature TEXT,
+  section TEXT,
   function_code TEXT,
   amount REAL,
   per_capita REAL
 );
-CREATE UNIQUE INDEX commune_functions_id ON commune_functions(insee, year, nomenclature, function_code);
+CREATE UNIQUE INDEX commune_functions_id ON commune_functions(insee, year, nomenclature, section, function_code);
 
 CREATE TABLE commune_function_strata (
   stratum TEXT,
   year INTEGER,
   nomenclature TEXT,
+  section TEXT,
   function_code TEXT,
   median_per_capita REAL,
   communes INTEGER
 );
-CREATE UNIQUE INDEX commune_function_strata_id ON commune_function_strata(stratum, year, nomenclature, function_code);
+CREATE UNIQUE INDEX commune_function_strata_id ON commune_function_strata(stratum, year, nomenclature, section, function_code);

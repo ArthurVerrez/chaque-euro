@@ -154,10 +154,19 @@ const steps = [
       </div>
       <Explainer title="Comment lire l’état d’une source">
         <p>
-          Le statut compare les dates des données et de récupération aux seuils du registre, selon
-          la fréquence déclarée. Une récupération ancienne ou une date des données manquante appelle
-          une vérification. Une série au-delà du délai prévu attend une nouvelle édition. Ce statut
-          ne prouve pas que le producteur n’a rien publié depuis notre téléchargement.
+          L’état distingue la vérification du téléchargement et la date des données. Un échec ou une
+          vérification trop ancienne appelle une vérification. Une édition ancienne attend son
+          renouvellement. Les références citées sans téléchargement ne sont pas contrôlées ainsi.
+          Une date inconnue reste indiquée comme telle. Ce statut ne garantit pas que nous disposons
+          de la dernière édition.
+        </p>
+      </Explainer>
+      <Explainer title="Allocations DGF 2026 : non disponibles ici">
+        <p>
+          Vérification du 4 novembre 2026 : le portail DGCL des concours financiers était en
+          maintenance et l’ancien téléchargement indisponible. Aucun montant d’allocation 2026 n’est
+          importé. La DGF comptabilisée dans les comptes exécutés reste une série distincte.{" "}
+          <a href="#source-dgcl-dotations-2026">Voir la source et les limites</a>.
         </p>
       </Explainer>
       <div class="sources">
@@ -230,11 +239,24 @@ const steps = [
                   <dd>{formatDate(source.publishedAt)}</dd>
                 </>
               )}
+              {source.downloadExpected && (
+                <>
+                  <dt>Dernière vérification réussie</dt>
+                  <dd>
+                    {source.checkedAt ? formatDate(source.checkedAt) : "Non vérifiée"}
+                    {source.refreshFailed && (
+                      <span class="muted"> (dernière tentative en échec)</span>
+                    )}
+                  </dd>
+                </>
+              )}
               <dt>Récupéré le</dt>
               <dd>
                 {source.retrievedAt
                   ? formatDate(source.retrievedAt)
-                  : "Non téléchargé (référence du registre)"}
+                  : source.downloadExpected
+                    ? "Non téléchargé"
+                    : "Référence du registre"}
               </dd>
               {source.rows !== null && (
                 <>

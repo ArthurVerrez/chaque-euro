@@ -522,7 +522,8 @@ details > summary {
   padding: 0;
 }
 
-.chips a {
+.chips a,
+.chips button {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
@@ -531,12 +532,16 @@ details > summary {
   border: 1px solid var(--border-strong);
   background: var(--surface);
   color: var(--text);
+  font-family: inherit;
   font-size: 0.9375rem;
   font-weight: 550;
+  text-align: left;
   text-decoration: none;
+  cursor: pointer;
 }
 
-.chips a:hover {
+.chips a:hover,
+.chips button:hover {
   border-color: var(--link);
   color: var(--link);
 }

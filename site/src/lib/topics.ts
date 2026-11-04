@@ -173,8 +173,14 @@ export const TOPICS: Topic[] = [
     synonyms: ["maire", "maires", "conseillers municipaux", "élus locaux"],
   },
   {
+    title: "Présidence de la République",
+    href: "/train-de-vie#institutions",
+    icon: "state",
+    synonyms: ["président", "président de la République", "présidence", "Élysée"],
+  },
+  {
     title: "Membres du gouvernement",
-    href: "/elus?chambre=minister#repertoire",
+    href: "/administrations?gouvernement=1",
     icon: "state",
     synonyms: ["ministre", "ministres", "gouvernement", "premier ministre"],
   },

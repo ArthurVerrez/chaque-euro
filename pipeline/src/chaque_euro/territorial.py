@@ -8,7 +8,6 @@ from .public_roles import archive_json, many
 
 
 def load(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -> None:
-    con.execute("load excel")
     con.execute(
         "set variable constituency_path = ?", [records["commune-circonscriptions-2024"].path]
     )
@@ -17,7 +16,10 @@ def load(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -> Non
     with zipfile.ZipFile(archive) as zipped:
         destination.write_bytes(zipped.read("table_passage_annuelle_2025.xlsx"))
     con.execute("set variable commune_passage_path = ?", [str(destination)])
-    con.execute("set variable commune_functions_path = ?", [records["dgfip-fonctions-2025"].path])
+    con.execute(
+        "set variable commune_functions_path = ?",
+        [[records[f"dgfip-fonctions-{year}"].path for year in (2024, 2025)]],
+    )
     con.execute(
         "create or replace table mandate_constituencies_raw "
         "(mandate_id varchar, department_code varchar, constituency integer)"

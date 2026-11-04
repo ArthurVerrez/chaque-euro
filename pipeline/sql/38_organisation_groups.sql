@@ -15,7 +15,8 @@ select distinct
     i.group_siren as siren,
     'Groupe SNCF' as name,
     i.as_of::varchar as as_of,
-    '/analyses/rail' as analysis_path
+    '/analyses/rail' as analysis_path,
+    year(i.as_of) as amount_year
 from organisation_group_input i
 join org_group_units u on u.siren = i.group_siren
 where i.parent_siren is null;
@@ -46,6 +47,7 @@ select
     m.source_id,
     m.source_ref,
     m.identifier_source_id,
-    m.identifier_ref
+    m.identifier_ref,
+    case when m.parent_siren is null then 'root' else 'direct' end as parent_kind
 from members m
 join org_group_units u on u.siren = m.siren;

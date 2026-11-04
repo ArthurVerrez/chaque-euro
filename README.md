@@ -62,6 +62,8 @@ npx wrangler dev --persist-to .wrangler/state   # http://localhost:8787
 
 `npm run dev` (Astro dev server on workerd) uses the same local D1. `npm run check` regenerates `worker-configuration.d.ts` with `wrangler types` before type-checking.
 
+Regenerate the share card with `node site/scripts/render-share.mjs` (Chrome on macOS or Chromium on PATH; `CHROME_BIN` overrides the executable).
+
 Screenshots of the main pages at 390 px and 1440 px are in `docs/screenshots/`.
 
 Checks:

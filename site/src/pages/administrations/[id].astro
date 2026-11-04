@@ -29,6 +29,27 @@ const { row } = data;
         <Answer
           text={`${row.category}${row.acronym ? ` · ${row.acronym}` : ""}. Source : ${documentPublisher(row.source_id)}.`}
         />
+        {row.head_name && (
+          <p>
+            <Icon name="state" size={18} /> {row.head_name} · {row.head_role}
+          </p>
+        )}
+        {row.head_name && (
+          <p>
+            <a
+              href={
+                row.head_role === "Président de la République"
+                  ? "/train-de-vie#institutions"
+                  : "/train-de-vie#cabinets"
+              }
+            >
+              <Icon name="spending" size={15} />
+              {row.head_role === "Président de la République"
+                ? "Les comptes de la Présidence"
+                : "Les moyens des cabinets ministériels"}
+            </a>
+          </p>
+        )}
         {row.record_url && (
           <a href={row.record_url}>
             <Icon name="external" size={15} />

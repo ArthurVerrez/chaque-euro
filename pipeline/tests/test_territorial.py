@@ -63,6 +63,11 @@ class TerritorialTest(unittest.TestCase):
                 (2025, "budget1", "s1", 1, "101", "M57", "930", "641", 5),
                 (2025, "budget1", "s1", 1, "101", "M57", "946", "681", 30),
                 (2025, "budget1", "s1", 1, "101", "M57", "211", "211", 999),
+                (2025, "budget1", "s1", 1, "101", "M57", "90211", "231", 101),
+                (2025, "budget1", "s1", 1, "101", "M57", "922", "231", 50),
+                (2025, "budget1", "s1", 1, "101", "M57", "211", "1641", 700),
+                (2025, "budget1", "s1", 1, "101", "M57", "211", "27", 800),
+                (2024, "budget1", "old-s1", 1, "101", "M57", "211", "641", 2000),
                 (2025, "annex", "s1", 3, "101", "M57", "211", "641", 999),
                 (2025, "small", "small", 1, "101", "M57", "", "641", 100),
                 (2025, "m14", "m14", 1, "101", "M14", "411", "641", 30),
@@ -91,11 +96,15 @@ class TerritorialTest(unittest.TestCase):
                 "create table commune_years as select insee,2025 as year,100 as population,"
                 "'1' as stratum from communes"
             )
+            con.execute("insert into commune_years values ('01001',2024,200,'1')")
+            con.execute("create table ofgl_rows as select insee,siren,2025 as year from communes")
+            con.execute("insert into ofgl_rows values ('01001','old-s1',2024)")
             con.execute((SQL / "58_commune_functions.sql").read_text())
             self.assertEqual(
                 con.execute(
                     "select function_code,amount,per_capita from commune_functions "
-                    "where insee='01001' order by function_code"
+                    "where insee='01001' and year=2025 and section='fonctionnement' "
+                    "order by function_code"
                 ).fetchall(),
                 [
                     ("0", 5.0, 0.05),
@@ -108,6 +117,20 @@ class TerritorialTest(unittest.TestCase):
             )
             self.assertEqual(
                 con.execute(
+                    "select function_code,amount from commune_functions "
+                    "where insee='01001' and section='investissement' order by function_code"
+                ).fetchall(),
+                [("2", 1100.0), ("unallocated", 50.0)],
+            )
+            self.assertEqual(
+                con.execute(
+                    "select amount,per_capita from commune_functions "
+                    "where insee='01001' and year=2024"
+                ).fetchone(),
+                (2000.0, 10.0),
+            )
+            self.assertEqual(
+                con.execute(
                     "select count(*) from commune_functions where insee='01006'"
                 ).fetchone(),
                 (0,),
@@ -115,7 +138,8 @@ class TerritorialTest(unittest.TestCase):
             self.assertEqual(
                 con.execute(
                     "select communes,median_per_capita from commune_function_strata "
-                    "where nomenclature='M57' and function_code='2'"
+                    "where nomenclature='M57' and function_code='2' "
+                    "and year=2025 and section='fonctionnement'"
                 ).fetchone(),
                 (6, 3.5),
             )

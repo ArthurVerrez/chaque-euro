@@ -19,6 +19,14 @@ class SearchTests(unittest.TestCase):
                 create table public_people as select 'PA1' as id,
                     'Élodie Députée' as display_name, 'deputy' as role_kind,
                     'Rhône' as territory_label, null as group_label, 1 as active;
+                create table administrations (id varchar, head_name varchar,
+                    head_role varchar, name_public varchar);
+                insert into administrations values
+                    ('presidence','Emmanuel MACRON','Président de la République','Présidence'),
+                    ('matignon','Sébastien LECORNU','Premier ministre','Premier ministre'),
+                    ('justice','Gérald DARMANIN','Ministre','Ministère de la Justice'),
+                    ('culture','Catherine PÉGARD','Ministre','Ministère de la Culture'),
+                    ('service',null,null,'Service');
             """)
             con.execute((PIPELINE / "sql/80_search.sql").read_text())
             rows = con.execute("select * from search").fetchall()
@@ -30,6 +38,10 @@ class SearchTests(unittest.TestCase):
                 ('"LYON"*', ("Commune", "69123")),
                 ('"elodie"* "deputee"*', ("Élu", "PA1")),
                 ('"ÉLODIE"*', ("Élu", "PA1")),
+                ('"macron"*', ("Responsable public", "presidence")),
+                ('"sebastien"* "lecornu"*', ("Responsable public", "matignon")),
+                ('"darmanin"*', ("Responsable public", "justice")),
+                ('"pegard"*', ("Responsable public", "culture")),
             ]:
                 with self.subTest(query=query):
                     self.assertEqual(

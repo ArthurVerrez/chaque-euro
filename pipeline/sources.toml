@@ -300,6 +300,7 @@ limits = [
 
 [[sources]]
 id = "insee-apu-definition"
+data_date = "2025-12-31"
 short_name = "Insee"
 name = "Administrations publiques en 2025 : définition des sous-secteurs"
 publisher = "Insee"
@@ -376,6 +377,7 @@ filename = "eu.xlsx"
 
 [[sources]]
 id = "crc-paris"
+data_date = "2025-07-03"
 short_name = "CRC"
 name = "Situation financière de la Ville de Paris, 2025"
 publisher = "Chambre régionale des comptes Île-de-France"
@@ -1018,6 +1020,7 @@ filename = "parties.html"
 
 [[sources]]
 id = "jorf-party-aid"
+data_date = "2024-02-02"
 short_name = "JORF"
 name = "Décret n° 2024-77 du 2 février 2024 relatif à l’aide publique aux partis"
 publisher = "Journal officiel de la République française"
@@ -1125,7 +1128,7 @@ frequency = "Quotidienne"
 kind = "file"
 filename = "roae.zip"
 usage = "Documents officiels et structures administratives."
-limits = ["Métadonnées et liens officiels uniquement. Les actes protégés et les champs personnels des annuaires sont exclus."]
+limits = ["Métadonnées et liens officiels uniquement. Seuls le président de la République et les membres du gouvernement sont nommés dans leur rôle public. Autres personnes, coordonnées et champs personnels exclus."]
 
 [[sources]]
 id = "annuaire-competence"
@@ -1635,14 +1638,14 @@ id = "dgcl-dotations-2026"
 short_name = "DGCL, dotations 2026"
 name = "Allocations et critères de répartition des dotations aux communes en 2026"
 publisher = "Direction générale des collectivités locales"
-page_url = "https://www.data.gouv.fr/datasets/criteres-de-repartition-des-dotations-versees-par-letat-aux-collectivites-territoriales"
+page_url = "https://concours-financiers.collectivites-locales.interieur.gouv.fr/accueil"
 file_url = "https://www.dotations-dgcl.interieur.gouv.fr/consultation/criteres_repartition.php"
 licence = "crpa"
 frequency = "Annuelle"
 kind = "reference"
 vintage = "Allocations 2026 non récupérées"
 usage = "Référence officielle des allocations, distinctes de la DGF comptabilisée dans les comptes communaux."
-limits = ["Vérification du 2 novembre 2026 : délai HTTPS dépassé, HTTP 503 ; le catalogue DGCL ne fournit que les fichiers 2016-2019.", "Aucun montant 2026 importé. L'absence de licence explicite n'empêche pas la réutilisation sous CRPA avec source et date."]
+limits = ["Vérification du 4 novembre 2026 : ancien téléchargement DGCL en délai dépassé ; nouveau portail des concours financiers en maintenance. Le catalogue DGCL ne propose que les fichiers 2016-2019.", "Aucun montant 2026 importé. L'absence de licence explicite n'empêche pas la réutilisation sous CRPA avec source et date."]
 
 [[sources]]
 id = "sncf-groupe-2025"
@@ -1703,7 +1706,7 @@ frequency = "À chaque découpage électoral"
 kind = "file"
 data_date = "2026-06-08"
 usage = "Correspondance commune-circonscription du découpage en vigueur aux législatives 2024."
-limits = ["Table INSEE publiée le 8 juin 2026, codes communaux de 2021 rapprochés avec le COG. Les contours législatifs sont ceux en vigueur depuis 2012, dont le scrutin de 2024.", "Une commune partagée affiche toutes ses circonscriptions, sans recherche par adresse.", "Les mandats en exercice proviennent du répertoire parlementaire, pas des vainqueurs du scrutin de 2024."]
+limits = ["Table INSEE publiée le 8 juin 2026, codes communaux de 2021 rapprochés avec le COG. Les contours législatifs sont ceux en vigueur depuis 2012, dont le scrutin de 2024.", "Une commune partagée affiche toutes ses circonscriptions. La recherche par adresse utilise séparément les contours simplifiés officiels.", "Les mandats en exercice proviennent du répertoire parlementaire, pas des vainqueurs du scrutin de 2024."]
 
 [[sources]]
 id = "dgfip-fonctions-2025"
@@ -1717,8 +1720,8 @@ licence = "lo2"
 frequency = "Annuelle"
 kind = "file"
 data_date = "2025-12-31"
-usage = "Dépenses budgétaires de fonctionnement des budgets principaux, par fonction."
-limits = ["Communes publiant une ventilation fonctionnelle, M14 ou M57. Une absence n’est jamais remplacée par zéro.", "Comptes de classe 6, opérations budgétaires nettes des annulations, opérations d’ordre comprises. Hors investissement et budgets annexes. Non comparable au total consolidé OFGL.", "Les fonctions M14 et M57 sont conservées séparément. Médiane seulement à partir de cinq communes de même strate, année et nomenclature.", "Paris exerce aussi les compétences d’un département ; ses montants ne décrivent pas un périmètre communal ordinaire."]
+usage = "Fonctionnement et investissement en équipements des budgets principaux, par fonction."
+limits = ["Communes publiant une ventilation fonctionnelle, M14 ou M57. Une absence n’est jamais remplacée par zéro.", "Fonctionnement : classe 6. Investissement en équipements et immobilisations : comptes 20 à 23, y compris subventions d’équipement. Opérations budgétaires nettes des annulations, opérations d’ordre comprises. Hors remboursements de dette, actifs financiers et budgets annexes. Non comparable au total consolidé OFGL.", "Les fonctions M14 et M57 sont conservées séparément. Médiane seulement à partir de cinq communes de même strate, année et nomenclature.", "Paris exerce aussi les compétences d’un département ; ses montants ne décrivent pas un périmètre communal ordinaire."]
 
 [[sources]]
 id = "dgfip-fonctions-notice"
@@ -1760,3 +1763,107 @@ kind = "file"
 data_date = "2025-01-01"
 usage = "Rapprochement des codes communaux 2021 de la table des circonscriptions avec les communes 2025."
 limits = ["Une scission d’une commune partagée entre circonscriptions n’est pas attribuée sans correspondance plus fine."]
+
+[licences.cc0]
+name = "CC0 1.0 Universal"
+url = "https://creativecommons.org/publicdomain/zero/1.0/"
+
+[[sources]]
+id = "gleif-entities"
+short_name = "GLEIF, identifiants LEI"
+name = "GLEIF Golden Copy, LEI-CDF 3.1"
+publisher = "Global Legal Entity Identifier Foundation"
+page_url = "https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy"
+file_url = "https://goldencopy.gleif.org/api/v2/golden-copies/publishes/lei2/latest.csv"
+record_url = "https://api.gleif.org/api/v1/lei-records/{lei}"
+filename = "entities.csv.zip"
+licence = "cc0"
+frequency = "Quotidienne"
+kind = "file"
+usage = "Correspondance exacte LEI-SIREN : autorités Sirene RA000189 ou Infogreffe RA000192 et identifiant de neuf chiffres, éventuellement séparés en trois groupes de trois, vérifié dans Sirene."
+limits = ["GLEIF tient le référentiel officiel du système mondial LEI, sous la supervision du LEI ROC. Sa copie validée est une publication primaire de ce système, pas un site de transparence réutilisant nos données.", "CC0 : données librement réutilisables. Les noms affichés viennent uniquement de Sirene, après exclusion des personnes physiques et unités non diffusibles.", "Aucun rapprochement par nom. Seuls les espaces de présentation entre trois groupes de trois chiffres sont supprimés. Les autres autorités d’enregistrement, les identifiants non numériques ou ambigus et les entités inactives sont exclus des groupes. Un LEI ne couvre pas toutes les entreprises."]
+
+[[sources]]
+id = "gleif-relationships"
+short_name = "GLEIF, liens de consolidation"
+name = "GLEIF Golden Copy, Relationship Record CDF 2.1"
+publisher = "Global Legal Entity Identifier Foundation"
+page_url = "https://www.gleif.org/en/lei-data/access-and-use-lei-data/level-2-data-who-owns-whom"
+file_url = "https://goldencopy.gleif.org/api/v2/golden-copies/publishes/rr/latest.csv"
+filename = "relationships.csv.zip"
+licence = "cc0"
+frequency = "Quotidienne"
+kind = "file"
+usage = "Groupes de consolidation comptable documentés, mère ultime identifiée dans Sirene ; priorité au périmètre SNCF issu des comptes annuels."
+limits = ["GLEIF est l’éditeur officiel du référentiel mondial LEI. Les relations sont déclarées au système LEI et validées par ses émetteurs accrédités. Il ne s’agit pas d’une déduction à partir des noms.", "Seuls les liens actifs de consolidation comptable ultime au statut PUBLISHED sont retenus. Les liens périmés, futurs, terminés, contradictoires ou sans mère française vérifiée sont exclus. Les participations minoritaires et les exceptions de déclaration ne créent aucun lien.", "Le périmètre est partiel et daté par la copie validée. Il est appliqué aux montants d’une même année, sans reconstitution des changements de groupe. Les marchés et les versements restent séparés.", "Le portefeuille de l’APE décrit des participations de l’État, y compris minoritaires ; il ne constitue pas une liste exhaustive de filiales avec SIREN et n’est pas utilisé pour fabriquer un groupe unique de sociétés publiques."]
+
+[[sources]]
+id = "gleif-registration-authorities"
+short_name = "GLEIF, autorités d’enregistrement"
+name = "GLEIF Registration Authorities List 1.8.1"
+publisher = "Global Legal Entity Identifier Foundation"
+page_url = "https://www.gleif.org/en/lei-data/code-lists/gleif-registration-authorities-list"
+file_url = "https://www.gleif.org/lei-data/code-lists/gleif-registration-authorities-list/2024-11-20_ra-list-v1.8.1.pdf"
+filename = "authorities.pdf"
+licence = "cc0"
+frequency = "Occasionnelle"
+kind = "file"
+data_date = "2024-11-20"
+usage = "Vérification de RA000189 (Sirene, Insee) et RA000192 (registre du commerce, Infogreffe)."
+limits = ["Seuls RA000189 et RA000192 sont utilisés, avec un identifiant de neuf chiffres retrouvé exactement dans Sirene, après retrait des seuls espaces de présentation entre groupes de trois chiffres. Les identifiants Infogreffe préfixés par un greffe et les autres registres ne sont pas assimilés à un SIREN."]
+
+[[sources]]
+id = "insee-constituency-contours"
+short_name = "Insee, contours"
+name = "Circonscriptions législatives, fond cartographique simplifié"
+publisher = "Institut national de la statistique et des études économiques"
+page_url = "https://www.insee.fr/fr/statistiques/6441661"
+file_url = "https://www.insee.fr/fr/statistiques/fichier/6441661/contours_circonscriptions_legislatives_03052022.zip"
+filename = "contours.zip"
+licence = "lo2"
+frequency = "À chaque découpage électoral"
+kind = "file"
+data_date = "2022-05-03"
+usage = "Repérage indicatif par adresse pour les communes partagées entre plusieurs circonscriptions."
+limits = ["Contours officiels construits par l’Insee à partir des fonds IGN, du code électoral et des préfectures. Découpage en vigueur depuis 2012, utilisé en 2024.", "L’Insee avertit que ces contours simplifiés ne permettent pas de déterminer précisément l’appartenance d’une coordonnée, en particulier près des limites. Le résultat reste indicatif, même à plus de 200 mètres d’une limite.", "558 circonscriptions de métropole et des DROM. Pas de résultat par adresse dans les territoires sans contours.", "Découpage à l’emprise communale élargie, simplification supplémentaire de 0,00001 degré et arrondi à six décimales. Aucun résultat à moins de 200 mètres d’une limite."]
+
+[[sources]]
+id = "ban-geocoding"
+short_name = "IGN, adresses"
+name = "Géocodage de la Base Adresse Nationale, Géoplateforme"
+publisher = "Institut national de l’information géographique et forestière"
+page_url = "https://cartes.gouv.fr/aide/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/geocodage/"
+record_url = "https://data.geopf.fr/geocodage/search"
+licence = "lo2"
+frequency = "Hebdomadaire"
+kind = "reference"
+usage = "Recherche d’adresse dans l’index BAN, depuis le navigateur et sur envoi explicite seulement."
+limits = ["L’adresse saisie est envoyée au service public de géocodage, jamais au serveur de Chaque Euro. Aucune conservation par Chaque Euro.", "La BAN est sous Licence Ouverte. Le géocodage peut être ambigu, incomplet ou indisponible ; le visiteur confirme l’adresse proposée.", "L’ancien service api-adresse.data.gouv.fr a été remplacé par la Géoplateforme IGN. Le géocodeur est limité à 50 requêtes par seconde et par adresse IP."]
+
+[[sources]]
+id = "dgfip-fonctions-2024"
+short_name = "DGFiP"
+name = "Balances communales croisées nature-fonction 2024"
+publisher = "Direction générale des finances publiques"
+page_url = "https://www.data.gouv.fr/datasets/balances-comptables-des-collectivites-et-des-etablissements-publics-locaux-avec-la-presentation-croisee-nature-fonction-2024"
+file_url = "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/balances-comptables-des-collectivites-et-des-etablissements-publics-locaux-avec-la-presentation-croisee-nature-fonction-2024/exports/csv?use_labels=false&where=cbudg%3D%271%27%20and%20%28categ%3D%27Commune%27%20or%20siren%3D%27217500016%27%29&select=exer,ident,siren,cbudg,ctype,nomen,fonction,compte,obnetdeb"
+filename = "fonctions.csv"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+data_date = "2024-12-31"
+usage = "Fonctionnement et investissement en équipements des budgets principaux, par fonction."
+limits = ["Communes publiant une ventilation fonctionnelle, M14 ou M57. Une absence n’est jamais remplacée par zéro.", "Fonctionnement : classe 6. Investissement en équipements et immobilisations : comptes 20 à 23, y compris subventions d’équipement. Opérations budgétaires nettes des annulations, opérations d’ordre comprises. Hors remboursements de dette, actifs financiers et budgets annexes. Non comparable au total consolidé OFGL.", "Les fonctions M14 et M57 sont conservées séparément. Médiane seulement à partir de cinq communes de même strate, année et nomenclature.", "Paris exerce aussi les compétences d’un département ; ses montants ne décrivent pas un périmètre communal ordinaire."]
+
+
+[[sources]]
+id = "cgct-fonctions-2025"
+short_name = "Légifrance"
+name = "CGCT, article L2312-3 applicable aux comptes 2024 et 2025"
+publisher = "DILA / Légifrance"
+page_url = "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006390524/2025-06-19"
+licence = "crpa"
+frequency = "Ponctuelle"
+kind = "reference"
+usage = "Seuil légal de présentation fonctionnelle du budget communal."
+limits = ["Version en vigueur du 1er janvier 2006 au 1er janvier 2026 : présentation fonctionnelle obligatoire à partir de 3 500 habitants. Le seuil ne garantit pas la disponibilité des données dans le fichier DGFiP."]

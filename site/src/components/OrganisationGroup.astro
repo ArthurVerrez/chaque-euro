@@ -3,6 +3,7 @@ import type { GroupAmount, GroupMeasure, OrganisationGroup } from "../lib/data";
 import { formatDate, formatEuros, formatSiren } from "../lib/format";
 import Explainer from "./Explainer.astro";
 import Icon from "./Icon.astro";
+import KeyFigures from "./KeyFigures.astro";
 import Provenance from "./Provenance.astro";
 import Term from "./Term.astro";
 
@@ -43,78 +44,99 @@ const display = (value: GroupAmount | null) =>
       </a>
     </p>
   )}
-  <div class="card group-table">
-    <table>
-      <caption class="visually-hidden">
-        {`Entités documentées du ${group.name}, montants en ${group.year}`}
-      </caption>
-      <thead>
-        <tr>
-          <th scope="col">Organisation</th>
-          {measures.map((measure) => (
-            <th scope="col" class="num">
-              <Icon name={measure.icon} size={16} /> {measure.label}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {group.members.map((member) => (
-          <tr class:list={{ current: member.siren === siren }}>
-            <th scope="row">
-              <a
-                href={`/organisation/${member.siren}`}
-                aria-current={member.siren === siren ? "page" : undefined}
-              >
-                <Icon name="company" size={16} />
-                {member.name}
-              </a>
-              <span class="muted small block">
-                {formatSiren(member.siren)}
-                {member.parentSiren === null ? " · Société mère" : ""}
-              </span>
-            </th>
-            {measures.map((measure) => {
-              const amount = member.amounts[measure.id];
-              return (
-                <td class="num" data-label={measure.label}>
-                  <span>
-                    {display(amount)}
-                    {amount && amount.unpriced > 0 && (
-                      <span class="muted small block">Montants incomplets</span>
-                    )}
-                    {amount && amount.estimated > 0 && (
-                      <span class="muted small block">Estimations incluses</span>
-                    )}
-                  </span>
-                </td>
-              );
-            })}
-          </tr>
-        ))}
-      </tbody>
-      <tfoot>
-        <tr>
-          <th scope="row">
-            <Icon name="group" size={16} /> Somme des entités listées
-            <span class="muted small block">Montants recensés uniquement</span>
-          </th>
-          {measures.map((measure) => (
-            <td class="num" data-label={measure.label}>
-              {display(group.totals[measure.id])}
-            </td>
-          ))}
-        </tr>
-      </tfoot>
-    </table>
-  </div>
+  <KeyFigures
+    figures={measures.map((measure) => ({
+      icon: measure.icon,
+      label: measure.label,
+      value: display(group.totals[measure.id]),
+      note: [
+        "Somme des entités documentées",
+        (group.totals[measure.id]?.unpriced ?? 0) > 0 && "Montants incomplets",
+        (group.totals[measure.id]?.estimated ?? 0) > 0 && "Estimations incluses",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    }))}
+  />
   <Provenance provenance={group.moneyProvenance} />
+  <Explainer title="Montants par entité">
+    <div class="card group-table">
+      <table>
+        <caption class="visually-hidden">
+          {`Entités documentées du ${group.name}, montants en ${group.year}`}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Organisation</th>
+            {measures.map((measure) => (
+              <th scope="col" class="num">
+                <Icon name={measure.icon} size={16} /> {measure.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {group.members.map((member) => (
+            <tr class:list={{ current: member.siren === siren }}>
+              <th scope="row">
+                <a
+                  href={`/organisation/${member.siren}`}
+                  aria-current={member.siren === siren ? "page" : undefined}
+                >
+                  <Icon name="company" size={16} />
+                  {member.name}
+                </a>
+                <span class="muted small block">
+                  {formatSiren(member.siren)}
+                  {member.parentSiren === null ? " · Entité mère" : ""}
+                </span>
+              </th>
+              {measures.map((measure) => {
+                const amount = member.amounts[measure.id];
+                return (
+                  <td class="num" data-label={measure.label}>
+                    <span>
+                      {display(amount)}
+                      {amount && amount.unpriced > 0 && (
+                        <span class="muted small block">Montants incomplets</span>
+                      )}
+                      {amount && amount.estimated > 0 && (
+                        <span class="muted small block">Estimations incluses</span>
+                      )}
+                    </span>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row">
+              <Icon name="group" size={16} /> Somme des entités listées
+              <span class="muted small block">Montants recensés uniquement</span>
+            </th>
+            {measures.map((measure) => (
+              <td class="num" data-label={measure.label}>
+                {display(group.totals[measure.id])}
+              </td>
+            ))}
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </Explainer>
   <div class="explain">
     <Explainer title="Comment lire ces montants">
       <p>
         Vous voyez les seules entités dont le lien avec le groupe est documenté ici. Les autres
         sociétés du groupe peuvent manquer. Les liens sont ceux du {formatDate(group.asOf)}, sans
         reconstitution des changements en cours d’année. Les noms viennent de Sirene.
+      </p>
+      <p>
+        Pour GLEIF, la mère ultime est celle qui consolide les comptes au plus haut niveau déclaré.
+        Ce lien ne désigne pas nécessairement un actionnaire direct. Les groupes dont la mère ultime
+        n’est pas identifiée dans Sirene ne sont pas couverts ici.
       </p>
       <p>
         Chaque colonne porte sur {group.year}. Les{" "}
@@ -132,6 +154,30 @@ const display = (value: GroupAmount | null) =>
       </p>
     </Explainer>
   </div>
+  <Explainer title="Liens documentés">
+    <ul>
+      {group.members.map((member) => (
+        <li>
+          {member.name} :{" "}
+          {member.parentKind === "root"
+            ? "entité mère"
+            : member.parentKind === "ultimate"
+              ? "consolidation par la mère ultime du groupe"
+              : `contrôle direct par ${group.members.find((parent) => parent.siren === member.parentSiren)?.name ?? member.parentSiren}`}
+          . {member.reference}.{" "}
+          <a
+            href={
+              member.evidence.recordUrl ??
+              member.evidence.source.fileUrl ??
+              member.evidence.source.pageUrl
+            }
+          >
+            <Icon name="external" size={14} /> Voir la source
+          </a>
+        </li>
+      ))}
+    </ul>
+  </Explainer>
   <Provenance provenance={group.provenance} />
 </section>
 

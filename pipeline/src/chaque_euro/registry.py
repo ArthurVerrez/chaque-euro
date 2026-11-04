@@ -39,6 +39,21 @@ class Source:
     years: list[int] = field(default_factory=list)
     aggregates: list[str] = field(default_factory=list)
 
+    @property
+    def download_expected(self) -> bool:
+        return self.kind not in {"reference", "constant"} or (
+            self.kind == "reference" and self.file_url is not None
+        )
+
+    @property
+    def max_age_days(self) -> int:
+        frequency = self.frequency.lower()
+        if frequency.startswith("quotidienne") or "flux actualisé quotidiennement" in frequency:
+            return 1
+        if frequency.startswith("hebdomadaire"):
+            return 7
+        return 30
+
 
 def load_registry(path: Path = REGISTRY_PATH) -> list[Source]:
     raw: dict[str, Any] = tomllib.loads(path.read_text(encoding="utf-8"))

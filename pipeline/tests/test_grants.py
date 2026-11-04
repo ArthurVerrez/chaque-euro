@@ -8,7 +8,7 @@ import duckdb
 class GrantsTest(unittest.TestCase):
     def test_workbook_keeps_corrections_and_normalises_identifiers_and_purpose(self) -> None:
         with tempfile.TemporaryDirectory() as directory, duckdb.connect() as con:
-            con.execute("load excel")
+            con.execute("install excel; load excel")
             path = str(Path(directory) / "grants.xlsx")
             con.execute(
                 "create table payments (Programme varchar, SIREN varchar, Montant varchar, "

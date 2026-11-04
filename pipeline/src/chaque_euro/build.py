@@ -1,3 +1,4 @@
+import hashlib
 import json
 import sqlite3
 import zipfile
@@ -10,9 +11,11 @@ import duckdb
 
 from . import (
     analyses,
+    constituency_shapes,
     democracy,
     documents,
     geo,
+    gleif,
     groups,
     lfi,
     local_money,
@@ -25,6 +28,7 @@ from . import (
 )
 from .fetch import FetchRecord, sha256_of
 from .registry import Source, load_registry
+from .source_dates import source_data_date
 
 PIPELINE_DIR = Path(__file__).resolve().parents[2]
 SQL_DIR = PIPELINE_DIR / "sql"
@@ -75,6 +79,7 @@ DATA_TABLES = (
     "rne_statistics",
     "local_executives",
     "commune_constituencies",
+    "constituency_shapes",
     "mandate_constituencies",
     "commune_function_labels",
     "commune_functions",
@@ -141,13 +146,16 @@ DATA_TABLES = (
 )
 META_TABLES = ("build", "sources", "source_urls", "downloads")
 DOWNLOADS = {
+    "constituency_shapes": "Contours Insee des communes partagées, simplifiés et indicatifs.",
     "commune_constituencies": "Correspondance officielle communes-circonscriptions législatives.",
     "mandate_constituencies": "Circonscriptions des mandats AN de la XVIIe législature.",
     "commune_function_labels": "Libellés des services, nomenclatures M14 et M57 séparées.",
-    "commune_functions": "Fonctionnement 2025 des budgets principaux, par service et habitant.",
+    "commune_functions": (
+        "Fonctionnement et équipements 2024-2025 des budgets principaux, par service et habitant."
+    ),
     "commune_function_strata": "Médianes par service, à partir de cinq communes comparables.",
     "org_groups": "Groupes documentés par un éditeur officiel, périmètre partiel et daté.",
-    "org_group_members": "Entités diffusables, SIREN et preuves officielles de contrôle.",
+    "org_group_members": "Entités diffusables et liens officiels de contrôle ou de consolidation.",
     "org_group_amounts": "Montants par entité, mesure et année ; absences distinctes de zéro.",
     "procurement_competition": "Offre unique depuis 2024, couverture par acheteur et famille CPV.",
     **{
@@ -356,6 +364,7 @@ type Value = str | int | float | None
 
 
 def _transform(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -> str:
+    con.execute("install excel; load excel")
     for source_id, variable in PATH_VARIABLES.items():
         con.execute(f"set variable {variable} = ?", [records[source_id].path])
     con.execute("set variable decp_retrieved_on = ?::date", [records["decp"].retrieved_at[:10]])
@@ -376,7 +385,9 @@ def _transform(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) 
     local_money.load(con, records)
     public_roles.load(con, records)
     groups.load(con, records)
+    gleif.load(con, records)
     territorial.load(con, records)
+    constituency_shapes.load(con, records)
     for script in sorted(SQL_DIR.glob("*.sql")):
         print(f"  sql {script.name}", flush=True)
         con.execute(script.read_text(encoding="utf-8"))
@@ -423,9 +434,12 @@ def _source_rows(
                 count,
                 record.sha256 if record else None,
                 source.value,
-                data_date or source.data_date,
+                data_date or source_data_date(source, record),
                 source.freshness_retrieval_days,
                 source.freshness_data_days,
+                (record.checked_at or record.retrieved_at) if record else None,
+                record.error if record else None,
+                int(source.download_expected),
             )
         )
     return rows
@@ -450,7 +464,10 @@ def _write_sqlite(
     db = sqlite3.connect(path)
     db.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
     for table in DATA_TABLES:
-        cursor = con.execute(f"select {', '.join(_columns(db, table))} from {table}")
+        cursor = con.execute(
+            f"select {', '.join(_columns(db, table))} from {table}"
+            + (" order by all" if table == "search" else "")
+        )
         while batch := cursor.fetchmany(50_000):
             _insert(db, table, batch)
     for table, rows in meta.items():
@@ -539,6 +556,20 @@ def _write_downloads(con: duckdb.DuckDBPyConnection, directory: Path) -> list[tu
     return rows
 
 
+def pipeline_hash() -> str:
+    paths = [
+        *sorted((PIPELINE_DIR / "src").rglob("*.py")),
+        *sorted(SQL_DIR.rglob("*.sql")),
+        SCHEMA_PATH,
+        PIPELINE_DIR / "sources.toml",
+    ]
+    digest = hashlib.sha256()
+    for path in paths:
+        digest.update(path.relative_to(PIPELINE_DIR).as_posix().encode() + b"\0")
+        digest.update(path.read_bytes() + b"\0")
+    return digest.hexdigest()
+
+
 def build(records: dict[str, FetchRecord], build_dir: Path) -> None:
     sources = load_registry()
     build_dir.mkdir(parents=True, exist_ok=True)
@@ -570,6 +601,7 @@ def build(records: dict[str, FetchRecord], build_dir: Path) -> None:
 
     manifest = {
         "built_at": built_at,
+        "pipeline_hash": pipeline_hash(),
         "sources": [
             {
                 "id": source.id,
@@ -577,7 +609,8 @@ def build(records: dict[str, FetchRecord], build_dir: Path) -> None:
                 "page_url": source.page_url,
                 "licence": source.licence.name,
                 "coverage": coverage.get(source.id, (None, source.vintage, None))[1],
-                "data_date": coverage.get(source.id, (None, None, None))[2] or source.data_date,
+                "data_date": coverage.get(source.id, (None, None, None))[2]
+                or source_data_date(source, records.get(source.id)),
                 "rows": coverage.get(source.id, (None, None, None))[0],
                 **(
                     {k: v for k, v in asdict(records[source.id]).items() if k != "path"}

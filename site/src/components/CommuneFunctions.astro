@@ -10,7 +10,9 @@ interface Props {
   data: Awaited<ReturnType<typeof getCommuneFunctions>>;
 }
 const { data } = Astro.props;
-const hasComparison = data.lines.some((line) => line.median !== null);
+const operating = data.lines.filter((line) => line.section === "fonctionnement");
+const investment = data.lines.filter((line) => line.section === "investissement");
+const hasComparison = operating.some((line) => line.median !== null);
 ---
 
 <section class="section" id="services" aria-labelledby="titre-services">
@@ -21,7 +23,19 @@ const hasComparison = data.lines.some((line) => line.median !== null);
     </h2>
     <p>Fonctionnement du budget principal, en {data.year}.</p>
   </div>
-  {data.lines.length > 0 ? (
+  {data.years.some((year) => year !== data.year) && (
+    <nav aria-label="Année des dépenses par service">
+      {data.years.map((year) => (
+        <a
+          href={`/commune/${data.insee}?annee=${year}#services`}
+          aria-current={year === data.year ? "date" : undefined}
+        >
+          <Icon name="calendar" size={15} /> {year}
+        </a>
+      ))}
+    </nav>
+  )}
+  {operating.length > 0 ? (
     <div class="card">
       <CompareList
         caption={
@@ -29,7 +43,7 @@ const hasComparison = data.lines.some((line) => line.median !== null);
             ? "Par habitant, comparé aux communes de même taille"
             : "Dépenses par habitant"
         }
-        lines={data.lines}
+        lines={operating}
       />
     </div>
   ) : (
@@ -37,22 +51,41 @@ const hasComparison = data.lines.some((line) => line.median !== null);
       Non disponible : aucune ventilation par service importée pour cette commune et cette année.
     </p>
   )}
-  {data.lines.length > 0 && !hasComparison && (
-    <p class="small muted">Comparaison non disponible.</p>
-  )}
+  {operating.length > 0 && !hasComparison && <p class="small muted">Comparaison non disponible.</p>}
+  <Explainer title="Investissement : équipements et immobilisations">
+    {investment.length > 0 ? (
+      <CompareList
+        caption={`Équipements et immobilisations par habitant, ${data.year}`}
+        lines={investment}
+      />
+    ) : (
+      <p>Ventilation des investissements non disponible pour cette commune et cette année.</p>
+    )}
+    <p>
+      Les <Term id="investissement">investissements</Term> présentés ici reprennent les comptes 20 à
+      23, y compris les subventions d’équipement. Les remboursements de dette, les actifs financiers
+      et les opérations pour compte de tiers sont exclus. Ce périmètre ne représente pas toute la
+      section d’investissement.
+    </p>
+  </Explainer>
   <Explainer title="Périmètre et couverture">
-    <p>La ventilation importée couvre uniquement 2025.</p>
+    <p>
+      Les fichiers importés couvrent 2024 et 2025. Pour ces exercices, l’article L2312-3 du code
+      général des collectivités territoriales impose une présentation fonctionnelle à partir de 3
+      500 habitants. Les communes plus petites n’y sont pas tenues. Le fichier DGFiP ne publie que
+      les budgets ayant renseigné au moins un code fonctionnel.
+    </p>
     <p>
       Cette lecture par <Term id="fonction-budgetaire">fonction budgétaire</Term> porte sur le
-      budget principal. Les investissements, les budgets annexes et les dépenses de
-      l’intercommunalité sont exclus. Les écritures d’ordre comptables sont comprises. Elle diffère
-      des comptes consolidés présentés plus haut.
+      budget principal. Le fonctionnement et les équipements sont présentés séparément. Les budgets
+      annexes et les dépenses de l’intercommunalité sont exclus. Les écritures d’ordre comptables
+      sont comprises. Elle diffère des comptes consolidés présentés plus haut.
     </p>
     <p>
       Chaque médiane porte sur les communes publiant le service, de même{" "}
-      <Term id="strate">strate de population</Term>, année et nomenclature comptable. Elle est non
-      disponible en dessous de cinq communes. Paris exerce aussi les compétences d’un département :
-      son périmètre diffère de celui des autres communes.
+      <Term id="strate">strate de population</Term>, année, section et nomenclature comptable. Elle
+      est non disponible en dessous de cinq communes. Paris exerce aussi les compétences d’un
+      département : son périmètre diffère de celui des autres communes.
     </p>
     <p>
       Une fonction absente est non disponible, jamais estimée ni remplacée par zéro. « Sans
@@ -66,3 +99,19 @@ const hasComparison = data.lines.some((line) => line.median !== null);
   </Explainer>
   <Provenance provenance={data.provenance} />
 </section>
+
+<style>
+  nav {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  nav a[aria-current] {
+    font-weight: 700;
+  }
+</style>

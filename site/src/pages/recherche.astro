@@ -26,7 +26,7 @@ const summary =
 
 <Base
   title={query ? `Recherche : ${query}` : "Rechercher"}
-  description="Cherchez un thème, un élu, une commune ou une organisation."
+  description="Cherchez un thème, un responsable public, une commune ou une organisation."
   noindex
 >
   <header class="page-head">
@@ -36,7 +36,7 @@ const summary =
         <Icon name="search" />
         <h1>Rechercher</h1>
       </div>
-      <p class="lead">Un sujet, un élu, une commune ou une organisation.</p>
+      <p class="lead">Un sujet, un responsable public, une commune ou une organisation.</p>
       <SearchForm query={query} autofocus={!query} />
     </div>
   </header>

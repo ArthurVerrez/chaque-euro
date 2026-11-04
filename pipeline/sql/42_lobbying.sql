@@ -66,7 +66,7 @@ from agora_targets t
 join lobbying_activities a on a.id = t.action_representation_interet_id
 where t.responsable_public is not null
 union
-select distinct a.id, 'ministry', trim(t.departement_ministeriel)
+select distinct a.id, 'ministry', trim(t.departement_ministeriel::varchar)
 from agora_targets t
 join lobbying_activities a on a.id = t.action_representation_interet_id
 where t.departement_ministeriel is not null

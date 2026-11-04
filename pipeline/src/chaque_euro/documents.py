@@ -54,7 +54,7 @@ TABLES = {
     "administrations": (
         "id varchar, name_public varchar, acronym varchar, category varchar, "
         "organism_type varchar, siren varchar, commune_code varchar, record_url varchar, "
-        "source_modified_at varchar, source_id varchar"
+        "source_modified_at varchar, source_id varchar, head_name varchar, head_role varchar"
     ),
     "administration_relations": (
         "parent_id varchar, child_id varchar, relation_type varchar, source_id varchar"
@@ -622,6 +622,26 @@ def administrative_rows(path: str, source: Source) -> dict[str, list[tuple[Any, 
             else "Autre structure"
         )
         siren = str(service.get("siren") or "")
+        head_name, head_role = None, None
+        if source.id == "roae" and service.get("type_organisme") in {
+            "Administration centrale (ou Ministère)",
+            "Institution",
+            "Secrétaire d'État",
+        }:
+            for assignment in as_list(service.get("affectation_personne")):
+                role = assignment.get("fonction") or ""
+                if not re.fullmatch(
+                    r"president de la republique|premier ministre|"
+                    r"(?:garde des sceaux, )?ministre(?: deleguee?)?(?: aupres .*)?|"
+                    r"secretaire d'etat(?: aupres .*)?",
+                    normalized(role),
+                ):
+                    continue
+                person = assignment.get("personne") or {}
+                if person.get("prenom") and person.get("nom"):
+                    head_name = f"{person['prenom']} {person['nom']}"
+                    head_role = role
+                    break
         rows.append(
             (
                 identifier,
@@ -636,6 +656,8 @@ def administrative_rows(path: str, source: Source) -> dict[str, list[tuple[Any, 
                 if service.get("date_modification")
                 else None,
                 source.id,
+                head_name,
+                head_role,
             )
         )
         for pivot in as_list(service.get("pivot")):

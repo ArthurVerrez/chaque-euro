@@ -6,6 +6,7 @@ import PublicPagination from "../../components/PublicPagination.astro";
 import Provenance from "../../components/Provenance.astro";
 import Explainer from "../../components/Explainer.astro";
 import Term from "../../components/Term.astro";
+import AddressDeputy from "../../components/AddressDeputy.astro";
 import { getElectedIndex, getCommuneRepresentatives } from "../../lib/data";
 import { formatDate, formatNumber } from "../../lib/format";
 import { pageNumber, roleLabels } from "../../lib/democracy";
@@ -52,6 +53,7 @@ const figure = (kind: string, label: string) => ({
         Trouver votre député
       </h2>
     </div>
+    <AddressDeputy />
     <form class="filters" method="get" action="/elus#trouver">
       <label>
         Votre commune
@@ -125,7 +127,8 @@ const figure = (kind: string, label: string) => ({
         <Explainer title="Périmètre et actualisation">
           <p>
             Les mandats sont ceux du dernier répertoire officiel importé. Les changements ultérieurs
-            peuvent manquer. Pour une commune partagée, la recherche par adresse n’est pas proposée.
+            peuvent manquer. Pour une commune partagée, la recherche par adresse donne un repérage
+            indicatif à partir des contours simplifiés de l’Insee.
           </p>
           <p>
             Le découpage est celui des législatives de 2024. Les fusions communales sont rapprochées

@@ -22,7 +22,7 @@ select
     any_value(year) as year,
     any_value(counted) as counted,
     any_value(amount_estimated) as amount_estimated,
-    sum(share) as amount
+    sum(share order by holder_siren) as amount
 from holder_shares
 where buyer_siren is not null
 group by uid;
@@ -45,7 +45,7 @@ with pairs as (
         'titulaire' as role,
         case when i.public then h.buyer_siren end as counterpart_siren,
         coalesce(i.label, 'Acheteur non identifié') as counterpart_name,
-        coalesce(sum(share), 0) as amount,
+        coalesce(sum(share order by h.uid, h.holder_siren), 0) as amount,
         count(*) as count
     from holder_shares h
     left join identities i on i.siren = h.buyer_siren
@@ -57,13 +57,15 @@ with pairs as (
         'acheteur',
         case when holder_public then holder_siren end,
         holder_label,
-        coalesce(sum(share), 0),
+        coalesce(sum(share order by uid, holder_siren), 0),
         count(*)
     from holder_shares
     where buyer_siren in (select siren from identities where public)
     group by all
 )
-select *, row_number() over (partition by siren, role order by amount desc, count desc) as rank
+select *, row_number() over (
+    partition by siren, role order by amount desc, count desc, counterpart_siren, counterpart_name
+) as rank
 from pairs
 qualify rank <= 8;
 
@@ -79,8 +81,8 @@ with candidates as (
 )
 select siren, role, uid
 from candidates
-qualify row_number() over (partition by siren, role order by counted desc, amount desc nulls last) <= 8
-    or row_number() over (partition by siren, role order by notified_on desc) <= 3;
+qualify row_number() over (partition by siren, role order by counted desc, amount desc nulls last, uid) <= 8
+    or row_number() over (partition by siren, role order by notified_on desc, uid) <= 3;
 
 create or replace table source_files as
 select row_number() over (order by source_url) as id, source_url as url
@@ -101,7 +103,7 @@ select
     row_number() over (order by r.uid) as id,
     r.uid,
     any_value(case when i.public then r.buyer_siren end) as buyer_siren,
-    left(any_value(r.subject), 160) as subject,
+    left(min(r.subject), 160) as subject,
     any_value(a.amount) as amount,
     any_value(a.amount_flag) as amount_flag,
     any_value(a.declared_amount) as declared_amount,
@@ -114,7 +116,7 @@ select
             || ' et ' || (any_value(h.holders) - 2) || ' autres'
     end as holders_label,
     any_value(r.notified_on)::varchar as notified_on,
-    any_value(f.id) as source_file_id
+    min(f.id) as source_file_id
 from contract_rows r
 join holders h using (uid)
 join contract_amounts a using (uid)
@@ -129,7 +131,7 @@ join contracts c using (uid);
 
 create or replace table grants as
 select
-    row_number() over (order by g.siren, g.amount desc) as id,
+    row_number() over (order by g.siren, g.amount desc, g.year, g.programme_code, g.purpose, b.programme) as id,
     g.siren,
     g.year,
     g.programme_code,
@@ -169,7 +171,7 @@ grant_totals as (
     group by siren
 ),
 activities as (
-    select holder_siren as siren, mode(holder_activity) as activity
+    select holder_siren as siren, mode(holder_activity order by holder_activity) as activity
     from contract_rows
     where holder_activity is not null
     group by holder_siren
