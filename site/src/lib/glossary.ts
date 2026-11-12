@@ -492,6 +492,12 @@ export const GLOSSARY = {
     definition:
       "Licence de l'État qui autorise à réutiliser des données publiques, y compris à des fins commerciales, à condition de citer la source.",
   },
+  mcp: {
+    term: "MCP (Model Context Protocol)",
+    theme: "lecture",
+    definition:
+      "Norme ouverte qui permet à un assistant d'IA comme Claude ou ChatGPT d'interroger un service. Le serveur MCP de Chaque Euro donne accès aux mêmes données que le site, en lecture seule.",
+  },
 } as const satisfies Record<string, GlossaryEntry>;
 
 export type TermId = keyof typeof GLOSSARY;

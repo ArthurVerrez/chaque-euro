@@ -1,0 +1,183 @@
+---
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import Icon from "../components/Icon.astro";
+import Term from "../components/Term.astro";
+import Base from "../layouts/Base.astro";
+import { PUBLIC_ORIGIN } from "../lib/site";
+
+const endpoint = new URL("/mcp", PUBLIC_ORIGIN).href;
+const examples = [
+  "Combien Lyon dépense-t-elle par habitant, comparé aux villes de même taille\u00a0?",
+  "Quel argent public reçoit la SNCF\u00a0?",
+  "Qui sont les députés de Rennes\u00a0?",
+  "Où va le budget de l'État\u00a0?",
+];
+---
+
+<Base
+  title="Utiliser avec une IA"
+  description="Posez vos questions sur l'argent public à Claude, ChatGPT ou un autre assistant : il interroge les données de Chaque Euro et cite les sources."
+>
+  <header class="page-head">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Utiliser avec une IA" }]} />
+      <div class="entity">
+        <Icon name="assistant" />
+        <h1>Utiliser avec une IA</h1>
+      </div>
+      <p class="lead">Votre assistant interroge les données du site et cite les sources.</p>
+    </div>
+  </header>
+
+  <div class="container">
+    <section class="section" aria-labelledby="titre-ajouter">
+      <h2 id="titre-ajouter">
+        <Icon name="assistant" />
+        Ajouter Chaque Euro à votre assistant
+      </h2>
+      <p>
+        Adresse du serveur <Term id="mcp">MCP</Term>, gratuit, sans compte et en lecture seule :
+      </p>
+      <div class="endpoint">
+        <code>{endpoint}</code>
+        <button type="button" data-copy={endpoint}>
+          <Icon name="copy" size={16} />
+          <span>Copier</span>
+        </button>
+      </div>
+      <dl class="steps">
+        <div>
+          <dt>Claude</dt>
+          <dd>
+            Dans les connecteurs, ajoutez un connecteur personnalisé avec cette adresse, sans
+            connexion. Possible avec l'offre gratuite.
+          </dd>
+        </div>
+        <div>
+          <dt>ChatGPT</dt>
+          <dd>
+            Activez le mode développeur dans les réglages des applications, puis créez une
+            application avec cette adresse, sans authentification. Selon votre abonnement.
+          </dd>
+        </div>
+        <div>
+          <dt>Autres</dt>
+          <dd>
+            Ajoutez un serveur MCP distant (HTTP) avec cette adresse. Avec Claude Code :
+            <code>claude mcp add --transport http chaque-euro {endpoint}</code>
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="section" aria-labelledby="titre-exemples">
+      <h2 id="titre-exemples">
+        <Icon name="answer" />
+        Exemples de questions
+      </h2>
+      <ul class="examples">
+        {examples.map((example) => (
+          <li>«&nbsp;{example}&nbsp;»</li>
+        ))}
+      </ul>
+    </section>
+  </div>
+</Base>
+
+<script>
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-copy]")) {
+    button.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(button.dataset.copy ?? "");
+      const label = button.querySelector("span");
+      if (label) label.textContent = "Copié";
+    });
+  }
+</script>
+
+<style>
+  .endpoint {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin: 0.75rem 0 1.5rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--navy-50);
+  }
+
+  .endpoint code {
+    flex: 1 1 14rem;
+    font-size: 1.0625rem;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+  }
+
+  .endpoint button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 44px;
+    padding: 0 1rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--navy-900);
+    color: #fff;
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+  }
+
+  .endpoint button:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .steps {
+    margin: 0;
+  }
+
+  .steps div {
+    display: grid;
+    gap: 0.25rem 2rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (min-width: 48rem) {
+    .steps div {
+      grid-template-columns: 8rem 1fr;
+    }
+  }
+
+  dt {
+    font-weight: 700;
+  }
+
+  dd {
+    margin: 0;
+    color: var(--text-secondary);
+  }
+
+  dd code {
+    display: block;
+    margin-top: 0.5rem;
+    overflow-wrap: anywhere;
+  }
+
+  .examples {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .examples li {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+</style>

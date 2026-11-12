@@ -77,6 +77,7 @@ const secondary: NavItem[] = [
   { href: "/lexique", label: "Lexique", icon: "book" },
   { href: "/methodologie", label: "Méthode et sources", icon: "method" },
   { href: "/telechargements", label: "Télécharger les données", icon: "download" },
+  { href: "/ia", label: "Utiliser avec une IA", icon: "assistant" },
 ];
 const exact = new Set(["/", "/analyses"]);
 const current = (href: string) =>
@@ -228,6 +229,12 @@ const current = (href: string) =>
                   <a href="/telechargements">
                     <Icon name="download" size={16} />
                     Télécharger les données
+                  </a>
+                </li>
+                <li>
+                  <a href="/ia">
+                    <Icon name="assistant" size={16} />
+                    Utiliser avec une IA
                   </a>
                 </li>
                 <li>
