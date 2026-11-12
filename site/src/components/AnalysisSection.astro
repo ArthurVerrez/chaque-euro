@@ -7,7 +7,7 @@ interface Props {
   id: string;
   title: string;
   icon: IconName;
-  provenance: ProvenanceData;
+  provenance: ProvenanceData | ProvenanceData[];
 }
 const { id, title, icon, provenance } = Astro.props;
 ---
@@ -23,7 +23,9 @@ const { id, title, icon, provenance } = Astro.props;
   <div class="chart card">
     <slot name="chart" />
   </div>
-  <Provenance provenance={provenance} />
+  <Provenance provenance={provenance}>
+    <slot name="caveat" />
+  </Provenance>
 </section>
 
 <style>

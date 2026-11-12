@@ -28,7 +28,7 @@ const figures = [
     icon: "award" as const,
     label: "Titulaires de marchés publics",
     value: formatNumber(holders.value),
-    note: "organisations identifiées depuis 2019",
+    note: "depuis 2019",
   },
   buyers && {
     icon: "buyer" as const,
@@ -56,7 +56,7 @@ const figures = [
         <Icon name="building" />
         <h1>Entreprises, associations et acheteurs publics</h1>
       </div>
-      <p class="lead">Entreprise, association ou organisme public, par nom ou SIREN.</p>
+      <p class="lead">Cherchez par nom ou par SIREN.</p>
       <SearchForm />
       <div class="figures">
         <KeyFigures figures={figures} />
@@ -108,10 +108,7 @@ const figures = [
           <Icon name="grant" />
           Les associations recevant le plus de crédits de l'État
         </h2>
-        <p>
-          Versements en {index.facts.grants_amount?.period ?? "2025"}, tous types de crédits
-          confondus.
-        </p>
+        <p>En {index.facts.grants_amount?.period ?? "2025"}, tous crédits confondus.</p>
       </div>
       <div class="grid">
         <div class="card">

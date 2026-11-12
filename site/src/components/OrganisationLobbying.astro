@@ -20,8 +20,7 @@ const { data } = Astro.props;
       <Icon name="lobbying" /> Représentant d’intérêts
     </h2>
     <p>
-      Les déclarations de <Term id="lobbying">représentation d’intérêts</Term> de cette
-      organisation.
+      Ses déclarations de <Term id="lobbying">représentation d’intérêts</Term>.
     </p>
   </div>
   {data.french.map((row) => (
@@ -35,15 +34,9 @@ const { data } = Astro.props;
           {exercisePeriod(row.starts_on, row.ends_on)}
         </p>
         <p>{formatNumber(row.activities ?? 0)} fiches d’activité dans cet exercice.</p>
-        {row.activities_reconciled === 0 && (
-          <p class="small muted">
-            Le répertoire annonce {formatNumber(row.declared_activities ?? 0)} fiches ; seules les
-            fiches effectivement présentes dans l’export sont comptées ici.
-          </p>
-        )}
         {data.targets.length > 0 && (
           <BarList
-            caption="Institutions ciblées dans le dernier exercice clos publié"
+            caption="Institutions ciblées, dernier exercice publié"
             items={data.targets.map((target) => ({
               label: target.label,
               value: target.count,
@@ -53,7 +46,14 @@ const { data } = Astro.props;
           />
         )}
       </div>
-      <Provenance provenance={row.provenance} />
+      <Provenance provenance={row.provenance}>
+        {row.activities_reconciled === 0 && (
+          <p>
+            Le répertoire annonce {formatNumber(row.declared_activities ?? 0)} fiches. Seules les
+            fiches présentes dans l’export sont comptées ici.
+          </p>
+        )}
+      </Provenance>
     </>
   ))}
   {data.european.length > 0 && (
@@ -64,12 +64,10 @@ const { data } = Astro.props;
         </h3>
         <EuropeanLobbyingTable rows={data.european} />
       </div>
-      {data.european.map((row) => (
-        <Provenance provenance={row.provenance} />
-      ))}
+      <Provenance provenance={data.european.map((row) => row.provenance)} />
     </>
   )}
-  <Explainer title="Ce que ce rapprochement permet de lire">
+  <Explainer title="Comment ces registres sont rapprochés">
     <p>
       La HATVP est rapprochée par SIREN. Le registre UE l’est par nom normalisé identique, pays
       France et unicité dans les deux registres. Ce dernier rapprochement est indicatif.

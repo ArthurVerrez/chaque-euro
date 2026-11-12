@@ -43,7 +43,6 @@ const others = ANALYSES.filter((entry) => entry.slug !== article.slug).slice(0, 
           </span>
           <h1>{article.title}</h1>
         </div>
-        <p class="dek">{article.summary}</p>
         <div class="short">
           <p class="short-label">
             <Icon name="answer" size={16} />
@@ -52,9 +51,7 @@ const others = ANALYSES.filter((entry) => entry.slug !== article.slug).slice(0, 
           <Answer text={answer} />
         </div>
         <KeyFigures figures={figures} />
-        {provenance.map((entry) => (
-          <Provenance provenance={entry} />
-        ))}
+        <Provenance provenance={provenance} />
       </div>
     </header>
     <Toc
@@ -71,7 +68,7 @@ const others = ANALYSES.filter((entry) => entry.slug !== article.slug).slice(0, 
           <Icon name="method" size={22} />
           Méthode et précautions
         </h2>
-        <Explainer title="Comment lire ces chiffres et leurs limites">
+        <Explainer title="Le détail de la méthode">
           <slot name="method" />
         </Explainer>
       </section>
@@ -151,17 +148,9 @@ const others = ANALYSES.filter((entry) => entry.slug !== article.slug).slice(0, 
 
   h1 {
     margin: 0;
-    font-size: clamp(2.25rem, 1.4rem + 3vw, 3.75rem);
+    font-size: clamp(1.75rem, 1.2rem + 3vw, 3.75rem);
     line-height: 1.04;
     letter-spacing: -0.035em;
-  }
-
-  .dek {
-    margin: 1.25rem 0 0;
-    font-size: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
-    line-height: 1.5;
-    color: var(--text-secondary);
-    text-wrap: pretty;
   }
 
   .short {
@@ -232,18 +221,33 @@ const others = ANALYSES.filter((entry) => entry.slug !== article.slug).slice(0, 
   }
 
   @media (max-width: 40rem) {
+    .hero {
+      padding: 0.75rem 0 1.5rem;
+    }
+
+    .kicker {
+      margin: 0.25rem 0 0.75rem;
+    }
+
     .title {
-      flex-direction: column;
+      align-items: center;
       gap: 0.75rem;
     }
 
     .badge {
-      width: 3rem;
-      height: 3rem;
+      width: 2.75rem;
+      height: 2.75rem;
       margin: 0;
+      border-radius: 12px;
+    }
+
+    .badge :global(svg) {
+      width: 1.5rem;
+      height: 1.5rem;
     }
 
     .short {
+      margin: 1.25rem 0;
       padding: 1rem 1.125rem;
     }
   }

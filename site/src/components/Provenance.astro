@@ -4,76 +4,147 @@ import { formatDate } from "../lib/format";
 import Icon from "./Icon.astro";
 
 interface Props {
-  provenance: Provenance;
+  provenance: Provenance | Provenance[];
 }
 
-const { provenance } = Astro.props;
-const shortNames = provenance.citations.map(({ source }) => source.shortName);
-const names = [...new Set(shortNames)].join(", ");
-const ambiguous = new Set(shortNames).size < shortNames.length;
-const tag = (source: Provenance["citations"][number]["source"]) =>
-  ambiguous ? (source.name.split(/ : | \(/)[0] ?? source.name) : source.shortName;
+const entries = [Astro.props.provenance].flat();
+const dates = [
+  ...new Set(
+    entries.flatMap(({ citations }) => citations.map(({ source }) => source.dataDate ?? "")),
+  ),
+];
+const summaryDate = dates.length === 1 && dates[0] ? formatDate(dates[0]) : null;
+const tagger = (provenance: Provenance) => {
+  const shortNames = provenance.citations.map(({ source }) => source.shortName);
+  const ambiguous = new Set(shortNames).size < shortNames.length;
+  return (source: Provenance["citations"][number]["source"]) =>
+    ambiguous ? (source.name.split(/ : | \(/)[0] ?? source.name) : source.shortName;
+};
 ---
 
 <footer class="provenance">
-  <div class="line">
-    <span class="label">
+  <details>
+    <summary>
       <Icon name="source" size={16} />
-      Source : {names}
-    </span>
-    {provenance.citations
-      .filter(({ source }) => source.dataDate)
-      .map(({ source }) => (
-        <span class="data-date">
-          {provenance.citations.length > 1 && `${tag(source)} : `}
-          données au {formatDate(source.dataDate!)}
-        </span>
-      ))}
-    {provenance.citations.map(({ source, recordUrl }) => (
-      <a href={recordUrl ?? source.fileUrl ?? source.pageUrl}>
-        <Icon name="external" size={14} />
-        Voir la source
-        {provenance.citations.length > 1 && <span class="muted"> ({tag(source)})</span>}
-      </a>
-    ))}
-    <a href={provenance.calculationUrl}>
-      <Icon name="code" size={14} />
-      Voir le calcul
-    </a>
-    <details>
-      <summary>
-        <Icon name="info" size={14} />
-        Méthode
-      </summary>
-      <p>{provenance.method}</p>
-      <ul>
-        {provenance.citations.map(({ source }) => (
-          <li>
-            <a href={source.pageUrl}>{source.name}</a>, {source.publisher}.{" "}
-            {source.fileUrl && (
-              <>
-                <a href={source.fileUrl}>Fichier source</a>.{" "}
-              </>
-            )}
-            {source.coverage && <>{source.coverage}. </>}
-            {source.publishedAt && <>Fichier mis à jour le {formatDate(source.publishedAt)}. </>}
-            {source.retrievedAt && <>Récupéré le {formatDate(source.retrievedAt)}. </>}
-            <a href={source.licence.url}>{source.licence.name}</a>.
-          </li>
-        ))}
-      </ul>
-      <p>
-        <a href="/methodologie#sources">Toutes les sources et leurs limites</a>
-      </p>
-    </details>
-  </div>
+      Sources
+      {summaryDate && <span class="summary-date">données au {summaryDate}</span>}
+    </summary>
+    <slot />
+    {entries.map((provenance) => {
+      const tag = tagger(provenance);
+      const several = provenance.citations.length > 1;
+      return (
+        <div class="entry">
+          <div class="line">
+            {provenance.citations.map(({ source, recordUrl }) => (
+              <a href={recordUrl ?? source.fileUrl ?? source.pageUrl}>
+                <Icon name="external" size={14} />
+                Voir la source
+                {several && <span class="muted">({tag(source)})</span>}
+              </a>
+            ))}
+            <a href={provenance.calculationUrl}>
+              <Icon name="code" size={14} />
+              Voir le calcul
+            </a>
+          </div>
+          <span class="label">
+            Source :{" "}
+            {[...new Set(provenance.citations.map(({ source }) => source.shortName))].join(", ")}
+          </span>
+          {provenance.citations
+            .filter(({ source }) => source.dataDate)
+            .map(({ source }) => (
+              <span class="data-date">
+                {several && `${tag(source)} : `}
+                données au {formatDate(source.dataDate)}
+              </span>
+            ))}
+          <p>{provenance.method}</p>
+          <ul>
+            {provenance.citations.map(({ source }) => (
+              <li>
+                <a href={source.pageUrl}>{source.name}</a>, {source.publisher}.{" "}
+                {source.fileUrl && (
+                  <>
+                    <a href={source.fileUrl}>Fichier source</a>.{" "}
+                  </>
+                )}
+                {source.coverage && <>{source.coverage}. </>}
+                {source.publishedAt && (
+                  <>Fichier mis à jour le {formatDate(source.publishedAt)}. </>
+                )}
+                {source.retrievedAt && <>Récupéré le {formatDate(source.retrievedAt)}. </>}
+                <a href={source.licence.url}>{source.licence.name}</a>.
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    })}
+    <p>
+      <a href="/methodologie#sources">Toutes les sources et leurs limites</a>
+    </p>
+  </details>
 </footer>
 
 <style>
   .provenance {
-    margin-top: 1.75rem;
+    margin-top: 0.5rem;
     font-size: 0.875rem;
     color: var(--text-muted);
+  }
+
+  summary {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 44px;
+    max-width: 100%;
+    width: fit-content;
+    padding: 0 0.25rem;
+    border-radius: 0.375rem;
+    color: var(--link);
+    font-weight: 600;
+    white-space: nowrap;
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary::after {
+    content: "+";
+    font-weight: 700;
+  }
+
+  [open] > summary::after {
+    content: "−";
+  }
+
+  summary:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 0;
+  }
+
+  .summary-date {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    font-weight: 400;
+  }
+
+  .summary-date::before {
+    content: "· ";
+  }
+
+  .entry + .entry {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
   }
 
   .line {
@@ -81,17 +152,14 @@ const tag = (source: Provenance["citations"][number]["source"]) =>
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
-  }
-
-  .label {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    margin-right: 0.25rem;
-    font-weight: 550;
+    margin-bottom: 0.25rem;
   }
 
   .line > a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-height: 44px;
     padding: 0.25rem 0.75rem;
     border: 1px solid var(--border);
     border-radius: 0.875rem;
@@ -103,38 +171,26 @@ const tag = (source: Provenance["citations"][number]["source"]) =>
     text-decoration: none;
   }
 
-  .line > a :global(svg) {
-    margin-right: 0.3rem;
-    vertical-align: -0.15em;
-  }
-
   .line > a:hover {
     border-color: var(--link);
     background: var(--navy-50);
   }
 
-  details[open] {
-    flex-basis: 100%;
+  .label {
+    font-weight: 550;
   }
 
-  summary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    margin-left: 0.25rem;
-    color: var(--link);
-    font-weight: 600;
-    width: fit-content;
-    cursor: pointer;
+  .data-date::before {
+    content: " · ";
   }
 
-  details p,
-  details ul {
+  details :global(p),
+  details :global(ul) {
     margin: 0.5rem 0;
     line-height: 1.6;
   }
 
-  details ul {
+  details :global(ul) {
     padding-left: 1.25rem;
   }
 </style>

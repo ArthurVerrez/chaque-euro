@@ -2,7 +2,6 @@
 import Analysis from "../../layouts/Analysis.astro";
 import Section from "../../components/AnalysisSection.astro";
 import LineChart from "../../components/LineChart.astro";
-import Provenance from "../../components/Provenance.astro";
 import Term from "../../components/Term.astro";
 import { analysis } from "../../lib/analyses";
 import { getDeficitAnalysis } from "../../lib/data";
@@ -45,7 +44,7 @@ const sections = [
 
 <Analysis
   article={analysis("deficit-par-president")}
-  answer={`En ${latest.year}, le déficit public atteint ${formatBillions(-latest.apu_balance)}, soit ${rate(-latest.apu_ratio)} du PIB. La dette s’établit à ${rate(latest.apu_debt_ratio!)} du PIB. Les présidences donnent des repères dans le temps, sans suffire à expliquer ces résultats.`}
+  answer={`En ${latest.year}, le déficit public atteint ${formatBillions(-latest.apu_balance)}, soit ${rate(-latest.apu_ratio)} du PIB, et la dette ${rate(latest.apu_debt_ratio!)} du PIB.`}
   figures={figures}
   provenance={[data.provenance]}
   sections={sections}
@@ -54,18 +53,13 @@ const sections = [
     id="solde"
     title="Le déficit rapporté à la richesse produite"
     icon="trend"
-    provenance={data.provenance}
+    provenance={[data.provenance, data.contextProvenance]}
   >
     <p>
-      Le solde des <Term id="administrations-publiques">administrations publiques</Term> rassemble
-      l’État, ses organismes, les collectivités et la Sécurité sociale. Quand il est négatif, leurs
-      dépenses dépassent leurs recettes. Le <Term id="pib">PIB</Term> sert à rapporter cet écart à
-      la taille de l’économie.
-    </p>
-    <p>
-      La série remonte à 1949. Vous pouvez suivre les ruptures autour des crises et les périodes de
-      réduction du déficit. Les bandes alternées indiquent les présidences&#8239;; elles ne
-      constituent ni un classement, ni une mesure de responsabilité.
+      Quand le solde des <Term id="administrations-publiques">administrations publiques</Term> est
+      négatif, leurs dépenses dépassent leurs recettes. Il est rapporté ici au{" "}
+      <Term id="pib">PIB</Term>, depuis 1949. Les bandes situent les présidences, sans les classer
+      ni mesurer leur responsabilité.
     </p>
     <LineChart
       slot="chart"
@@ -80,21 +74,18 @@ const sections = [
       events={data.events}
     />
   </Section>
-  <Provenance provenance={data.contextProvenance} />
   <Section
     id="euros"
     title="En milliards d’euros courants"
     icon="euro"
     provenance={data.provenance}
   >
-    <p>
-      Les montants vous donnent l’écart annuel à financer. Ils ne permettent pas de comparer
-      directement le pouvoir d’achat d’un euro de 1950 à celui d’aujourd’hui : l’inflation et la
-      croissance ont changé l’échelle.
-    </p>
-    <p>
-      Le solde de l’État est une partie du solde public. Les autres administrations peuvent être en
-      excédent ou en déficit la même année. Il ne faut donc pas additionner les deux courbes.
+    <p>Les montants donnent l’écart annuel à financer.</p>
+    <p slot="caveat">
+      L’inflation et la croissance ont changé l’échelle : un euro de 1950 ne se compare pas
+      directement à un euro d’aujourd’hui. Le solde de l’État est une partie du solde public&#8239;;
+      les autres administrations peuvent être en excédent ou en déficit la même année. Il ne faut
+      donc pas additionner les deux courbes.
     </p>
     <LineChart
       slot="chart"
@@ -110,20 +101,19 @@ const sections = [
   </Section>
   <Section
     id="dette"
-    title="La dette reste à rembourser, le déficit est annuel"
+    title="La dette s’accumule, le déficit est annuel"
     icon="debt"
     provenance={data.provenance}
   >
     <p>
-      La <Term id="dette-publique">dette publique</Term> est mesurée à la fin de l’année. La série
-      homogène disponible commence en 1978. Elle cumule des emprunts passés, mais sa variation ne
-      correspond pas exactement au déficit : les opérations financières et la trésorerie
-      interviennent aussi.
+      La <Term id="dette-publique">dette publique</Term> cumule les emprunts passés. En{" "}
+      {latest.year}, elle atteint {formatBillions(latest.apu_debt!)}, dont{" "}
+      {formatBillions(latest.state_debt!)} pour la contribution de l’État.
     </p>
-    <p>
-      En {latest.year}, elle représente {formatBillions(latest.apu_debt!)} pour l’ensemble public,
-      dont {formatBillions(latest.state_debt!)} pour la contribution de l’État. Les ratios
-      ci-dessous utilisent le PIB de chaque année.
+    <p slot="caveat">
+      La dette est mesurée à la fin de l’année&#8239;; la série homogène commence en 1978. Sa
+      variation ne correspond pas exactement au déficit : les opérations financières et la
+      trésorerie interviennent aussi. Les ratios utilisent le PIB de chaque année.
     </p>
     <LineChart
       slot="chart"
@@ -144,9 +134,8 @@ const sections = [
     provenance={data.provenance}
   >
     <p>
-      Les milliards d’euros indiquent le stock nominal à fin décembre. Le ratio au PIB peut diminuer
-      alors que ce montant augmente, si la production en euros progresse plus vite. Vous pouvez
-      ainsi distinguer l’évolution de la somme due de celle de son poids dans l’économie.
+      Le ratio au PIB peut baisser alors que ce montant augmente, si la production en euros
+      progresse plus vite.
     </p>
     <LineChart
       slot="chart"
@@ -162,19 +151,20 @@ const sections = [
   </Section>
   <Section
     id="etat"
-    title="Pourquoi deux chiffres pour le déficit de l’État ?"
+    title="Deux mesures du déficit de l’État"
     icon="state"
     provenance={data.provenance}
   >
     <p>
-      Le résultat d’exécution des lois de finances suit les règles budgétaires. La{" "}
-      <Term id="comptabilite-nationale">comptabilité nationale</Term> rattache les opérations à leur
-      fait générateur et traite différemment les prêts, les participations et certains fonds.
+      Le résultat budgétaire suit les règles des lois de finances. La{" "}
+      <Term id="comptabilite-nationale">comptabilité nationale</Term> traite autrement les prêts,
+      les participations et certains fonds.
     </p>
-    <p>
-      Le tableau de passage de l’Insee permet de comparer ces deux mesures depuis 2009. Le solde
-      budgétaire présenté ici exclut les opérations avec le FMI&#8239;; ce périmètre doit rester
-      visible quand vous le rapprochez d’un autre chiffre publié.
+    <p slot="caveat">
+      La comptabilité nationale rattache les opérations à leur fait générateur. Le tableau de
+      passage de l’Insee permet de comparer ces deux mesures depuis 2009. Le solde budgétaire
+      présenté ici exclut les opérations avec le FMI&#8239;; gardez ce périmètre en tête avant de le
+      rapprocher d’un autre chiffre publié.
     </p>
     <LineChart
       slot="chart"

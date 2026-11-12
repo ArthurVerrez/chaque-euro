@@ -18,6 +18,9 @@ const total = data.accounts.reduce((n, r) => n + r.resources, 0);
 const aid = data.accounts.reduce((n, r) => n + r.public_aid, 0);
 const alerts = data.accounts.filter((r) => r.majority_public);
 const discrepancies = data.accounts.filter((r) => !r.reconciled);
+const discrepancyList =
+  discrepancies.map((r) => `${r.name} (${formatEuros(r.component_difference)})`).join(" ; ") ||
+  "aucun";
 const years = [2021, 2022, 2023, 2024].map((year) => ({
   year,
   amount: data.history.filter((r) => r.year === year).reduce((n, r) => n + r.public_aid, 0),
@@ -52,7 +55,7 @@ const sections = [
         <h1>Le financement des partis politiques</h1>
       </div>
       <Answer
-        text={`La CNCCFP publie ${formatNumber(data.accounts.length)} comptes de partis pour 2024. Ils déclarent ${formatEuros(total)} de produits, avant consolidation entre partis.`}
+        text={`La CNCCFP publie ${formatNumber(data.accounts.length)} comptes de partis pour 2024, soit ${formatEuros(total)} de produits non consolidés.`}
       />
       <KeyFigures
         figures={[
@@ -60,26 +63,26 @@ const sections = [
             icon: "politicalFinance",
             label: "Comptes publiés",
             value: formatNumber(data.accounts.length),
-            note: "Exercice 2024, en euros",
+            note: "Exercice 2024",
           },
           {
             icon: "revenue",
             label: "Produits déclarés",
             value: formatEuros(total),
-            note: "Cumul non consolidé, 2024",
+            note: "Non consolidés, 2024",
           },
           {
             icon: "grant",
             label: "Aides inscrites aux comptes",
             value: formatEuros(aid),
-            note: "Cumul non consolidé, 2024",
+            note: "Non consolidées, 2024",
             term: "aide-partis",
           },
           {
             icon: "percent",
             label: "Aide publique majoritaire",
             value: formatNumber(alerts.length),
-            note: "Plus de 50 % des produits, comptes rapprochés",
+            note: "Plus de 50 % des produits",
           },
         ]}
       />
@@ -88,9 +91,9 @@ const sections = [
   </header>
   <Toc items={sections} />
   <div class="container">
-    <p>
+    <p class="campaigns">
       <a href="/campagnes">
-        <Icon name="campaign" /> Consulter les comptes de campagne
+        <Icon name="campaign" size={18} /> Consulter les comptes de campagne
       </a>
     </p>
   </div>
@@ -100,7 +103,9 @@ const sections = [
         <h2>
           <Icon name="politicalFinance" /> Les ressources d’un parti
         </h2>
-        <p>Comptes d’ensemble déposés auprès de la CNCCFP, exercice 2024.</p>
+        <p>
+          Comptes 2024 déposés à la <Term id="cnccfp">CNCCFP</Term>.
+        </p>
       </div>
       <form method="get">
         <label for="parti-select">Choisir un parti</label>
@@ -131,9 +136,8 @@ const sections = [
         />
         {!party.reconciled && (
           <p>
-            Les composantes et le total publiés diffèrent de{" "}
-            {formatEuros(party.component_difference)}. Ce compte est exclu des alertes de majorité
-            publique.
+            Écart de {formatEuros(party.component_difference)} avec le total publié : compte exclu
+            des alertes.
           </p>
         )}
       </div>
@@ -144,7 +148,6 @@ const sections = [
         <h2>
           <Icon name="calendar" /> L’aide publique inscrite aux comptes depuis 2021
         </h2>
-        <p>Montants comptabilisés, deux fractions et autres aides publiques.</p>
       </div>
       <div class="grid two">
         <div class="card">
@@ -158,13 +161,10 @@ const sections = [
               detail: formatEuros(r.public_aid),
             }))}
           />
-          {data.selectedHistory.length < 4 && (
-            <p class="small muted">Les exercices absents ne valent pas zéro.</p>
-          )}
         </div>
         <div class="card">
           <ColumnChart
-            caption="Cumul des comptes disponibles, non consolidé"
+            caption="Tous les comptes disponibles, non consolidé"
             unit="Euros"
             columns={years.map((r) => ({
               label: String(r.year),
@@ -175,7 +175,7 @@ const sections = [
           />
         </div>
       </div>
-      <Explainer title="Pourquoi ce cumul diffère du décret d’aide publique">
+      <Explainer title="Pourquoi ce cumul diffère du décret">
         <p>
           Les comptes d’ensemble et les transferts entre formations peuvent faire compter plusieurs
           fois un même financement. Le nombre de comptes disponibles varie aussi selon l’exercice.
@@ -187,14 +187,16 @@ const sections = [
           l’aide de 2024. C’est une référence distincte des montants inscrits dans les comptes.
         </p>
       </Explainer>
-      <Provenance provenance={data.provenance} />
+      <Provenance provenance={data.provenance}>
+        {data.selectedHistory.length < 4 && <p>Les exercices absents ne valent pas zéro.</p>}
+      </Provenance>
     </section>
     <section class="section" id="comptes">
       <div class="section-head">
         <h2>
           <Icon name="list" /> Les comptes publiés pour 2024
         </h2>
-        <p>Les quinze principaux produits déclarés, sans consolidation entre partis.</p>
+        <p>Montants non consolidés entre partis.</p>
       </div>
       <div class="card">
         <table>
@@ -224,15 +226,12 @@ const sections = [
           <a href="/telechargements#democratie">Télécharger tous les comptes retenus</a>
         </p>
       </div>
-      <Explainer title="Les contrôles arithmétiques">
+      <Explainer title="Écarts dans les comptes publiés">
         <p>
           La somme des composantes des produits est comparée au total déclaré.{" "}
           {formatNumber(discrepancies.length)} comptes de 2024 présentent un écart supérieur à un
-          euro :{" "}
-          {discrepancies
-            .map((r) => `${r.name} (${formatEuros(r.component_difference)})`)
-            .join(" ; ") || "aucun"}
-          . Les montants officiels sont conservés et les comptes concernés sont exclus des alertes.
+          euro : {discrepancyList}. Les montants officiels sont conservés et les comptes concernés
+          sont exclus des alertes.
         </p>
       </Explainer>
       <Provenance provenance={data.provenance} />
@@ -242,9 +241,7 @@ const sections = [
         <h2>
           <Icon name="percent" /> Une majorité des produits issue de l’aide publique
         </h2>
-        <p>
-          Seuil de lecture : plus de 50 % des produits 2024. Ce constat n’est pas une irrégularité.
-        </p>
+        <p>Plus de 50 % des produits 2024.</p>
       </div>
       <div class="card">
         <BarList
@@ -266,14 +263,16 @@ const sections = [
           d’élu reste une catégorie distincte.
         </p>
       </Explainer>
-      <Provenance provenance={data.provenance} />
+      <Provenance provenance={data.provenance}>
+        <p>Dépendre surtout de l’aide publique n’est pas une irrégularité.</p>
+      </Provenance>
     </section>
     <section class="section" id="privation">
       <div class="section-head">
         <h2>
-          <Icon name="info" /> Les pertes du bénéfice de l’aide publique publiées
+          <Icon name="info" /> Les partis privés d’aide publique
         </h2>
-        <p>Décisions relatives à 2024, dates de fin expressément renseignées par la CNCCFP.</p>
+        <p>Décisions sur les comptes 2024.</p>
       </div>
       <div class="card">
         <table>
@@ -309,6 +308,15 @@ const sections = [
 <style>
   .block {
     display: block;
+  }
+  .campaigns {
+    margin: 1rem 0 -1rem;
+  }
+  .campaigns a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 44px;
   }
   form {
     margin-bottom: 1rem;

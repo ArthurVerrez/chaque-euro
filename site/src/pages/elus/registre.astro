@@ -34,13 +34,13 @@ const items = (key: "mandate_kind" | "sex" | "age_band" | "department_code") =>
   title="Répertoire national des élus"
   description="Répartition des mandats du RNE et répertoire minimisé des maires, millésimes 2026."
   icon="elected"
-  answer="Le RNE contient des lignes de mandats et de fonctions. Une même personne peut apparaître plusieurs fois. Les statistiques ci-dessous ne sont donc pas un nombre de personnes uniques."
+  answer="Les mandats et fonctions inscrits au répertoire national des élus."
   figures={[
     {
       icon: "list",
       label: "Lignes de mandats ou fonctions",
       value: formatNumber(stats.reduce((n, r) => n + r.records, 0)),
-      note: department ? `Département ${department}` : "Douze catégories du RNE",
+      note: department ? `Département ${department}` : "Toutes catégories",
     },
     {
       icon: "town",
@@ -48,7 +48,6 @@ const items = (key: "mandate_kind" | "sex" | "age_band" | "department_code") =>
       value: formatNumber(
         data.statistics.filter((r) => r.mandate_kind === "mai").reduce((n, r) => n + r.records, 0),
       ),
-      note: "Millésime du 11 août 2026",
     },
   ]}
   provenance={data.provenance}
@@ -57,6 +56,10 @@ const items = (key: "mandate_kind" | "sex" | "age_band" | "department_code") =>
     { id: "maires", label: "Maires", icon: "town" },
   ]}
 >
+  <p slot="caveat">
+    Une même personne peut avoir plusieurs mandats : ces chiffres comptent des lignes, pas des
+    personnes.
+  </p>
   <section id="repartition" class="section">
     <div class="section-head">
       <h2>
@@ -72,25 +75,27 @@ const items = (key: "mandate_kind" | "sex" | "age_band" | "department_code") =>
       <button type="submit">Filtrer les statistiques</button>
     </form>
     <div class="reference-grid">
-      <BarList caption="Type de mandat ou fonction" items={items("mandate_kind")} />
-      <BarList caption="Sexe, uniquement agrégé" items={items("sex")} />
-      <BarList caption="Âge au millésime du fichier, uniquement agrégé" items={items("age_band")} />
+      <BarList caption="Par mandat ou fonction" items={items("mandate_kind")} />
+      <BarList caption="Par sexe" items={items("sex")} />
+      <BarList caption="Par âge" items={items("age_band")} />
     </div>
     <details>
       <summary>Répartition par département</summary>
       <PublicTable
-        caption="Lignes de mandats ou fonctions, toutes catégories RNE"
+        caption="Lignes par département"
         columns={["Code département", "Lignes"]}
         rows={sum("department_code")
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([code, value]) => [{ text: code }, { text: formatNumber(value) }])}
       />
     </details>
-    <p class="small muted">
-      Millésime d’août 2026, sauf AFE et conseillers consulaires : mai 2026. Pour les parlementaires
-      en exercice, consultez les répertoires AN et Sénat plus récents.
-    </p>
-    <Provenance provenance={data.provenance} />
+    <Provenance provenance={data.provenance}>
+      <p>
+        Sexe et âge ne sont publiés qu’en totaux, l’âge à la date du fichier. Fichier d’août 2026,
+        sauf AFE et conseillers consulaires : mai 2026. Pour les parlementaires en exercice, les
+        répertoires de l’Assemblée et du Sénat sont plus récents.
+      </p>
+    </Provenance>
   </section>
   <section id="maires" class="section">
     <div class="section-head">
@@ -107,7 +112,7 @@ const items = (key: "mandate_kind" | "sex" | "age_band" | "department_code") =>
       <button type="submit">Rechercher</button>
     </form>
     <PublicTable
-      caption="Identité publique, commune et date de fonction, sans naissance ni contact"
+      caption="Maires par commune"
       columns={["Nom", "Commune", "Début de fonction"]}
       rows={data.executives.map((r) => [
         { text: r.display_name, href: `/elus/locaux/${r.id}` },
@@ -119,6 +124,8 @@ const items = (key: "mandate_kind" | "sex" | "age_band" | "department_code") =>
       ])}
     />
     <PublicPagination page={page} count={data.count} />
-    <Provenance provenance={data.provenance} />
+    <Provenance provenance={data.provenance}>
+      <p>Seuls le nom, la commune et la date de début sont publiés, sans naissance ni contact.</p>
+    </Provenance>
   </section>
 </Democracy>

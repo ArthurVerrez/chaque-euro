@@ -46,9 +46,7 @@ const chart = [...filtered]
       <Icon name={level === "region" ? "region" : "intercommunalite"} />
       <h1>{title}</h1>
     </div>
-    <Answer
-      text={`En ${year}, les comptes de ${formatNumber(data.accounts.length)} collectivités sont disponibles, avec leurs dépenses, recettes et dette.`}
-    />
+    <Answer text={`Dépenses, recettes et dette de chaque collectivité en ${year}.`} />
     <KeyFigures
       figures={[
         {
@@ -75,7 +73,6 @@ const chart = [...filtered]
         <Icon name="list" />
         Les comptes {year}
       </h2>
-      <p>Montants totaux et, en dessous, montants par habitant.</p>
     </div>
     <form method="get" class="filters">
       <label>
@@ -96,11 +93,6 @@ const chart = [...filtered]
         Afficher
       </button>
     </form>
-    {level === "epci" && year === 2025 && (
-      <p class="small muted">
-        L’OFGL signale quatre comptes 2025 indisponibles. Aucun montant n’est estimé.
-      </p>
-    )}
     <div class="card accounts">
       <table>
         <thead>
@@ -165,7 +157,11 @@ const chart = [...filtered]
         {page < pages && <a href={href(page + 1)}>Suivante</a>}
       </nav>
     )}
-    <Provenance provenance={data.provenance} />
+    <Provenance provenance={data.provenance}>
+      {level === "epci" && year === 2025 && (
+        <p>L’OFGL signale quatre comptes 2025 indisponibles. Aucun montant n’est estimé.</p>
+      )}
+    </Provenance>
     <LocalLevelsExplainer />
   </section>
   <section class="section" id="comparaison" aria-labelledby="titre-comparaison">
@@ -174,11 +170,10 @@ const chart = [...filtered]
         <Icon name="compare" />
         Dépenses par habitant
       </h2>
-      <p>Les huit montants les plus élevés dans votre sélection, sans jugement sur la gestion.</p>
     </div>
     <div class="card">
       <BarList
-        caption={`Dépenses hors remboursement de dette en ${year}`}
+        caption={`Les plus élevées en ${year}, hors remboursement de dette`}
         items={chart.map((row) => ({
           label: row.name,
           value: row.spendingPerCapita ?? 0,
@@ -187,7 +182,9 @@ const chart = [...filtered]
         }))}
       />
     </div>
-    <Provenance provenance={data.provenance} />
+    <Provenance provenance={data.provenance}>
+      <p>Un montant élevé ne dit rien de la qualité de la gestion.</p>
+    </Provenance>
   </section>
 </div>
 

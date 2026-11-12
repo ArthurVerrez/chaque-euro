@@ -266,7 +266,7 @@ const current = (href: string) =>
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    height: 4rem;
+    height: 3.5rem;
     padding: 0 1.25rem;
     background: rgb(255 255 255 / 94%);
     backdrop-filter: blur(8px);
@@ -281,6 +281,7 @@ const current = (href: string) =>
     display: flex;
     align-items: center;
     gap: 0.625rem;
+    min-height: 44px;
     color: var(--navy-900);
     text-decoration: none;
   }
@@ -315,8 +316,8 @@ const current = (href: string) =>
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    min-width: 2.5rem;
-    height: 2.5rem;
+    min-width: 2.75rem;
+    height: 2.75rem;
     padding: 0 0.75rem;
     border: 1px solid var(--border-strong);
     border-radius: 10px;
@@ -525,6 +526,7 @@ const current = (href: string) =>
     display: flex;
     align-items: center;
     gap: 0.625rem;
+    min-height: 2.75rem;
     padding: 0.45rem 0.75rem;
     border-radius: 9px;
     color: var(--text-secondary);
@@ -558,7 +560,7 @@ const current = (href: string) =>
     display: flex;
     flex-direction: column;
     min-width: 0;
-    min-height: calc(100vh - 4rem);
+    min-height: calc(100vh - 3.5rem);
   }
 
   @media (min-width: 72rem) {
@@ -605,13 +607,17 @@ const current = (href: string) =>
       display: none;
     }
 
+    .group a {
+      min-height: 0;
+    }
+
     .page {
       min-height: 100vh;
     }
   }
 
   .site-footer {
-    margin-top: 4rem;
+    margin-top: 2.5rem;
     background: var(--navy-950);
     color: #c8d3ea;
     padding: 2.5rem 0 3rem;
@@ -620,12 +626,17 @@ const current = (href: string) =>
 
   .cols {
     display: grid;
-    gap: 2rem;
+    gap: 1.5rem;
   }
 
   @media (min-width: 48rem) {
+    .site-footer {
+      margin-top: 4rem;
+    }
+
     .cols {
       grid-template-columns: 2fr 1fr;
+      gap: 2rem;
     }
   }
 

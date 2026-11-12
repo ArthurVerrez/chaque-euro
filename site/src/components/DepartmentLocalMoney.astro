@@ -24,7 +24,7 @@ const perCapita = (value: number | null) =>
       <Icon name="administration" />
       Les comptes de la collectivité
     </h2>
-    <p>Le conseil départemental ou la collectivité particulière, séparément des communes.</p>
+    <p>Distincts de ceux des communes.</p>
   </div>
   {data.authorities.length ? (
     data.authorities.map(({ latest, history, provenance }) => (
@@ -82,7 +82,7 @@ const perCapita = (value: number | null) =>
       </div>
     ))
   ) : (
-    <p class="muted">Aucun compte correspondant dans les bases OFGL retenues.</p>
+    <p class="muted">Aucun compte trouvé dans les données OFGL.</p>
   )}
   <LocalLevelsExplainer />
 </section>

@@ -43,9 +43,8 @@ const steps = [
       </div>
       <p class="lead">D'où vient chaque chiffre, et comment il est calculé.</p>
       <p class="small muted">
-        Dernière construction des données&nbsp;: {formatDate(manifest.builtAt)}.{" "}
-        <a href="/methodologie/manifest.json">Manifeste complet (JSON)</a>, avec l'adresse exacte de
-        chaque fichier récupéré et son empreinte SHA-256.
+        Données mises à jour le {formatDate(manifest.builtAt)}.{" "}
+        <a href="/methodologie/manifest.json">Liste des fichiers récupérés (JSON)</a>.
       </p>
       <p>
         <a class="button" href="/telechargements">
@@ -73,9 +72,8 @@ const steps = [
         </h2>
       </div>
       <p>
-        Sous chaque chiffre, «&nbsp;Voir la source&nbsp;» vous mène au fichier officiel et
-        «&nbsp;Voir le calcul&nbsp;» au traitement utilisé. La date visible indique la période des
-        données. «&nbsp;Méthode&nbsp;» précise le périmètre, la date de récupération et les limites.
+        Sous chaque chiffre, ouvrez «&nbsp;Sources&nbsp;» : vous y trouvez le fichier officiel, le
+        calcul, la date des données et les limites.
       </p>
       {benefitsTotal && (
         <div class="card">
@@ -148,9 +146,7 @@ const steps = [
           <Icon name="source" />
           Les sources
         </h2>
-        <p>
-          {manifest.sources.length} jeux de données publics, avec leurs licences et leurs limites.
-        </p>
+        <p>Licences, dates et limites de chaque source.</p>
       </div>
       <Explainer title="Comment lire l’état d’une source">
         <p>
@@ -166,7 +162,7 @@ const steps = [
           Vérification du 4 novembre 2026 : le portail DGCL des concours financiers était en
           maintenance et l’ancien téléchargement indisponible. Aucun montant d’allocation 2026 n’est
           importé. La DGF comptabilisée dans les comptes exécutés reste une série distincte.{" "}
-          <a href="#source-dgcl-dotations-2026">Voir la source et les limites</a>.
+          <a href="#source-dgcl-dotations-2026">Voir la fiche de la source</a>.
         </p>
       </Explainer>
       <div class="sources">
@@ -186,32 +182,6 @@ const steps = [
                   {source.pageUrl}
                 </a>
               </dd>
-              {source.fileUrl && (
-                <>
-                  <dt>Fichier ou API</dt>
-                  <dd>
-                    <a class="url" href={source.fileUrl} title={source.fileUrl}>
-                      {source.fileUrl}
-                    </a>
-                  </dd>
-                </>
-              )}
-              {source.urls[0] && (
-                <>
-                  <dt>Adresse récupérée</dt>
-                  <dd>
-                    <a class="url" href={source.urls[0]} title={source.urls[0]}>
-                      {source.urls[0]}
-                    </a>
-                    {source.urls.length > 1 && (
-                      <span class="muted">
-                        {" "}
-                        et {formatNumber(source.urls.length - 1)} autres requêtes
-                      </span>
-                    )}
-                  </dd>
-                </>
-              )}
               <dt>Licence</dt>
               <dd>
                 <a href={source.licence.url}>{source.licence.name}</a>
@@ -225,64 +195,95 @@ const steps = [
                   {source.freshness}
                 </span>
               </dd>
-              <dt>Fréquence déclarée</dt>
-              <dd>{source.frequency}</dd>
-              {source.coverage && (
-                <>
-                  <dt>Couverture</dt>
-                  <dd>{source.coverage}</dd>
-                </>
-              )}
-              {source.publishedAt && (
-                <>
-                  <dt>Publié le</dt>
-                  <dd>{formatDate(source.publishedAt)}</dd>
-                </>
-              )}
-              {source.downloadExpected && (
-                <>
-                  <dt>Dernière vérification réussie</dt>
-                  <dd>
-                    {source.checkedAt ? formatDate(source.checkedAt) : "Non vérifiée"}
-                    {source.refreshFailed && (
-                      <span class="muted"> (dernière tentative en échec)</span>
-                    )}
-                  </dd>
-                </>
-              )}
-              <dt>Récupéré le</dt>
-              <dd>
-                {source.retrievedAt
-                  ? formatDate(source.retrievedAt)
-                  : source.downloadExpected
-                    ? "Non téléchargé"
-                    : "Référence du registre"}
-              </dd>
-              {source.rows !== null && (
-                <>
-                  <dt>Lignes lues</dt>
-                  <dd class="num">{formatNumber(source.rows)}</dd>
-                </>
-              )}
-              {source.value !== null && (
-                <>
-                  <dt>Valeur utilisée</dt>
-                  <dd class="num">{formatNumber(source.value)}</dd>
-                </>
-              )}
-              {source.sha256 && (
-                <>
-                  <dt>SHA-256</dt>
-                  <dd class="hash">{source.sha256}</dd>
-                </>
-              )}
             </dl>
-            <h4>Limites connues</h4>
-            <ul class="limits">
-              {source.limits.map((limit) => (
-                <li>{limit}</li>
-              ))}
-            </ul>
+            <details>
+              <summary>Détails et limites</summary>
+              <dl>
+                {source.fileUrl && (
+                  <>
+                    <dt>Fichier ou API</dt>
+                    <dd>
+                      <a class="url" href={source.fileUrl} title={source.fileUrl}>
+                        {source.fileUrl}
+                      </a>
+                    </dd>
+                  </>
+                )}
+                {source.urls[0] && (
+                  <>
+                    <dt>Adresse récupérée</dt>
+                    <dd>
+                      <a class="url" href={source.urls[0]} title={source.urls[0]}>
+                        {source.urls[0]}
+                      </a>
+                      {source.urls.length > 1 && (
+                        <span class="muted">
+                          {" "}
+                          et {formatNumber(source.urls.length - 1)} autres requêtes
+                        </span>
+                      )}
+                    </dd>
+                  </>
+                )}
+                <dt>Fréquence déclarée</dt>
+                <dd>{source.frequency}</dd>
+                {source.coverage && (
+                  <>
+                    <dt>Couverture</dt>
+                    <dd>{source.coverage}</dd>
+                  </>
+                )}
+                {source.publishedAt && (
+                  <>
+                    <dt>Publié le</dt>
+                    <dd>{formatDate(source.publishedAt)}</dd>
+                  </>
+                )}
+                {source.downloadExpected && (
+                  <>
+                    <dt>Dernière vérification réussie</dt>
+                    <dd>
+                      {source.checkedAt ? formatDate(source.checkedAt) : "Non vérifiée"}
+                      {source.refreshFailed && (
+                        <span class="muted"> (dernière tentative en échec)</span>
+                      )}
+                    </dd>
+                  </>
+                )}
+                <dt>Récupéré le</dt>
+                <dd>
+                  {source.retrievedAt
+                    ? formatDate(source.retrievedAt)
+                    : source.downloadExpected
+                      ? "Non téléchargé"
+                      : "Référence du registre"}
+                </dd>
+                {source.rows !== null && (
+                  <>
+                    <dt>Lignes lues</dt>
+                    <dd class="num">{formatNumber(source.rows)}</dd>
+                  </>
+                )}
+                {source.value !== null && (
+                  <>
+                    <dt>Valeur utilisée</dt>
+                    <dd class="num">{formatNumber(source.value)}</dd>
+                  </>
+                )}
+                {source.sha256 && (
+                  <>
+                    <dt>SHA-256</dt>
+                    <dd class="hash">{source.sha256}</dd>
+                  </>
+                )}
+              </dl>
+              <h4>Limites connues</h4>
+              <ul class="limits">
+                {source.limits.map((limit) => (
+                  <li>{limit}</li>
+                ))}
+              </ul>
+            </details>
           </article>
         ))}
       </div>
@@ -337,6 +338,11 @@ const steps = [
 
   .source .badge {
     margin: 0 0 0.75rem;
+  }
+
+  .source summary {
+    color: var(--link);
+    font-weight: 600;
   }
 
   dl {

@@ -33,7 +33,7 @@ const figure = (kind: string, label: string) => ({
   title="Élus"
   description="Mandats, groupes et votes publics des parlementaires, fonctions gouvernementales et répertoire des élus locaux."
   icon="elected"
-  answer="Retrouvez votre député ou sénateur et ses votes publics. La participation mesure les votes enregistrés, pas tout le travail parlementaire."
+  answer="Retrouvez vos députés et sénateurs, et leurs votes publics."
   figures={[
     figure("deputy", "Députés en exercice"),
     figure("senator", "Sénateurs en exercice"),
@@ -189,7 +189,7 @@ const figure = (kind: string, label: string) => ({
       <button type="submit">Rechercher</button>
     </form>
     <PublicTable
-      caption="Fonctions en cours dans les sources importées"
+      caption="Fonctions en cours"
       columns={["Nom", "Fonction", "Territoire", "Groupe"]}
       rows={data.people.map((p) => [
         { text: p.display_name, href: `/elus/${p.id}` },
@@ -199,10 +199,6 @@ const figure = (kind: string, label: string) => ({
       ])}
     />
     <PublicPagination page={filters.page} count={data.count} />
-    <p class="small muted">
-      Les membres du gouvernement sont ceux du répertoire parlementaire AN. Le rapprochement
-      exhaustif avec les décrets de nomination reste à compléter.
-    </p>
     <div class="related">
       <a href="/elus/registre">
         <Icon name="town" size={18} />
@@ -217,7 +213,12 @@ const figure = (kind: string, label: string) => ({
         Indemnités et moyens
       </a>
     </div>
-    <Provenance provenance={data.provenance} />
+    <Provenance provenance={data.provenance}>
+      <p>
+        Les membres du gouvernement viennent du répertoire de l’Assemblée nationale. Le
+        rapprochement complet avec les décrets de nomination reste à faire.
+      </p>
+    </Provenance>
   </section>
   <section id="scrutins" class="section">
     <div class="section-head">
@@ -227,7 +228,7 @@ const figure = (kind: string, label: string) => ({
       </h2>
     </div>
     <PublicTable
-      caption="Derniers scrutins publiés dans les deux chambres"
+      caption="Derniers scrutins, Assemblée et Sénat"
       columns={["Date", "Chambre", "Scrutin"]}
       rows={data.ballots.map((b) => [
         { text: formatDate(b.voted_on) },

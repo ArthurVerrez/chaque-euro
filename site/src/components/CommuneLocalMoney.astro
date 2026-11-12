@@ -1,6 +1,6 @@
 ---
 import type { getCommuneLocal } from "../lib/data";
-import { formatEuro, formatEuros, formatNumber, formatPercent, plural } from "../lib/format";
+import { formatEuro, formatEuros, formatNumber, formatPercent } from "../lib/format";
 import Explainer from "./Explainer.astro";
 import Icon from "./Icon.astro";
 import KeyFigures from "./KeyFigures.astro";
@@ -38,10 +38,7 @@ const euros = (value: number | null) => (value === null ? "n.d." : formatEuros(v
       <Icon name="localTax" />
       Impôts locaux 2025
     </h2>
-    <p>
-      Taux et <Term id="base-fiscale">bases fiscales</Term>, par bénéficiaire, comparés aux communes
-      de même taille.
-    </p>
+    <p>Taux comparés aux communes de même taille.</p>
   </div>
   {data.taxes.length ? (
     <div class="taxes">
@@ -79,20 +76,13 @@ const euros = (value: number | null) => (value === null ? "n.d." : formatEuros(v
                         )}
                       </th>
                       <td class="num">{rate(row.rate)}</td>
-                      <td class="num">
-                        {rate(row.medianRate)}
-                        <span class="detail muted">
-                          {row.peers === null ? "" : plural(row.peers, "commune", "communes")}
-                        </span>
-                      </td>
+                      <td class="num">{rate(row.medianRate)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <p class="muted small">
-                Aucune base ou aucun taux positif renseigné pour cette taxe.
-              </p>
+              <p class="muted small">Aucune base ni aucun taux positif publié.</p>
             )}
             {rows.length > 0 && (
               <details>
@@ -135,7 +125,7 @@ const euros = (value: number | null) => (value === null ? "n.d." : formatEuros(v
       })}
     </div>
   ) : (
-    <p class="muted">Aucune donnée fiscale 2025 disponible ici. Aucun taux estimé.</p>
+    <p class="muted">Pas de données fiscales 2025 pour cette commune.</p>
   )}
   <Explainer title="Ce que les taux permettent de comparer">
     <p>
@@ -145,9 +135,10 @@ const euros = (value: number | null) => (value === null ? "n.d." : formatEuros(v
       population totale OFGL 2025.
     </p>
     <p>
-      La base est une valeur fiscale, pas la valeur de marché du bien. Les taux sont ceux
-      applicables, parfois différents des taux votés lors d’une fusion. Les exonérations, frais,
-      lissages et taxes annexes ne permettent pas de déduire votre avis d’imposition de ce tableau.
+      La <Term id="base-fiscale">base</Term> est une valeur fiscale, pas la valeur de marché du
+      bien. Les taux sont ceux applicables, parfois différents des taux votés lors d’une fusion. Les
+      exonérations, frais, lissages et taxes annexes ne permettent pas de déduire votre avis
+      d’imposition de ce tableau.
     </p>
     <p>
       La taxe d’enlèvement des ordures ménagères distingue ses zones de taux. Sa part incitative
@@ -192,7 +183,7 @@ const euros = (value: number | null) => (value === null ? "n.d." : formatEuros(v
       ]}
     />
   ) : (
-    <p class="muted">Aucune donnée d’impôt sur le revenu disponible ici. Aucun montant estimé.</p>
+    <p class="muted">Pas de données d’impôt sur le revenu pour cette commune.</p>
   )}
   <Explainer title="Revenus des habitants, recette de l’État">
     <p>
@@ -242,7 +233,7 @@ const euros = (value: number | null) => (value === null ? "n.d." : formatEuros(v
   ) : (
     <p class="muted">Montant comptabilisé non disponible.</p>
   )}
-  <Explainer title="Pourquoi les allocations 2026 ne figurent pas ici">
+  <Explainer title="Pas encore d’allocations 2026">
     <p>
       Lors de la vérification du 4 novembre 2026, le nouveau portail DGCL était en maintenance et
       l’ancien téléchargement indisponible. Les allocations 2026 restent donc absentes. Les comptes
@@ -283,7 +274,7 @@ const euros = (value: number | null) => (value === null ? "n.d." : formatEuros(v
     font-size: 0.75rem;
     font-weight: 400;
     margin-top: 0.3rem;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     white-space: normal;
   }
   details {

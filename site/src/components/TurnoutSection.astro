@@ -20,7 +20,6 @@ const { rows, provenance } = Astro.props;
       <Icon name="vote" />
       Participation aux élections
     </h2>
-    <p>La part des inscrits qui ont voté, sur le périmètre de chaque scrutin.</p>
   </div>
   {rows.length ? (
     <>
@@ -54,8 +53,6 @@ const { rows, provenance } = Astro.props;
       <Provenance provenance={provenance} />
     </>
   ) : (
-    <p class="muted">
-      Aucune donnée de participation pour ce territoire dans les fichiers retenus.
-    </p>
+    <p class="muted">Aucune donnée de participation pour ce territoire.</p>
   )}
 </section>

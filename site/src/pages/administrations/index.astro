@@ -25,13 +25,12 @@ const params = Astro.url.searchParams;
           <Icon name="administration" />
           <h1>Les administrations de l'État</h1>
         </div>
-        <Answer text="Vous pouvez retrouver un ministère, une direction ou une préfecture et consulter ses rattachements officiels." />
+        <Answer text="Ministères, directions et préfectures, avec leurs rattachements." />
         <KeyFigures
           figures={data.categories.map((row) => ({
             icon: "administration",
             label: row.label,
             value: formatNumber(row.count),
-            note: "Structures diffusables dans les sources intégrées",
           }))}
         />
         <Provenance provenance={data.provenance} />
@@ -73,7 +72,7 @@ const params = Astro.url.searchParams;
           <button type="submit">Filtrer</button>
           <a href="/administrations">Réinitialiser</a>
         </form>
-        <p>{formatNumber(data.total)} structures correspondent à vos filtres.</p>
+        <p>{formatNumber(data.total)} structures trouvées.</p>
         <ol class="document-results">
           {data.rows.map((row) => (
             <li>

@@ -14,6 +14,12 @@ const parliament = data.references.filter((r) =>
 );
 const local = data.references.filter((r) => r.source_id === "local-allowance");
 const presidency = data.references.find((r) => r.source_id === "presidency-accounts")!;
+const cadaLast = formatDate(
+  data.cada
+    .map((r) => r.last)
+    .sort()
+    .at(-1) ?? null,
+);
 const kinds: Record<string, string> = {
   allowance: "Indemnité",
   envelope: "Enveloppe autorisée",
@@ -26,7 +32,7 @@ const kinds: Record<string, string> = {
   title="Moyens publics"
   description="Indemnités brutes, enveloppes de frais, budgets institutionnels et plafonds locaux, avec dates et limites."
   icon="spending"
-  answer="Une indemnité, une enveloppe de frais et un budget d’institution décrivent des réalités différentes. Vous trouvez ici leurs barèmes et leurs dates, sans les attribuer à la dépense personnelle d’un élu."
+  answer="Indemnités, frais de mandat et budgets des institutions, avec leurs dates."
   provenance={data.accessProvenance}
   sections={[
     { id: "parlement", label: "Parlement", icon: "elected" },
@@ -37,6 +43,10 @@ const kinds: Record<string, string> = {
     { id: "cada", label: "Avis CADA", icon: "scale" },
   ]}
 >
+  <p slot="caveat">
+    Une indemnité, une enveloppe de frais et un budget d’institution sont des choses différentes.
+    Aucun de ces montants n’est la dépense personnelle d’un élu.
+  </p>
   <section id="parlement" class="section">
     <div class="section-head">
       <h2>
@@ -73,7 +83,7 @@ const kinds: Record<string, string> = {
       </h2>
     </div>
     <BarList
-      caption="Mission Pouvoirs publics, exécution et crédits votés séparés"
+      caption="Mission Pouvoirs publics"
       items={data.budget
         .filter((r) => r.amount !== null)
         .map((r) => ({
@@ -84,22 +94,24 @@ const kinds: Record<string, string> = {
         }))}
     />
     <p>
-      <a href="/budget-etat">Voir les programmes et les crédits du budget de l’État</a>. Ces totaux
-      comprennent des moyens parlementaires : ils ne s’ajoutent pas aux enveloppes présentées plus
-      haut.
+      <a href="/budget-etat">Voir le budget de l’État</a>
     </p>
-    <Provenance provenance={data.budgetProvenance} />
+    <Provenance provenance={data.budgetProvenance}>
+      <p>
+        Exécution et crédits votés sont présentés séparément. Ces totaux comprennent les moyens
+        parlementaires : ils ne s’ajoutent pas aux enveloppes ci-dessus.
+      </p>
+    </Provenance>
     <div class="card">
       <h3>
         <Icon name="state" />
         Présidence de la République
       </h3>
       <p class="reference-value">{formatEuros(presidency.amount_cents / 100)}</p>
-      <p>
-        Charges de l’exercice 2024, selon la Cour des comptes. Ce montant n’est ni la dotation de
-        l’État ni une dépense personnelle du président.
-      </p>
-      <Provenance provenance={presidency.provenance} />
+      <p>Charges 2024, selon la Cour des comptes.</p>
+      <Provenance provenance={presidency.provenance}>
+        <p>Ce montant n’est ni la dotation de l’État ni une dépense personnelle du président.</p>
+      </Provenance>
     </div>
   </section>
   <section id="cabinets" class="section">
@@ -110,7 +122,7 @@ const kinds: Record<string, string> = {
       </h2>
     </div>
     <BarList
-      caption="Effectifs au 1er juillet 2025, annexe PLF 2026"
+      caption="Effectifs au 1er juillet 2025"
       items={data.cabinets.map((r) => ({
         icon: "staff",
         label: r.category,
@@ -118,11 +130,12 @@ const kinds: Record<string, string> = {
         display: formatNumber(r.value),
       }))}
     />
-    <p class="small muted">
-      Photographie historique, pas effectif actuel du gouvernement. Aucun salaire individuel ou
-      moyen n’est déduit de ces effectifs.
-    </p>
-    <Provenance provenance={data.cabinetProvenance} />
+    <Provenance provenance={data.cabinetProvenance}>
+      <p>
+        Photographie à une date passée, pas l’effectif actuel du gouvernement. Aucun salaire n’est
+        déduit de ces effectifs.
+      </p>
+    </Provenance>
   </section>
   <section id="locaux" class="section">
     <div class="section-head">
@@ -132,7 +145,7 @@ const kinds: Record<string, string> = {
       </h2>
     </div>
     <PublicTable
-      caption="Barèmes bruts mensuels au 1er janvier 2026, hors majorations et règles de cumul"
+      caption="Montants bruts mensuels au 1er janvier 2026"
       columns={["Fonction", "Population", "Montant de référence"]}
       rows={local.map((r) => [
         { text: r.role_kind },
@@ -140,8 +153,12 @@ const kinds: Record<string, string> = {
         { text: formatEuroCents(r.amount_cents) },
       ])}
     />
-    <p>Ces plafonds ne prouvent pas les indemnités réellement versées par une commune.</p>
-    <Provenance provenance={local[0]!.provenance} />
+    <Provenance provenance={local[0]!.provenance}>
+      <p>
+        Plafonds légaux, hors majorations et règles de cumul. Ils ne disent pas ce qu’une commune
+        verse réellement.
+      </p>
+    </Provenance>
   </section>
   <section id="acces" class="section">
     <div class="section-head">
@@ -176,19 +193,10 @@ const kinds: Record<string, string> = {
       </h2>
     </div>
     <p>
-      Séances couvertes jusqu’au{" "}
-      <strong>
-        {formatDate(
-          data.cada
-            .map((r) => r.last)
-            .sort()
-            .at(-1) ?? null,
-        )}
-      </strong>
-      . Le fichier mis en ligne en 2026 ne contient pas des avis de 2026.
+      Séances couvertes jusqu’au <strong>{cadaLast}</strong>.
     </p>
     <PublicTable
-      caption="Dossiers uniques ; sens favorable et défavorable peuvent se chevaucher"
+      caption="Avis et conseils de la CADA"
       columns={["Type", "Dossiers", "Avec sens favorable", "Avec sens défavorable"]}
       rows={data.cada.map((r) => [
         { text: r.kind },
@@ -197,10 +205,15 @@ const kinds: Record<string, string> = {
         { text: formatNumber(r.unfavorable) },
       ])}
     />
-    <p class="small muted">
-      Un avis est consultatif et ne prouve pas que le document a été communiqué. Les textes, les
-      requérants privés et les trois sanctions sont exclus.
-    </p>
-    <Provenance provenance={data.cadaProvenance} />
+    <Provenance provenance={data.cadaProvenance}>
+      <p>
+        Un avis est consultatif : il ne prouve pas que le document a été communiqué. Un dossier peut
+        avoir un sens favorable et défavorable à la fois.
+      </p>
+      <p>
+        Le fichier mis en ligne en 2026 ne contient pas d’avis de 2026. Les textes des avis, les
+        demandeurs privés et les trois sanctions sont exclus.
+      </p>
+    </Provenance>
   </section>
 </Democracy>

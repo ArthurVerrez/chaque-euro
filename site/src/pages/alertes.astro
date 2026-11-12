@@ -5,6 +5,7 @@ import PublicTable from "../components/PublicTable.astro";
 import PublicPagination from "../components/PublicPagination.astro";
 import Provenance from "../components/Provenance.astro";
 import Explainer from "../components/Explainer.astro";
+import Term from "../components/Term.astro";
 import { getDemocracyAlerts } from "../lib/data";
 import { electionLabels, pageNumber } from "../lib/democracy";
 import { formatDate, formatNumber } from "../lib/format";
@@ -27,7 +28,7 @@ const data = await getDemocracyAlerts(filters);
   title="Alertes et statuts officiels"
   description="Statuts CNCCFP publiés, selon des règles explicites et vérifiables, sans qualification pénale."
   icon="alert"
-  answer="Ces informations reprennent trois statuts administratifs explicites : compte rejeté, absence de dépôt et dépôt hors délai. Elles ne constituent ni un classement des personnes ni une qualification pénale."
+  answer="Comptes de campagne rejetés, non déposés ou déposés hors délai, selon la CNCCFP."
   figures={data.totals.map((t) => ({
     icon: "scale",
     label: rules[t.rule] ?? t.rule,
@@ -37,12 +38,19 @@ const data = await getDemocracyAlerts(filters);
   provenance={data.provenance}
   sections={[{ id: "statuts", label: "Rechercher", icon: "search" }]}
 >
+  <p slot="caveat">
+    Ces statuts sont administratifs. Ils ne sont ni un classement des personnes ni une qualification
+    pénale.
+  </p>
   <section id="statuts" class="section">
     <div class="section-head">
       <h2>
         <Icon name="scale" />
         Décisions publiées
       </h2>
+      <p>
+        Statuts administratifs publiés par la <Term id="cnccfp">CNCCFP</Term>.
+      </p>
     </div>
     <form class="filters" method="get">
       <label>
@@ -74,7 +82,7 @@ const data = await getDemocracyAlerts(filters);
       <button type="submit">Filtrer</button>
     </form>
     <PublicTable
-      caption="Statut dans la publication CNCCFP, procédure judiciaire non renseignée"
+      caption="Candidats et statut officiel"
       columns={["Candidat", "Élection et territoire", "Statut officiel", "Publication"]}
       rows={data.rows.map((r) => [
         { text: r.candidate_name, href: `/campagnes/${r.election_id}/${r.candidate_id}` },
@@ -95,6 +103,8 @@ const data = await getDemocracyAlerts(filters);
         cette seule base. Les décisions municipales non analysées ne produisent pas d’alerte.
       </p>
     </Explainer>
-    <Provenance provenance={data.provenance} />
+    <Provenance provenance={data.provenance}>
+      <p>Ces statuts ne disent rien d’une éventuelle procédure judiciaire.</p>
+    </Provenance>
   </section>
 </Democracy>

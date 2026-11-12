@@ -50,11 +50,17 @@ const path = (values: (number | null)[]) =>
         : `${index > 0 && values[index - 1] !== null ? "L" : "M"}${x(index)} ${y(value)}`,
     )
     .join(" ");
-const labelCount = Math.min(labels.length, maxLabels);
-const labelIndexes = new Set(
-  Array.from({ length: labelCount }, (_, index) =>
-    Math.round((index * (labels.length - 1)) / Math.max(labelCount - 1, 1)),
-  ),
+const spread = (count: number) => {
+  const shown = Math.min(labels.length, count);
+  return new Set(
+    Array.from({ length: shown }, (_, index) =>
+      Math.round((index * (labels.length - 1)) / Math.max(shown - 1, 1)),
+    ),
+  );
+};
+const labelIndexes = spread(maxLabels);
+const compactIndexes = spread(
+  Math.min(maxLabels, labels.some((label) => label.length > 4) ? 3 : 4),
 );
 const tickWidth = Math.max(4, ...ticks.map((tick) => format(tick).length * 0.5));
 const color = (entry: LineSeries, index: number) =>
@@ -144,7 +150,7 @@ const readout = (index: number) =>
     <div class="labels">
       {labels.map((label, index) => (
         <span
-          class:list={{ minor: !labelIndexes.has(index) }}
+          class:list={{ minor: !labelIndexes.has(index), compact: compactIndexes.has(index) }}
           style={`left: ${index === 0 ? 0 : index === labels.length - 1 ? 100 : x(index)}%`}
         >
           {label}
@@ -399,7 +405,7 @@ const readout = (index: number) =>
 
   @media (max-width: 40rem) {
     .period-name,
-    .labels .minor,
+    .labels :not(.compact),
     .dense .point {
       display: none;
     }

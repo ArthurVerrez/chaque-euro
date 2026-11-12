@@ -3,7 +3,6 @@ import Analysis from "../../layouts/Analysis.astro";
 import Section from "../../components/AnalysisSection.astro";
 import LineChart from "../../components/LineChart.astro";
 import BarList from "../../components/BarList.astro";
-import Provenance from "../../components/Provenance.astro";
 import Term from "../../components/Term.astro";
 import { analysis } from "../../lib/analyses";
 import { getEuropeAnalysis } from "../../lib/data";
@@ -51,24 +50,25 @@ const sections = [
 
 <Analysis
   article={analysis("europe")}
-  answer={`En ${latest.year}, la France contribue à hauteur de ${formatBillions(latest.contribution)} au budget européen et reçoit ${formatBillions(latest.expenditure)} de dépenses allouées sur son territoire, hors relance. Le solde comptable est de ${formatBillions(latest.balance)}. Il ne mesure pas les effets économiques de l’Union européenne.`}
+  answer={`En ${latest.year}, la France verse ${formatBillions(latest.contribution)} au budget européen, qui dépense ${formatBillions(latest.expenditure)} sur son territoire, hors relance.`}
   figures={figures}
   provenance={[data.provenance]}
   sections={sections}
 >
   <Section
     id="flux"
-    title="Ce qui est versé, ce qui est dépensé en France"
+    title="Versé à l’Europe, dépensé en France"
     icon="trend"
-    provenance={data.provenance}
+    provenance={[data.provenance, data.stateProvenance]}
   >
     <p>
-      La contribution inclut les ressources fondées sur le revenu national, la TVA, les emballages
-      plastiques, les droits de douane et les ajustements. Les dépenses reçues financent des
-      bénéficiaires et des projets en France, pas uniquement le budget de l’État.
+      Les dépenses reçues financent des bénéficiaires et des projets en France, pas uniquement le
+      budget de l’État.
     </p>
-    <p>
-      Le <Term id="prelevements-sur-recettes">prélèvement sur recettes</Term> inscrit au budget
+    <p slot="caveat">
+      La contribution inclut les ressources fondées sur le revenu national, la TVA, les emballages
+      plastiques, les droits de douane et les ajustements. Le{" "}
+      <Term id="prelevements-sur-recettes">prélèvement sur recettes</Term> inscrit au budget
       français représente {formatBillions(data.psr)} en 2025. Il exclut les droits de douane
       collectés pour l’Union. Le graphique utilise une contribution plus large pour comparer des
       flux de même périmètre.
@@ -90,7 +90,6 @@ const sections = [
       format={formatBillions}
     />
   </Section>
-  <Provenance provenance={data.stateProvenance} />
   <Section
     id="usages"
     title="À quoi servent les dépenses européennes en France ?"
@@ -98,14 +97,13 @@ const sections = [
     provenance={data.provenance}
   >
     <p>
-      Les ressources naturelles et l’environnement, dont la politique agricole commune, constituent
-      la principale rubrique en {latest.year}. Viennent ensuite le marché unique, l’innovation et le
-      numérique, puis la cohésion et les politiques de résilience.
+      Première rubrique en {latest.year} : ressources naturelles et environnement, dont la politique
+      agricole commune.
     </p>
-    <p>
+    <p slot="caveat">
       Ces catégories suivent le cadre budgétaire européen. Elles ne correspondent pas aux missions
       du budget français. L’administration européenne située en France est incluse&#8239;; les
-      dépenses de relance sont présentées dans la section suivante.
+      dépenses de relance sont présentées à part.
     </p>
     <BarList
       slot="chart"
@@ -118,20 +116,14 @@ const sections = [
       }))}
     />
   </Section>
-  <Section
-    id="solde"
-    title="Un solde comptable, avec un périmètre explicite"
-    icon="scale"
-    provenance={data.provenance}
-  >
+  <Section id="solde" title="Un solde comptable" icon="scale" provenance={data.provenance}>
     <p>
-      Le calcul est une soustraction : dépenses en France moins contribution. Un solde négatif
-      indique que la France verse davantage qu’elle ne reçoit sur ce périmètre. En {latest.year},
-      l’écart est de {formatBillions(-latest.balance)}, soit {formatEuro(-latest.per_capita)} par
-      habitant.
+      Dépenses en France moins contribution : en {latest.year}, l’écart est de{" "}
+      {formatBillions(-latest.balance)}, soit {formatEuro(-latest.per_capita)} par habitant.
     </p>
-    <p>
-      Ce ratio est un ordre de grandeur collectif. Ce n’est ni votre facture, ni une mesure des
+    <p slot="caveat">
+      Un solde négatif indique que la France verse davantage qu’elle ne reçoit sur ce périmètre. Ce
+      ratio est un ordre de grandeur collectif. Ce n’est ni votre facture, ni une mesure des
       avantages de l’adhésion. Les échanges sur le marché unique, les effets transfrontaliers et les
       biens publics européens restent hors de ce calcul.
     </p>
@@ -152,14 +144,13 @@ const sections = [
     provenance={data.provenance}
   >
     <p>
-      Le plan de relance NextGenerationEU est financé par des emprunts européens. La Commission le
-      présente séparément du budget ordinaire. Le mélanger aux retours ordinaires changerait le sens
-      du solde précédent.
+      Le plan de relance est financé par des emprunts européens. En {latest.year},{" "}
+      {formatBillions(latest.ngeu)} de dépenses NGEU sont allouées en France.
     </p>
-    <p>
-      En {latest.year}, le fichier retrace {formatBillions(latest.ngeu)} de dépenses NGEU allouées
-      en France. Ce flux annuel ne doit pas être confondu avec l’enveloppe pluriannuelle d’un plan,
-      ni avec la date d’annonce d’un versement.
+    <p slot="caveat">
+      La Commission présente ce plan séparément du budget ordinaire&#8239;; le mélanger aux retours
+      ordinaires changerait le sens du solde précédent. Ce flux annuel ne doit pas être confondu
+      avec l’enveloppe pluriannuelle d’un plan, ni avec la date d’annonce d’un versement.
     </p>
     <LineChart
       slot="chart"

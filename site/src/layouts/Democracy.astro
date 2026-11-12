@@ -18,19 +18,23 @@ interface Props {
   sections: { id: string; label: string; icon: IconName }[];
 }
 const { title, description, icon, answer, figures = [], provenance, sections } = Astro.props;
+const parent =
+  Astro.url.pathname.replace(/\/$/, "") === "/elus" ? [] : [{ label: "Élus", href: "/elus" }];
 ---
 
 <Base title={title} description={description}>
   <header class="page-head">
     <div class="container">
-      <Breadcrumbs items={[{ label: "Élus", href: "/elus" }, { label: title }]} />
+      <Breadcrumbs items={[...parent, { label: title }]} />
       <div class="entity">
         <Icon name={icon} />
         <h1>{title}</h1>
       </div>
       <Answer text={answer} />
       {figures.length > 0 && <KeyFigures figures={figures} />}
-      <Provenance provenance={provenance} />
+      <Provenance provenance={provenance}>
+        <slot name="caveat" />
+      </Provenance>
     </div>
   </header>
   {sections.length > 1 && (
@@ -86,6 +90,7 @@ const { title, description, icon, answer, figures = [], provenance, sections } =
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
+    min-height: 44px;
   }
   .democracy :global(.reference-grid) {
     display: grid;

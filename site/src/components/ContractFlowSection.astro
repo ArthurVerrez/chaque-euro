@@ -47,7 +47,7 @@ const figures = [
     value: formatEuros(flow.amount),
     note:
       flow.estimated > 0
-        ? `dont ${formatNumber(flow.estimated)} montants estimés par le consolidateur`
+        ? `dont ${formatNumber(flow.estimated)} montants estimés`
         : won
           ? "part estimée de l'organisation"
           : "somme des marchés attribués",
@@ -58,7 +58,7 @@ const figures = [
     value: formatNumber(flow.count),
     note:
       flow.unpriced > 0
-        ? `dont ${formatNumber(flow.unpriced)} sans montant fiable, non comptés`
+        ? `dont ${formatNumber(flow.unpriced)} sans montant fiable`
         : "tous avec un montant publié",
   },
   ...(top && flow.amount > 0

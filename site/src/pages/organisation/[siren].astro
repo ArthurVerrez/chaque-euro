@@ -192,9 +192,7 @@ const description = answer ?? "Aucune donnée publique pour ce SIREN.";
             </p>
           )}
           {answer && <Answer text={answer} />}
-          {!answer && group && (
-            <p class="lead">Aucun marché ni versement recensé pour ce SIREN dans nos données.</p>
-          )}
+          {!answer && group && <p class="lead">Aucun marché ni versement recensé pour ce SIREN.</p>}
           {figures.length > 0 && <KeyFigures figures={figures} />}
           {org.commune && (
             <p class="commune-link">
@@ -217,12 +215,12 @@ const description = answer ?? "Aucune donnée publique pour ce SIREN.";
                 Les versements de l'État en {org.grants.year}
               </h2>
               <p>
-                Versements par <Term id="programme">programme</Term> du budget de l'État.
+                Par <Term id="programme">programme</Term> du budget de l'État.
               </p>
             </div>
             <div class="grid two">
               <div class="card">
-                <BarList caption="Par programme du budget de l'État" items={grantProgrammes} />
+                <BarList caption="Montant par programme" items={grantProgrammes} />
               </div>
               <div class="card">
                 <h3>
@@ -304,9 +302,8 @@ const description = answer ?? "Aucune donnée publique pour ce SIREN.";
         />
         <h1>Aucune donnée pour ce SIREN</h1>
         <p class="lead">
-          Ce SIREN n'apparaît ni dans les marchés publics publiés depuis 2019, ni dans les
-          subventions de l'État aux associations. Les entrepreneurs individuels ne sont jamais
-          affichés sur ce site.
+          Ni marché public ni versement de l'État pour ce SIREN. Les entrepreneurs individuels ne
+          sont jamais affichés.
         </p>
         <a class="button" href="/recherche">
           Faire une recherche

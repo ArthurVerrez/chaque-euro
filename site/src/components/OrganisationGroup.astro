@@ -18,6 +18,13 @@ const measures = [
   { id: "acheteur", label: "Marchés attribués", icon: "buyer" },
   { id: "versement", label: "Versements de l’État", icon: "grant" },
 ] as const satisfies { id: GroupMeasure; label: string; icon: string }[];
+const asOf = formatDate(group.asOf);
+const relation = (member: OrganisationGroup["members"][number]) =>
+  member.parentKind === "root"
+    ? "entité mère"
+    : member.parentKind === "ultimate"
+      ? "consolidation par la mère ultime du groupe"
+      : `contrôle direct par ${group.members.find((parent) => parent.siren === member.parentSiren)?.name ?? member.parentSiren}`;
 const display = (value: GroupAmount | null) =>
   value?.amount !== null && value?.amount !== undefined
     ? formatEuros(value.amount)
@@ -33,8 +40,7 @@ const display = (value: GroupAmount | null) =>
       {group.name}
     </h2>
     <p>
-      <Term id="groupe-entreprises">Groupe</Term> au {formatDate(group.asOf)}, périmètre partiel.
-      Montants en {group.year}.
+      <Term id="groupe-entreprises">Groupe</Term> au {asOf}, montants {group.year}.
     </p>
   </div>
   {group.analysisPath && (
@@ -50,7 +56,7 @@ const display = (value: GroupAmount | null) =>
       label: measure.label,
       value: display(group.totals[measure.id]),
       note: [
-        "Somme des entités documentées",
+        "Entités documentées",
         (group.totals[measure.id]?.unpriced ?? 0) > 0 && "Montants incomplets",
         (group.totals[measure.id]?.estimated ?? 0) > 0 && "Estimations incluses",
       ]
@@ -58,7 +64,6 @@ const display = (value: GroupAmount | null) =>
         .join(" · "),
     }))}
   />
-  <Provenance provenance={group.moneyProvenance} />
   <Explainer title="Montants par entité">
     <div class="card group-table">
       <table>
@@ -130,8 +135,8 @@ const display = (value: GroupAmount | null) =>
     <Explainer title="Comment lire ces montants">
       <p>
         Vous voyez les seules entités dont le lien avec le groupe est documenté ici. Les autres
-        sociétés du groupe peuvent manquer. Les liens sont ceux du {formatDate(group.asOf)}, sans
-        reconstitution des changements en cours d’année. Les noms viennent de Sirene.
+        sociétés du groupe peuvent manquer. Les liens sont ceux du {asOf}, sans reconstitution des
+        changements en cours d’année. Les noms viennent de Sirene.
       </p>
       <p>
         Pour GLEIF, la mère ultime est celle qui consolide les comptes au plus haut niveau déclaré.
@@ -154,17 +159,12 @@ const display = (value: GroupAmount | null) =>
       </p>
     </Explainer>
   </div>
-  <Explainer title="Liens documentés">
+  <Provenance provenance={[group.moneyProvenance, group.provenance]}>
+    <p>Liens documentés entre sociétés, périmètre partiel :</p>
     <ul>
       {group.members.map((member) => (
         <li>
-          {member.name} :{" "}
-          {member.parentKind === "root"
-            ? "entité mère"
-            : member.parentKind === "ultimate"
-              ? "consolidation par la mère ultime du groupe"
-              : `contrôle direct par ${group.members.find((parent) => parent.siren === member.parentSiren)?.name ?? member.parentSiren}`}
-          . {member.reference}.{" "}
+          {member.name} : {relation(member)}. {member.reference}.{" "}
           <a
             href={
               member.evidence.recordUrl ??
@@ -177,8 +177,7 @@ const display = (value: GroupAmount | null) =>
         </li>
       ))}
     </ul>
-  </Explainer>
-  <Provenance provenance={group.provenance} />
+  </Provenance>
 </section>
 
 <style>

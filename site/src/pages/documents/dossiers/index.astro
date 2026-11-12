@@ -26,16 +26,18 @@ const params = Astro.url.searchParams;
           <Icon name="legislation" />
           <h1>Dossiers législatifs</h1>
         </div>
-        <Answer text="Vous pouvez suivre un texte auprès de chaque producteur. Une même loi peut avoir plusieurs notices." />
+        <Answer text="Projets et propositions de loi, étape par étape." />
         <KeyFigures
           figures={data.counts.map((row) => ({
             icon: "legislation",
             label: documentPublisher(row.label),
             value: formatNumber(row.count),
-            note: "Notices, sans addition entre producteurs",
+            note: "Notices, à ne pas additionner",
           }))}
         />
-        <Provenance provenance={data.provenance} />
+        <Provenance provenance={data.provenance}>
+          <p>Une même loi peut avoir une notice chez chaque producteur.</p>
+        </Provenance>
       </div>
     </header>
     <section class="section">
@@ -45,11 +47,10 @@ const params = Astro.url.searchParams;
             <Icon name="search" />
             Chercher un dossier
           </h2>
+          <p>
+            Un texte peut faire la <Term id="navette">navette</Term> entre les deux chambres.
+          </p>
         </div>
-        <p>
-          La <Term id="navette">navette parlementaire</Term> peut se poursuivre dans les deux
-          chambres. Un événement annoncé n'est pas une étape réalisée.
-        </p>
         <form class="document-filters" method="get">
           <label>
             Titre
@@ -101,7 +102,7 @@ const params = Astro.url.searchParams;
           <button type="submit">Filtrer</button>
           <a href="/documents/dossiers">Réinitialiser</a>
         </form>
-        <p>{formatNumber(data.total)} notices correspondent à vos filtres.</p>
+        <p>{formatNumber(data.total)} notices trouvées.</p>
         <ol class="document-results">
           {data.rows.map((row) => (
             <li>

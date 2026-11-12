@@ -24,8 +24,7 @@ const lookup = await getAddressLookup();
     <button type="submit">Chercher par adresse</button>
   </form>
   <p id="address-privacy" class="small muted">
-    Votre adresse est envoyée au service d’adresses de l’État et n’est pas conservée par Chaque
-    Euro.
+    Votre adresse est envoyée au service d’adresses de l’État, pas à Chaque Euro.
   </p>
   <p id="address-status" role="status" aria-atomic="true" tabindex="-1"></p>
   <ul id="address-choices" class="chips" aria-label="Adresses proposées"></ul>
@@ -209,3 +208,9 @@ const lookup = await getAddressLookup();
     root.hidden = false;
   }
 </script>
+
+<style>
+  #address-lookup {
+    margin-bottom: 1.5rem;
+  }
+</style>

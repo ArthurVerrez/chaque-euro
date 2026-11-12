@@ -49,8 +49,8 @@ const ondam = accounts.ondam.rows.filter((row) => row.year === ondamYear);
       Les cinq branches
     </h2>
     <p>
-      Les <Term id="branche-securite-sociale">branches de la Sécurité sociale</Term> couvrent cinq
-      risques. Leurs comptes sont distincts du périmètre Insee présenté plus haut.
+      <Term id="branche-securite-sociale">Branches</Term> maladie, vieillesse, famille, accidents du
+      travail et autonomie.
     </p>
   </div>
   <Explainer title="Trois cadres comptables à distinguer">
@@ -87,17 +87,14 @@ const ondam = accounts.ondam.rows.filter((row) => row.year === ondamYear);
       Afficher
     </button>
   </form>
-  <p class="small">
-    {selected[0]?.stage}, rapport CCSS d'octobre 2026. Les prévisions ne sont pas des dépenses
-    constatées.
-  </p>
+  <p class="small">{selected[0]?.stage}, rapport CCSS d'octobre 2026.</p>
   <div class="card">
     <BranchAccounts
       rows={[...branchRows, ...totals]}
       caption={`Recettes, dépenses et soldes en ${year}`}
     />
   </div>
-  <Explainer title="Pourquoi la somme des dépenses des branches dépasse le total">
+  <Explainer title="Pourquoi la somme dépasse le total">
     <p>
       Les branches se versent de l'argent. Le total publié retire ces transferts internes : il est
       consolidé. Les soldes des cinq branches s'additionnent au solde des régimes de base, aux
@@ -105,8 +102,10 @@ const ondam = accounts.ondam.rows.filter((row) => row.year === ondamYear);
       solde s'ajoute à celui des régimes de base. Il est supprimé à partir de 2026.
     </p>
   </Explainer>
-  <Provenance provenance={accounts.branchProvenance.ccss} />
-  <Explainer title="Le projet pour 2027, après les mesures proposées">
+  <Provenance provenance={accounts.branchProvenance.ccss}>
+    <p>Les prévisions ne sont pas des dépenses constatées.</p>
+  </Provenance>
+  <Explainer title="Le projet 2027, non voté">
     <p>
       PLFSS 2027, présenté en octobre 2026, non voté. Cette version intègre les mesures du projet et
       diffère des prévisions avant mesures de la CCSS.
@@ -114,7 +113,7 @@ const ondam = accounts.ondam.rows.filter((row) => row.year === ondamYear);
     <BranchAccounts rows={projected} caption="Projet 2027, après mesures" />
     <Provenance provenance={accounts.branchProvenance.project} />
   </Explainer>
-  <Explainer title="L'ancienne prévision pour 2026, publiée en octobre 2025">
+  <Explainer title="L'ancienne prévision pour 2026">
     <p>
       Annexe 3 du PLFSS 2026 : prévision du projet initial, antérieure au vote et aux révisions de
       2026.
@@ -131,8 +130,8 @@ const ondam = accounts.ondam.rows.filter((row) => row.year === ondamYear);
       Qui finance la santé ?
     </h2>
     <p>
-      Dépense courante de santé au sens international, {healthTotal?.year} :{" "}
-      {formatBillions(healthTotal?.amount ?? 0)}, financeurs publics et privés.
+      {formatBillions(healthTotal?.amount ?? 0)} en {healthTotal?.year}, financeurs publics et
+      privés.
     </p>
   </div>
   <div class="card">
@@ -147,8 +146,10 @@ const ondam = accounts.ondam.rows.filter((row) => row.year === ondamYear);
         }))}
     />
   </div>
-  <Provenance provenance={accounts.health.provenance} />
-  <Explainer title="L'ONDAM, un objectif dans un autre périmètre">
+  <Provenance provenance={accounts.health.provenance}>
+    <p>Dépense courante de santé au sens international.</p>
+  </Provenance>
+  <Explainer title="L'ONDAM, un autre périmètre">
     <p>
       L'<Term id="ondam">ONDAM</Term> concerne plusieurs branches. Dans l'annexe 5 du projet initial
       pour {ondamYear}, son montant proposé était de{" "}
@@ -176,10 +177,6 @@ const ondam = accounts.ondam.rows.filter((row) => row.year === ondamYear);
         <Icon name="people" />
         Les pensions de retraite
       </h2>
-      <p>
-        DREES, {pension.year}, régimes de base et complémentaires obligatoires, résidents en France
-        et à l'étranger.
-      </p>
     </div>
     <KeyFigures
       figures={[
@@ -197,7 +194,7 @@ const ondam = accounts.ondam.rows.filter((row) => row.year === ondamYear);
         },
       ]}
     />
-    <Explainer title="Une pension moyenne ne mesure pas la dépense annuelle">
+    <Explainer title="Pension moyenne et dépense totale">
       <p>
         Le droit direct est acquis par votre propre activité professionnelle. Une pension de
         réversion découle des droits d'une personne décédée. Cette moyenne porte sur les pensions de
@@ -205,7 +202,9 @@ const ondam = accounts.ondam.rows.filter((row) => row.year === ondamYear);
         reconstitue pas les dépenses annuelles de la branche vieillesse.
       </p>
     </Explainer>
-    <Provenance provenance={accounts.pensions.provenance} />
+    <Provenance provenance={accounts.pensions.provenance}>
+      <p>Régimes de base et complémentaires obligatoires, résidents en France et à l'étranger.</p>
+    </Provenance>
   </section>
 )}
 
@@ -217,9 +216,7 @@ const ondam = accounts.ondam.rows.filter((row) => row.year === ondamYear);
         Les prestations gérées par les caisses
       </h2>
       <p>
-        {formatBillions(familyTotal.amount)} de prestations légales directes en {familyTotal.year},
-        tous régimes, France entière. Ce total inclut des prestations financées par l'État et les
-        départements.
+        {formatBillions(familyTotal.amount)} de prestations légales directes en {familyTotal.year}.
       </p>
     </div>
     <div class="card">
@@ -234,7 +231,12 @@ const ondam = accounts.ondam.rows.filter((row) => row.year === ondamYear);
           }))}
       />
     </div>
-    <Provenance provenance={accounts.family.provenance} />
+    <Provenance provenance={accounts.family.provenance}>
+      <p>
+        Tous régimes, France entière. Ce total inclut des prestations financées par l'État et les
+        départements.
+      </p>
+    </Provenance>
   </section>
 )}
 
@@ -245,9 +247,7 @@ const ondam = accounts.ondam.rows.filter((row) => row.year === ondamYear);
         <Icon name="unemployment" />
         L'assurance chômage, à côté des cinq branches
       </h2>
-      <p>
-        Unédic, {unemployment.year}. Ces comptes ne sont pas inclus dans le total des cinq branches.
-      </p>
+      <p>Unédic, {unemployment.year}.</p>
     </div>
     <KeyFigures
       figures={[
@@ -272,7 +272,9 @@ const ondam = accounts.ondam.rows.filter((row) => row.year === ondamYear);
         format={formatBillions}
       />
     </div>
-    <Provenance provenance={accounts.unemployment.provenance} />
+    <Provenance provenance={accounts.unemployment.provenance}>
+      <p>Ces comptes ne sont pas inclus dans le total des cinq branches.</p>
+    </Provenance>
   </section>
 )}
 

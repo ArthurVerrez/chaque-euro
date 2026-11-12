@@ -182,17 +182,10 @@ const doors = [
                 <Icon name={figure.icon} size={15} /> <Term id={figure.term}>{figure.label}</Term>
               </dt>
               <dd>{figure.value}</dd>
-              <dd class="panel-source">
-                <a href={figure.provenance.citations[0]?.source.pageUrl}>
-                  <Icon name="source" size={13} /> Voir la source
-                </a>
-                <a href={figure.provenance.calculationUrl}>
-                  <Icon name="code" size={13} /> Voir le calcul
-                </a>
-              </dd>
             </div>
           ))}
         </dl>
+        <Provenance provenance={keyFigures.map((figure) => figure.provenance)} />
       </aside>
     </div>
   </section>
@@ -270,9 +263,9 @@ const doors = [
           <p class="card-sub">
             {facts.contracts_count && facts.contracts_amount && (
               <>
-                En {facts.contracts_count.period},{" "}
-                <strong>{formatNumber(facts.contracts_count.value)} marchés</strong> ont été
-                <Term id="notification">notifiés</Term>, pour{" "}
+                En {facts.contracts_count.period} :{" "}
+                <strong>{formatNumber(facts.contracts_count.value)} marchés</strong>{" "}
+                <Term id="notification">notifiés</Term>,{" "}
                 <strong>{formatEuros(facts.contracts_amount.value)}</strong> prévus aux contrats.
               </>
             )}
@@ -296,8 +289,8 @@ const doors = [
             Ce que dépensent les communes, selon leur taille
           </h3>
           <p class="card-sub">
-            Dépense <Term id="mediane">médiane</Term> par habitant en{" "}
-            {facts.communes_median_spending_per_capita?.period}, par taille de commune.
+            Dépense <Term id="mediane">médiane</Term> par habitant, en{" "}
+            {facts.communes_median_spending_per_capita?.period}.
           </p>
           <BarList caption="Dépenses totales par habitant (médiane)" items={strata} />
           <p>
@@ -316,17 +309,14 @@ const doors = [
           <p class="card-sub">
             {facts.grants_amount && facts.grants_associations && (
               <>
-                En {facts.grants_amount.period}, l'État a versé{" "}
-                <strong>{formatEuros(facts.grants_amount.value)}</strong> à{" "}
+                En {facts.grants_amount.period},{" "}
+                <strong>{formatEuros(facts.grants_amount.value)}</strong> versés à{" "}
                 <strong>{formatNumber(facts.grants_associations.value)} organismes</strong>{" "}
                 identifiés.
               </>
             )}
           </p>
-          <BarList
-            caption="Les cinq associations recevant le plus de crédits"
-            items={associations}
-          />
+          <BarList caption="Les cinq premières associations" items={associations} />
           <p>
             <a class="more" href="/organisations#associations">
               Voir le classement
@@ -353,8 +343,7 @@ const doors = [
             Un marché n'est pas un paiement
           </h3>
           <p>
-            Le <Term id="montant-marche">montant d'un marché</Term> est un plafond prévu au contrat,
-            pas la somme payée.
+            Son <Term id="montant-marche">montant</Term> est un plafond prévu au contrat.
           </p>
         </li>
         <li class="card">
@@ -363,8 +352,7 @@ const doors = [
             Comparer par habitant
           </h3>
           <p>
-            Chaque commune est comparée aux <Term id="strate">communes de même taille</Term>,{" "}
-            <Term id="par-habitant">par habitant</Term>.
+            Face aux <Term id="strate">communes de même taille</Term>.
           </p>
         </li>
         <li class="card">
@@ -372,10 +360,7 @@ const doors = [
             <Icon name="source" />
             Chaque chiffre a une source
           </h3>
-          <p>
-            «&nbsp;Voir la source&nbsp;» ouvre le fichier officiel, «&nbsp;Voir le calcul&nbsp;» le
-            code.
-          </p>
+          <p>Ouvrez «&nbsp;Sources&nbsp;» sous chaque graphique.</p>
         </li>
       </ol>
       <p>
@@ -395,7 +380,6 @@ const doors = [
         <h2>
           <Icon name="book" /> Analyses
         </h2>
-        <p>Des questions concrètes, des graphiques et leurs sources.</p>
       </div>
       <div class="analysis-links">
         {ANALYSES.map((article) => (
@@ -446,18 +430,25 @@ const doors = [
   .hero {
     background: linear-gradient(160deg, var(--navy-950), var(--navy-800));
     color: #fff;
-    padding: 3.5rem 0;
+    padding: 2rem 0;
   }
 
   .hero-grid {
     display: grid;
-    gap: 2.5rem;
+    gap: 1.75rem;
     align-items: center;
+  }
+
+  @media (min-width: 48rem) {
+    .hero {
+      padding: 3.5rem 0;
+    }
   }
 
   @media (min-width: 64rem) {
     .hero-grid {
       grid-template-columns: 1fr 22rem;
+      gap: 2.5rem;
     }
   }
 
@@ -466,7 +457,7 @@ const doors = [
     background: rgb(255 255 255 / 6%);
     border: 1px solid rgb(255 255 255 / 18%);
     border-radius: var(--radius);
-    padding: 1.25rem 1.5rem;
+    padding: 1rem 1.125rem 0.5rem;
     backdrop-filter: blur(4px);
   }
 
@@ -486,48 +477,71 @@ const doors = [
   .hero-panel dl {
     margin: 0;
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 1.25rem;
+    padding-bottom: 0.75rem;
   }
 
   .hero-panel dl > div {
     display: flex;
     flex-direction: column;
-    padding: 0.875rem 0;
-    border-top: 1px solid rgb(255 255 255 / 12%);
+    min-width: 0;
   }
 
-  .hero-panel dl > div:first-child {
-    border-top: 0;
+  @media (min-width: 64rem) {
+    .hero-panel {
+      padding: 1.25rem 1.5rem 0.5rem;
+    }
+
+    .hero-panel dl {
+      grid-template-columns: 1fr;
+      gap: 0;
+      padding-bottom: 0;
+    }
+
+    .hero-panel dl > div {
+      padding: 0.875rem 0;
+    }
+
+    .hero-panel dl > div + div {
+      border-top: 1px solid rgb(255 255 255 / 12%);
+    }
   }
 
   .hero-panel dt {
     order: 2;
     color: #d7e1f3;
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
+    line-height: 1.45;
   }
 
   .hero-panel dd {
     margin: 0;
     order: 1;
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     font-weight: 750;
     line-height: 1.15;
     color: #fff;
   }
 
-  .panel-source a {
-    color: inherit;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    margin-right: 0.5rem;
+  @media (min-width: 64rem) {
+    .hero-panel dt {
+      font-size: 0.9375rem;
+    }
+
+    .hero-panel dd {
+      font-size: 1.75rem;
+    }
   }
 
-  .hero-panel .panel-source {
-    order: 3;
-    font-size: 0.75rem;
-    font-weight: 400;
-    color: #a9c4ee;
-    margin-top: 0.125rem;
+  .hero-panel :global(.provenance) {
+    --text-muted: #c8d3ea;
+    --surface: rgb(255 255 255 / 8%);
+    --border: rgb(255 255 255 / 25%);
+    --navy-50: rgb(255 255 255 / 16%);
+    margin-top: 0.25rem;
+    border-top: 1px solid rgb(255 255 255 / 12%);
+    padding-top: 0.25rem;
   }
 
   .hero h1 {
@@ -593,13 +607,22 @@ const doors = [
   .door-icon {
     display: grid;
     place-items: center;
-    width: 3.25rem;
-    height: 3.25rem;
-    border-radius: 14px;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 12px;
     background: var(--navy-900);
     color: #fff;
-    margin-bottom: 1.25rem;
+    margin-bottom: 0.75rem;
     box-shadow: 0 8px 20px -8px rgb(13 33 73 / 45%);
+  }
+
+  @media (min-width: 56rem) {
+    .door-icon {
+      width: 3.25rem;
+      height: 3.25rem;
+      border-radius: 14px;
+      margin-bottom: 1.25rem;
+    }
   }
 
   .door p {
@@ -615,8 +638,11 @@ const doors = [
   }
 
   .door-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
     align-self: flex-start;
-    margin-top: 0.75rem;
+    min-height: 44px;
   }
 
   .card > p:last-of-type:has(.more) {

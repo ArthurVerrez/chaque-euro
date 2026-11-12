@@ -47,9 +47,7 @@ const hasComparison = operating.some((line) => line.median !== null);
       />
     </div>
   ) : (
-    <p>
-      Non disponible : aucune ventilation par service importée pour cette commune et cette année.
-    </p>
+    <p>Pas de détail par service pour cette année.</p>
   )}
   {operating.length > 0 && !hasComparison && <p class="small muted">Comparaison non disponible.</p>}
   <Explainer title="Investissement : équipements et immobilisations">
@@ -59,7 +57,7 @@ const hasComparison = operating.some((line) => line.median !== null);
         lines={investment}
       />
     ) : (
-      <p>Ventilation des investissements non disponible pour cette commune et cette année.</p>
+      <p>Pas de détail des investissements pour cette année.</p>
     )}
     <p>
       Les <Term id="investissement">investissements</Term> présentés ici reprennent les comptes 20 à

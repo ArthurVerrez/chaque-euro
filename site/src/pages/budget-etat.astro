@@ -148,7 +148,7 @@ const nextFigures: Figure[] = [
     value: `${nextChange < 0 ? "−" : "+"}${formatPercent(Math.abs(nextChange))}`,
   },
 ];
-const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spent)}, soit ${formatEuro(budget.perHousehold)} par ménage, pour ${formatEuros(revenue.net)} de recettes.`;
+const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spent)} pour ${formatEuros(revenue.net)} de recettes.`;
 ---
 
 <Base title="Le budget de l'État, mission par mission" description={answer}>
@@ -196,7 +196,7 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
           Sur 100 € dépensés par l'État
         </h2>
         <p>
-          Les six principales <Term id="mission">missions</Term> représentent{" "}
+          Les six premières <Term id="mission">missions</Term> représentent{" "}
           {formatPercent(topShare)} des dépenses.
         </p>
       </div>
@@ -233,9 +233,6 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
           <Icon name="euro" />
           Une partie de l'argent public
         </h2>
-        <p>
-          La Sécurité sociale, les collectivités et les opérateurs de l'État ont chacun leur budget.
-        </p>
       </div>
       <div class="card">
         <BarList caption={`Dépenses ${budget.year}`} items={scope} />
@@ -245,8 +242,7 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
           Tout l'argent public
         </a>
       </p>
-      <Provenance provenance={budget.provenance} />
-      <Provenance provenance={publicFinances.provenance} />
+      <Provenance provenance={[budget.provenance, publicFinances.provenance]} />
     </section>
 
     <section class="section" id="circuit" aria-labelledby="titre-circuit">
@@ -272,18 +268,15 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
             Les <Term id="prelevements-sur-recettes">prélèvements sur recettes</Term> sont reversés
             avant toute dépense. Le <Term id="deficit">déficit</Term> est financé par l'emprunt.
           </p>
+          <p>
+            Avec la <Term id="non-affectation">non-affectation des recettes</Term>, les impôts
+            alimentent un budget commun : on ne peut pas suivre un euro d'impôt jusqu'à une dépense
+            précise. La loi prévoit des exceptions, notamment les taxes affectées, les comptes
+            spéciaux et les fonds de concours.
+          </p>
         </Explainer>
       </div>
-      <Provenance provenance={revenue.provenance} />
-      <Provenance provenance={budget.provenance} />
-      <Explainer title="Pourquoi on ne peut pas suivre un euro d'impôt jusqu'à une dépense">
-        <p>
-          Avec la <Term id="non-affectation">non-affectation des recettes</Term>, les impôts
-          alimentent un budget commun. Le graphique montre les recettes et les dépenses de
-          l'ensemble du budget, sans attribuer un impôt à un service précis. La loi prévoit des
-          exceptions, notamment les taxes affectées, les comptes spéciaux et les fonds de concours.
-        </p>
-      </Explainer>
+      <Provenance provenance={[revenue.provenance, budget.provenance]} />
     </section>
 
     <section class="section" id="recettes" aria-labelledby="titre-recettes">
@@ -424,7 +417,7 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
           L'année en cours
         </h2>
         <p>
-          Exécution provisoire {monthlyYear}, cumulée de janvier à {months.at(-1)?.toLowerCase()}.
+          Chiffres provisoires, de janvier à {months.at(-1)?.toLowerCase()} {monthlyYear}.
         </p>
       </div>
       <KeyFigures
@@ -480,10 +473,6 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
           <Icon name="layers" />
           Par nature de dépense
         </h2>
-        <p>
-          Exécution 2025 par <Term id="titre-budgetaire">titre budgétaire</Term>, remboursements
-          d'impôts inclus.
-        </p>
       </div>
       <div class="card">
         <BarList
@@ -491,7 +480,12 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
           items={amountBars(execution.titles.rows)}
         />
       </div>
-      <Provenance provenance={execution.titles.provenance} />
+      <Provenance provenance={execution.titles.provenance}>
+        <p>
+          Classement par <Term id="titre-budgetaire">titre budgétaire</Term>. Les impôts remboursés
+          sont inclus.
+        </p>
+      </Provenance>
     </section>
 
     <section class="section" id="ministeres" aria-labelledby="titre-ministeres">
@@ -500,7 +494,6 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
           <Icon name="state" />
           Par ministère
         </h2>
-        <p>Exécution 2025 selon les ministères de gestion de cette année.</p>
       </div>
       <div class="card">
         <BarList
@@ -510,9 +503,10 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
       </div>
       <Explainer title="Le périmètre de ce classement">
         <p>
-          Les programmes sont rattachés à la nomenclature DGFiP 2025. Les remboursements et
-          dégrèvements sont inclus dans le ministère responsable ; ils correspondent à des impôts
-          rendus aux contribuables. Les pouvoirs publics restent un poste distinct.
+          Les programmes sont rattachés aux ministères de 2025, selon la nomenclature DGFiP. Les
+          remboursements et dégrèvements sont inclus dans le ministère responsable ; ils
+          correspondent à des impôts rendus aux contribuables. Les pouvoirs publics restent un poste
+          distinct.
         </p>
       </Explainer>
       <Provenance provenance={execution.ministries.provenance} />
@@ -525,7 +519,7 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
             <Icon name="scale" />
             Le bilan de l'État
           </h2>
-          <p>Valeurs comptables au 31 décembre {assets.year}, État seul.</p>
+          <p>Au 31 décembre {assets.year}, État seul.</p>
         </div>
         <KeyFigures
           figures={[
@@ -549,11 +543,12 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
             },
           ]}
         />
-        <Explainer title="Ce que le bilan permet de lire">
+        <Explainer title="Ce que ce bilan ne mesure pas">
           <p>
-            La situation nette est l'actif moins le passif. Les engagements hors bilan sont exclus.
-            Le droit de lever l'impôt n'est pas comptabilisé comme un actif. Ce bilan ne mesure ni
-            la richesse nationale ni la dette de Maastricht de toutes les administrations.
+            Ce sont des valeurs comptables. La situation nette est l'actif moins le passif. Les
+            engagements hors bilan sont exclus. Le droit de lever l'impôt n'est pas comptabilisé
+            comme un actif. Ce bilan ne mesure ni la richesse nationale ni la dette de Maastricht de
+            toutes les administrations.
           </p>
         </Explainer>
         <Provenance provenance={execution.assets.provenance} />
@@ -567,8 +562,7 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
           Le budget vert
         </h2>
         <p>
-          <Term id="budget-vert">Cotation environnementale</Term> des crédits proposés au{" "}
-          <Term id="plf">PLF</Term> 2026.
+          <Term id="budget-vert">Effet sur l'environnement</Term> des crédits proposés pour 2026.
         </p>
       </div>
       <div class="card">
@@ -582,13 +576,13 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
           )}
         />
       </div>
-      <Explainer title="Un périmètre propre au budget vert">
+      <Explainer title="Des propositions, pas des dépenses">
         <p>
-          Ces montants sont des propositions du PLF 2026. Ils ne sont ni les dépenses exécutées
-          2025, ni le budget finalement voté. Le fichier retraite les contributions aux pensions et
-          comprend des prélèvements sur recettes. Les taxes affectées et dépenses fiscales sont
-          exclues ici. Les cotations portent sur six objectifs ; une cotation neutre ne signifie pas
-          une dépense inutile.
+          Ces montants sont des propositions du <Term id="plf">PLF</Term> 2026. Ils ne sont ni les
+          dépenses exécutées 2025, ni le budget finalement voté. Le fichier retraite les
+          contributions aux pensions et comprend des prélèvements sur recettes. Les taxes affectées
+          et dépenses fiscales sont exclues ici. Les cotations portent sur six objectifs ; une
+          cotation neutre ne signifie pas une dépense inutile.
         </p>
       </Explainer>
       <Provenance provenance={execution.green.provenance} />
@@ -626,7 +620,7 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
           Le budget voté pour {next.year}
         </h2>
         <p>
-          <a href="#missions">Mission par mission</a>, en regard de {budget.year}.
+          <a href="#missions">Voir le détail par mission</a>
         </p>
       </div>
       <KeyFigures figures={nextFigures} />

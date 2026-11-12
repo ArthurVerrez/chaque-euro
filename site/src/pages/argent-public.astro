@@ -130,7 +130,7 @@ const series = ["S13", ...PUBLIC_SECTORS.map(({ code }) => code)].map((code) => 
     .filter((entry) => entry.year >= FIRST_YEAR)
     .map((entry) => entry.spending),
 }));
-const answer = `En ${year}, l'État, la Sécurité sociale, les collectivités et les opérateurs de l'État ont dépensé ${formatEuros(spending)}, soit ${formatEuro(spending / households)} par ménage. Le budget de l'État n'en est qu'une partie.`;
+const answer = `En ${year}, toutes les administrations publiques ont dépensé ${formatEuros(spending)}.`;
 ---
 
 <Base title="Tout l'argent public" description={answer}>
@@ -166,27 +166,12 @@ const answer = `En ${year}, l'État, la Sécurité sociale, les collectivités e
           Qui dépense
         </h2>
         <p>
-          Quatre familles d'<Term id="administrations-publiques">administrations publiques</Term>,
-          sans doubles comptes.
+          Quatre familles d'<Term id="administrations-publiques">administrations publiques</Term>.
         </p>
       </div>
       <div class="card">
         <BarList caption={`Dépenses ${year}`} items={steps} />
       </div>
-      <h3>
-        <Icon name="building" size={20} />
-        Les administrations publiques
-      </h3>
-      <ul class="families">
-        {PUBLIC_SECTORS.map((family) => (
-          <li>
-            <a href={`/argent-public/${family.slug}`}>
-              <Icon name={family.icon} size={18} />
-              {family.name}
-            </a>
-          </li>
-        ))}
-      </ul>
       <div class="explain">
         <Explainer title={`Et les ${formatEuros(stateBudget.spent)} du budget de l'État ?`}>
           <p>
@@ -199,7 +184,12 @@ const answer = `En ${year}, l'État, la Sécurité sociale, les collectivités e
           </p>
         </Explainer>
       </div>
-      <Provenance provenance={finances.provenance} />
+      <Provenance provenance={finances.provenance}>
+        <p>
+          Le total retire l'argent que les administrations se versent entre elles, pour ne pas le
+          compter deux fois.
+        </p>
+      </Provenance>
     </section>
 
     <section class="section" id="usages" aria-labelledby="titre-usages">
@@ -207,7 +197,6 @@ const answer = `En ${year}, l'État, la Sécurité sociale, les collectivités e
         <h2 id="titre-usages">
           <Icon name="flow" />À quoi sert tout l'argent public
         </h2>
-        <p>Dépenses par usage, dernière année détaillée : {functions.year}.</p>
       </div>
       <div class="card">
         <FlowChart
@@ -224,7 +213,9 @@ const answer = `En ${year}, l'État, la Sécurité sociale, les collectivités e
           </p>
         </Explainer>
       </div>
-      <Provenance provenance={functions.provenance} />
+      <Provenance provenance={functions.provenance}>
+        <p>{functions.year} est la dernière année détaillée par usage.</p>
+      </Provenance>
     </section>
 
     <section class="section" id="prelevements" aria-labelledby="titre-prelevements">
@@ -268,8 +259,7 @@ const answer = `En ${year}, l'État, la Sécurité sociale, les collectivités e
           Comparer avec l'Europe
         </h2>
         <p>
-          Administrations publiques, en part du <Term id="pib">PIB</Term>, année commune{" "}
-          {europeYear}.
+          En part du <Term id="pib">PIB</Term>, en {europeYear}.
         </p>
       </div>
       {[
@@ -306,11 +296,12 @@ const answer = `En ${year}, l'État, la Sécurité sociale, les collectivités e
       </Explainer>
       <Explainer title="Comment comparer">
         <p>
-          L'Union européenne est un agrégat des 27 pays, pas la moyenne simple des ratios. Les pays
-          affichés sont les cinq plus grandes économies de l'Union en PIB nominal. Les règles
-          comptables sont harmonisées, mais l'organisation des services publics diffère. Les barres
-          du solde montrent son ampleur ; le signe affiché indique un déficit ou un excédent. Les
-          données peuvent être révisées.
+          Tous les pays sont comparés sur la même année, pour l'ensemble de leurs administrations
+          publiques. L'Union européenne est un agrégat des 27 pays, pas la moyenne simple des
+          ratios. Les pays affichés sont les cinq plus grandes économies de l'Union en PIB nominal.
+          Les règles comptables sont harmonisées, mais l'organisation des services publics diffère.
+          Les barres du solde montrent son ampleur ; le signe affiché indique un déficit ou un
+          excédent. Les données peuvent être révisées.
         </p>
       </Explainer>
       <Provenance provenance={indicators.europe.provenance} />
@@ -323,9 +314,8 @@ const answer = `En ${year}, l'État, la Sécurité sociale, les collectivités e
             La dette au dernier trimestre
           </h2>
           <p>
-            <Term id="dette-publique">Dette publique</Term> à la fin de{" "}
-            {debt.period.replace("Q", "T")}
-            {debt.status?.includes("p") ? ", donnée provisoire" : ""}.
+            À la fin de {debt.period.replace("Q", "T")}
+            {debt.status?.includes("p") ? ", chiffre provisoire" : ""}.
             <a class="more" href="/analyses/deficit-par-president">
               <Icon name="trend" size={16} /> Dette et déficit : l’évolution
             </a>
@@ -376,14 +366,6 @@ const answer = `En ${year}, l'État, la Sécurité sociale, les collectivités e
   #prelevements > .card + .card,
   #europe > .card + .card {
     margin-top: 1rem;
-  }
-
-  .families {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-    gap: 0.75rem;
-    list-style: none;
-    padding: 0;
   }
 
   .explain {

@@ -40,7 +40,7 @@ const { ballot, votes, groups, corrections } = data;
       </h2>
     </div>
     <PublicTable
-      caption="Décompte des entrées nominatives"
+      caption="Votes par groupe"
       columns={["Groupe", "Position", "Entrées"]}
       rows={groups.map((g) => [
         { text: g.group_label },
@@ -58,7 +58,7 @@ const { ballot, votes, groups, corrections } = data;
       </h2>
     </div>
     <PublicTable
-      caption="Votes comptabilisés et statuts publiés"
+      caption="Position de chaque parlementaire"
       columns={["Parlementaire", "Position", "Modalité"]}
       rows={votes.map((v) => [
         { text: v.display_name, href: `/elus/${v.person_id}` },
@@ -81,14 +81,13 @@ const { ballot, votes, groups, corrections } = data;
     </div>
     {ballot.announced_for !== null && ballot.announced_against !== null && (
       <p>
-        Totaux annoncés en séance : {formatNumber(ballot.announced_for)} pour,{" "}
-        {formatNumber(ballot.announced_against)} contre. Les chiffres en tête reprennent les totaux
-        du fichier officiel après mise à jour.
+        Annoncés en séance : {formatNumber(ballot.announced_for)} pour,{" "}
+        {formatNumber(ballot.announced_against)} contre.
       </p>
     )}
     {corrections.length ? (
       <PublicTable
-        caption="Corrections distinctes du vote comptabilisé"
+        caption="Corrections, hors vote comptabilisé"
         columns={["Référence", "Information"]}
         rows={corrections.map((c) => [
           {
@@ -99,8 +98,13 @@ const { ballot, votes, groups, corrections } = data;
         ])}
       />
     ) : (
-      <p>Aucune correction structurée dans le fichier importé pour ce scrutin.</p>
+      <p>Aucune correction trouvée dans le fichier officiel.</p>
     )}
-    <Provenance provenance={data.provenance} />
+    <Provenance provenance={data.provenance}>
+      <p>
+        Les chiffres en haut de page viennent du fichier officiel mis à jour. Les corrections sont
+        enregistrées à part du vote comptabilisé.
+      </p>
+    </Provenance>
   </section>
 </Democracy>

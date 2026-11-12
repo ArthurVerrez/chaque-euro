@@ -4,7 +4,7 @@ import Answer from "../../components/Answer.astro";
 import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import Icon from "../../components/Icon.astro";
 import Provenance from "../../components/Provenance.astro";
-import { getAdministration, documentPublisher } from "../../lib/data";
+import { getAdministration } from "../../lib/data";
 import { formatDate, formatNumber } from "../../lib/format";
 import DocumentContent from "../../components/DocumentContent.astro";
 const data = await getAdministration(Astro.params.id ?? "");
@@ -26,9 +26,7 @@ const { row } = data;
           <Icon name="administration" />
           <h1>{row.name_public}</h1>
         </div>
-        <Answer
-          text={`${row.category}${row.acronym ? ` · ${row.acronym}` : ""}. Source : ${documentPublisher(row.source_id)}.`}
-        />
+        <Answer text={`${row.category}${row.acronym ? ` · ${row.acronym}` : ""}.`} />
         {row.head_name && (
           <p>
             <Icon name="state" size={18} /> {row.head_name} · {row.head_role}
@@ -50,17 +48,16 @@ const { row } = data;
             </a>
           </p>
         )}
-        {row.record_url && (
-          <a href={row.record_url}>
-            <Icon name="external" size={15} />
-            Voir la source
-          </a>
-        )}
-        {row.source_modified_at && (
-          <p>Modification source : {formatDate(row.source_modified_at)}</p>
-        )}
-        <p>{row.siren ? `SIREN : ${row.siren}` : "SIREN non renseigné dans cette source."}</p>
-        <Provenance provenance={data.provenance} />
+        {row.siren && <p>SIREN : {row.siren}</p>}
+        <Provenance provenance={data.provenance}>
+          {row.record_url && (
+            <p>
+              <a href={row.record_url}>Fiche officielle de cette structure</a>
+            </p>
+          )}
+          {row.source_modified_at && <p>Modifiée le {formatDate(row.source_modified_at)}.</p>}
+          <p>Cette fiche ne décrit ni un budget propre ni la compétence géographique du service.</p>
+        </Provenance>
       </div>
     </header>
     <section class="section">
@@ -106,7 +103,7 @@ const { row } = data;
         {data.coverage.length > 0 && (
           <details>
             <summary>
-              {formatNumber(data.coverage.length)} communes dans la compétence préfectorale intégrée
+              {formatNumber(data.coverage.length)} communes de la compétence préfectorale
             </summary>
             <ul>
               {data.coverage.map((commune) => (
@@ -117,7 +114,6 @@ const { row } = data;
             </ul>
           </details>
         )}
-        <p>Cette fiche ne décrit ni un budget propre ni la compétence géographique du service.</p>
       </div>
     </section>
   </DocumentContent>

@@ -74,7 +74,7 @@ const highest = sorted.at(-1);
           <Icon name="map" />
           La carte des départements
         </h2>
-        <p>Dépenses par habitant en {index.year}. Cliquez sur un département.</p>
+        <p>Choisissez un département.</p>
       </div>
       <div class="grid">
         <div class="card">
@@ -155,7 +155,7 @@ const highest = sorted.at(-1);
       <div class="grid">
         <div class="card">
           <BarList
-            caption={`Dépenses totales par habitant en ${index.year}, médiane par taille`}
+            caption={`Dépenses totales par habitant, médiane, ${index.year}`}
             items={strata}
           />
         </div>
@@ -227,8 +227,9 @@ const highest = sorted.at(-1);
           </tbody>
         </table>
       </div>
-      <p class="footnote small muted">Paris inclut aussi ses dépenses de département.</p>
-      <Provenance provenance={index.provenance} />
+      <Provenance provenance={index.provenance}>
+        <p>Paris inclut aussi ses dépenses de département.</p>
+      </Provenance>
     </section>
     <CommuneDgfHistory />
   </div>
@@ -247,9 +248,5 @@ const highest = sorted.at(-1);
 
   .table-card {
     overflow-x: auto;
-  }
-
-  .footnote {
-    margin: 0.75rem 0 0;
   }
 </style>

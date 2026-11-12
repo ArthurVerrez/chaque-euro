@@ -69,24 +69,20 @@ const summary =
           </section>
         ))}
         {results.length === 0 && (
-          <p>
-            Essayez un autre mot, ou consultez l’
-            <a href="/argent-public">
-              <Icon name="euro" size={15} />
-              argent public
-            </a>
-            , les{" "}
-            <a href="/elus">
-              <Icon name="elected" size={15} />
-              élus
-            </a>{" "}
-            et les{" "}
-            <a href="/communes">
-              <Icon name="town" size={15} />
-              communes
-            </a>
-            .
-          </p>
+          <>
+            <p>Essayez un autre mot, ou consultez :</p>
+            <p class="suggestions">
+              <a href="/argent-public">
+                <Icon name="euro" size={15} /> L’argent public
+              </a>
+              <a href="/elus">
+                <Icon name="elected" size={15} /> Les élus
+              </a>
+              <a href="/communes">
+                <Icon name="town" size={15} /> Les communes
+              </a>
+            </p>
+          </>
         )}
       </section>
     )}
@@ -147,5 +143,11 @@ const summary =
   .result-body a:hover {
     color: var(--link);
     text-decoration-color: currentcolor;
+  }
+
+  .suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
   }
 </style>

@@ -94,6 +94,18 @@ const width = (value: number) => Math.max(percent(value), value > 0 ? 0.5 : 0);
     overflow-wrap: normal;
   }
 
+  @media (max-width: 40rem) {
+    ol {
+      gap: 0.75rem;
+      font-size: 0.9375rem;
+    }
+
+    .note {
+      display: block;
+      margin-left: 0;
+    }
+  }
+
   .value {
     font-weight: 750;
     color: var(--navy-900);

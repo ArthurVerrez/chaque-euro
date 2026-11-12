@@ -35,9 +35,7 @@ const groups = [
         {group.title}
       </h2>
       <p>
-        {group.future
-          ? "Projets APProch, sans engagement de l'acheteur."
-          : "Échéances BOAMP, heure de Paris."}
+        {group.future ? "Projets annoncés sur APProch." : "Dates limites du BOAMP, heure de Paris."}
       </p>
     </div>
     {group.rows.length ? (
@@ -71,7 +69,7 @@ const groups = [
     <Explainer title="Périmètre et actualisation">
       <p>
         {group.future
-          ? "La publication sur APProch est volontaire. Les projets ouverts sans date future sont écartés. Une date annoncée ne garantit pas qu'un appel d'offres sera publié."
+          ? "La publication sur APProch est volontaire et n'engage pas l'acheteur. Les projets ouverts sans date future sont écartés. Une date annoncée ne garantit pas qu'un appel d'offres sera publié."
           : "Cette liste est une photographie des avis dont la date limite n'était pas passée à la collecte. Les échéances déjà passées sont ensuite masquées. Vérifiez les modifications, annulations et conditions sur l'avis officiel avant de répondre."}
       </p>
       <p>

@@ -40,7 +40,7 @@ const sections = [
 
 <Analysis
   article={analysis("paris")}
-  answer={`Paris exerce à la fois les compétences d’une commune et d’un département. Sur le périmètre rapproché par la Chambre régionale des comptes, ses dépenses de fonctionnement atteignent ${formatEuro(paris.per_capita)} par habitant en 2023, contre ${formatEuro(data.comparison.find((row) => row.city === "Marseille")!.per_capita)} à Marseille et ${formatEuro(data.comparison.find((row) => row.city === "Lyon")!.per_capita)} à Lyon. L’écart subsiste, mais une comparaison des seules communes l’exagère.`}
+  answer={`En 2023, Paris dépense ${formatEuro(paris.per_capita)} par habitant en fonctionnement, contre ${formatEuro(data.comparison.find((row) => row.city === "Marseille")!.per_capita)} à Marseille et ${formatEuro(data.comparison.find((row) => row.city === "Lyon")!.per_capita)} à Lyon, en réunissant commune, département et métropole.`}
   figures={figures}
   provenance={[data.provenance]}
   sections={sections}
@@ -54,13 +54,14 @@ const sections = [
     <p>
       Depuis 2019, la Ville de Paris réunit la commune et le département. À Lyon, la métropole porte
       aussi les compétences départementales. À Marseille, elles se partagent entre la ville, la
-      métropole et les Bouches-du-Rhône.
+      métropole et les Bouches-du-Rhône. Une fois ces niveaux additionnés, Paris reste plus élevé.
     </p>
-    <p>
-      La CRC reconstitue ces niveaux et les rapporte à la population de chaque ville. En 2023, Paris
-      reste plus élevé. Ce rapprochement mesure un ordre de grandeur financier, sans corriger toutes
+    <p slot="caveat">
+      La Chambre régionale des comptes (CRC) reconstitue ces niveaux et les rapporte à la population
+      de chaque ville. Ce rapprochement mesure un ordre de grandeur financier, sans corriger toutes
       les différences de compétences ou de qualité des services. Il est plus pertinent que la{" "}
-      <Term id="mediane">médiane</Term> des <Term id="strate">communes de même taille</Term>.
+      <Term id="mediane">médiane</Term> des <Term id="strate">communes de même taille</Term> :
+      comparer les seules communes exagère l’écart.
     </p>
     <BarList
       slot="chart"
@@ -81,15 +82,14 @@ const sections = [
     provenance={data.provenance}
   >
     <p>
-      La <Term id="perequation">péréquation</Term> transfère des ressources entre collectivités. La
-      CRC évalue la contribution parisienne à {formatEuros(amount("equalisation"))} en 2024, après
-      avoir retiré des reversements de taxe de séjour qui n’ont pas la même fonction.
+      La CRC évalue la contribution de Paris à la <Term id="perequation">péréquation</Term> à{" "}
+      {formatEuros(amount("equalisation"))} en 2024. Ce sont des versements, pas un solde net.
     </p>
-    <p>
-      Le FNGIR, soit {formatEuros(amount("fngir"))}, est présenté séparément : il résulte d’une
-      réforme fiscale ancienne. Le graphique montre des versements, pas un solde net. Les
-      attributions reçues au titre de chaque fonds n’ont pas pu être vérifiées ici&#8239;; elles ne
-      sont pas supposées nulles.
+    <p slot="caveat">
+      Ce montant exclut des reversements de taxe de séjour qui n’ont pas la même fonction. Le FNGIR,
+      soit {formatEuros(amount("fngir"))}, est présenté séparément : il résulte d’une réforme
+      fiscale ancienne. Les attributions reçues au titre de chaque fonds n’ont pas pu être vérifiées
+      ici&#8239;; elles ne sont pas supposées nulles.
     </p>
     <BarList
       slot="chart"
@@ -117,11 +117,10 @@ const sections = [
     provenance={data.provenance}
   >
     <p>
-      La population résidente sert de dénominateur aux ratios budgétaires. Pourtant, les personnes
-      venant travailler, étudier, faire des achats ou visiter Paris utilisent aussi ses rues et ses
-      services.
+      Les ratios divisent par les résidents. Pourtant, les personnes venant travailler, étudier,
+      faire des achats ou visiter Paris utilisent aussi ses rues et ses services.
     </p>
-    <p>
+    <p slot="caveat">
       La CRC cite une estimation Apur d’environ {formatNumber(amount("daytime"))} personnes
       présentes chaque jour en 2023, pour environ {formatNumber(amount("residents"))} résidents. Ce
       sont des estimations arrondies de fréquentation, pas une population légale ni un nouveau
@@ -148,7 +147,7 @@ const sections = [
   </Section>
   <Section
     id="services"
-    title={"Des contributions spécifiques, sans total du «\u00a0coût de capitale\u00a0»"}
+    title="Deux contributions aux services publics"
     icon="security"
     provenance={data.provenance}
   >
@@ -157,7 +156,7 @@ const sections = [
       police, pompiers inclus, et {formatEuros(amount("transport"))} à Île-de-France Mobilités. Ces
       contributions financent des services qui dépassent les seuls résidents.
     </p>
-    <p>
+    <p slot="caveat">
       L’organisation de la préfecture de police est particulière à Paris. Le financement des
       transports relève d’une solidarité régionale. Ces deux lignes n’expliquent pas, à elles
       seules, l’écart avec Lyon et Marseille. La source ne fournit pas de montant global isolant

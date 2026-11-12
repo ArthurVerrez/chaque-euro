@@ -46,7 +46,7 @@ const bars = (rows: { label: string; count: number }[]) =>
         <h1>Lobbying et argent public</h1>
       </div>
       <Answer
-        text={`${formatNumber(data.totals.activities)} fiches d’activité ont été publiées en 12 mois par les organisations retenues du répertoire HATVP, au ${formatDate(data.asOf)}.`}
+        text={`${formatNumber(data.totals.activities)} fiches de lobbying publiées à la HATVP en 12 mois.`}
       />
       <KeyFigures
         figures={[
@@ -54,32 +54,32 @@ const bars = (rows: { label: string; count: number }[]) =>
             icon: "building",
             label: "Organisations HATVP",
             value: formatNumber(data.totals.organisations),
-            note: "Personnes morales vérifiées, radiées incluses",
+            note: "Radiées incluses",
           },
           {
             icon: "lobbying",
             label: "Fiches publiées",
             value: formatNumber(data.totals.activities),
-            note: "12 mois avant la récupération",
+            note: "Sur 12 mois",
             term: "lobbying",
           },
           {
             icon: "info",
             label: "En défaut de déclaration",
             value: formatNumber(data.totals.defaults),
-            note: "Liste officielle, personnes morales retenues",
+            note: "Liste officielle HATVP",
           },
           {
             icon: "europe",
             label: "Organisations françaises UE",
             value: formatNumber(data.totals.european),
-            note: "Siège en France, formes juridiques retenues",
+            note: "Siège en France",
           },
         ]}
       />
-      <Provenance provenance={data.provenance} />
-      <Provenance provenance={data.defaultsProvenance} />
-      <Provenance provenance={data.europeanProvenance} />
+      <Provenance
+        provenance={[data.provenance, data.defaultsProvenance, data.europeanProvenance]}
+      />
     </div>
   </header>
   <Toc items={sections} />
@@ -89,32 +89,28 @@ const bars = (rows: { label: string; count: number }[]) =>
         <h2>
           <Icon name="state" /> Les institutions ciblées
         </h2>
-        <p>Fiches publiées sur les 12 derniers mois, plusieurs cibles possibles.</p>
+        <p>Sur les 12 derniers mois.</p>
       </div>
       <div class="grid two">
         <div class="card">
           <BarList caption="Catégories d’institutions" items={bars(data.targets)} />
         </div>
         <div class="card">
-          <BarList
-            caption="Principaux ministères déclarés, libellés HATVP"
-            items={bars(data.ministries)}
-          />
+          <BarList caption="Principaux ministères" items={bars(data.ministries)} />
         </div>
       </div>
-      <Provenance provenance={data.provenance} />
+      <Provenance provenance={data.provenance}>
+        <p>Une fiche peut viser plusieurs institutions.</p>
+      </Provenance>
     </section>
     <section class="section" id="organisations">
       <div class="section-head">
         <h2>
-          <Icon name="building" /> Les organisations les plus actives à publier
+          <Icon name="building" /> Les organisations qui publient le plus
         </h2>
-        <p>10 résultats, classés par nombre de fiches publiées sur 12 mois.</p>
       </div>
       <form method="get" class="search-form">
-        <label for="organisation">
-          Rechercher une organisation dans les deux registres et les défauts
-        </label>
+        <label for="organisation">Rechercher une organisation</label>
         <div class="search-controls">
           <input
             id="organisation"
@@ -166,11 +162,10 @@ const bars = (rows: { label: string; count: number }[]) =>
         <h2>
           <Icon name="calendar" /> Les publications par trimestre
         </h2>
-        <p>La date de publication est connue, celle des actions ne l’est pas.</p>
       </div>
       <div class="card">
         <ColumnChart
-          caption="Fiches publiées, huit derniers trimestres observés"
+          caption="Fiches publiées par trimestre"
           unit="Fiches"
           columns={data.quarters.map((row) => ({
             label: `T${row.quarter} ${row.year}`,
@@ -180,7 +175,7 @@ const bars = (rows: { label: string; count: number }[]) =>
           }))}
         />
       </div>
-      <Explainer title="Pourquoi ces trimestres ne décrivent pas l’activité réelle">
+      <Explainer title="Ces dates ne sont pas celles des actions">
         <p>
           Les activités sont déclarées par exercice, le plus souvent annuel. Le dépôt du printemps
           concerne généralement l’année précédente. Les dates de publication ne permettent pas de
@@ -195,11 +190,11 @@ const bars = (rows: { label: string; count: number }[]) =>
         <h2>
           <Icon name="euro" /> Les fourchettes de dépenses
         </h2>
-        <p>Dernier exercice clos et publié de chaque organisation, années variables.</p>
+        <p>Dernier exercice déclaré, années variables.</p>
       </div>
       <div class="card">
         <BarList
-          caption="Nombre d’organisations par fourchette, sans addition des budgets"
+          caption="Organisations par fourchette de dépenses"
           items={data.budgets.map((r) => ({
             label: r.label,
             value: r.count,
@@ -208,22 +203,20 @@ const bars = (rows: { label: string; count: number }[]) =>
           }))}
         />
       </div>
-      <Provenance provenance={data.provenance} />
+      <Provenance provenance={data.provenance}>
+        <p>Les fourchettes déclarées ne sont pas des montants exacts et ne s’additionnent pas.</p>
+      </Provenance>
     </section>
     <section class="section" id="defauts">
       <div class="section-head">
         <h2>
           <Icon name="info" /> Les défauts de déclaration publiés par la HATVP
         </h2>
-        <p>Un état déclaratif officiel, pas une condamnation.</p>
       </div>
       <div class="card">
-        <p>
-          <a href={data.defaultsUrl}>Consulter la liste officielle actualisée</a>
-        </p>
         <details>
           <summary>
-            Voir les {formatNumber(data.defaults.length)} organisations retenues
+            Voir les {formatNumber(data.defaults.length)} organisations
             {query && " pour cette recherche"}
           </summary>
           <ul class="defaults">
@@ -238,17 +231,18 @@ const bars = (rows: { label: string; count: number }[]) =>
           </ul>
         </details>
       </div>
-      <Provenance provenance={data.defaultsProvenance} />
+      <Provenance provenance={data.defaultsProvenance}>
+        <p>
+          Un défaut de déclaration n’est pas une condamnation.{" "}
+          <a href={data.defaultsUrl}>Liste officielle à jour</a>.
+        </p>
+      </Provenance>
     </section>
     <section class="section" id="croisements">
       <div class="section-head">
         <h2>
           <Icon name="compare" /> Des organisations présentes dans plusieurs jeux de données
         </h2>
-        <p>
-          {formatNumber(data.totals.crossrefs)} SIREN communs. Cette coïncidence ne prouve aucun
-          lien.
-        </p>
       </div>
       <div class="card">
         <table class="crosses">
@@ -285,30 +279,37 @@ const bars = (rows: { label: string; count: number }[]) =>
           celles des déclarations de <Term id="lobbying">représentation d’intérêts</Term>.
         </p>
       </Explainer>
-      <Provenance provenance={data.crossProvenance} />
+      <Provenance provenance={data.crossProvenance}>
+        <p>
+          {formatNumber(data.totals.crossrefs)} organisations figurent dans plusieurs jeux de
+          données. Cela ne prouve aucun lien entre eux.
+        </p>
+      </Provenance>
     </section>
     <section class="section" id="europe">
       <div class="section-head">
         <h2>
           <Icon name="europe" /> Le registre de transparence de l’Union européenne
         </h2>
-        <p>Siège en France, dernier exercice déclaré. Les périmètres HATVP et UE sont distincts.</p>
+        <p>Organisations ayant leur siège en France.</p>
       </div>
       <div class="card">
-        <BarList caption="Principaux domaines, libellés officiels UE" items={bars(data.areas)} />
+        <BarList caption="Principaux domaines d’intérêt" items={bars(data.areas)} />
       </div>
       <div class="card">
         <h3>
           <Icon name="euro" /> Coûts annuels déclarés
         </h3>
-        <p class="small muted">
-          10 résultats, classés par borne basse connue ou montant exact. Ce classement ne compare
-          pas des dépenses exactes.
-        </p>
         <EuropeanLobbyingTable rows={data.european} />
         {data.european.length === 0 && <p>Aucun résultat pour cette recherche.</p>}
       </div>
-      <Provenance provenance={data.europeanProvenance} />
+      <Provenance provenance={data.europeanProvenance}>
+        <p>Les registres HATVP et UE n’ont pas le même périmètre.</p>
+        <p>
+          Les coûts sont souvent déclarés en fourchettes. Le classement suit la borne basse : il ne
+          compare pas des dépenses exactes.
+        </p>
+      </Provenance>
     </section>
   </div>
 </Base>

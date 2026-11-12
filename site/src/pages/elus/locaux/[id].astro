@@ -14,10 +14,11 @@ const { executive: e } = data;
   title={e.display_name}
   description={`Fonction publique dans le RNE : ${e.role_label}, ${e.territory_label}.`}
   icon="person"
-  answer={`${e.role_label} · ${e.territory_label} (${e.department_code}). Répertoire du ${formatDate(e.data_date)}. Cette fiche décrit une fonction, sans compter les autres mandats éventuels de la personne.`}
+  answer={`${e.role_label} · ${e.territory_label} (${e.department_code}).`}
   provenance={data.provenance}
   sections={[{ id: "fonction", label: "Fonction publique", icon: "town" }]}
 >
+  <p slot="caveat">Cette fiche décrit une fonction, pas les autres mandats éventuels.</p>
   <section id="fonction" class="section">
     <div class="section-head">
       <h2>
@@ -32,13 +33,14 @@ const { executive: e } = data;
         [{ text: "Fonction" }, { text: e.role_label }],
         [{ text: "Commune" }, { text: e.territory_label, href: `/commune/${e.territory_code}` }],
         [{ text: "Début de fonction" }, { text: formatDate(e.starts_on) }],
-        [{ text: "Millésime" }, { text: formatDate(e.data_date) }],
+        [{ text: "Date du fichier" }, { text: formatDate(e.data_date) }],
       ]}
     />
     <p>
-      <a href="/train-de-vie#locaux">Voir les barèmes légaux des indemnités</a>. Un plafond ne
-      prouve pas le montant réellement perçu par cette personne.
+      <a href="/train-de-vie#locaux">Voir les barèmes des indemnités</a>
     </p>
-    <Provenance provenance={data.provenance} />
+    <Provenance provenance={data.provenance}>
+      <p>Un barème est un plafond : il ne dit pas ce que cette personne perçoit réellement.</p>
+    </Provenance>
   </section>
 </Democracy>

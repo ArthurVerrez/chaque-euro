@@ -27,7 +27,7 @@ const money = (v: number | null) => (v === null ? "Non renseigné" : formatEuros
   title="Financement des campagnes"
   description="Comptes de campagne publiés par la CNCCFP, législatives et européennes 2024, décisions municipales 2026 partielles."
   icon="campaign"
-  answer="Les dépenses déclarées par les candidats sont rapprochées des montants retenus par la CNCCFP. Les décisions sont administratives. Un rejet de compte ne constitue pas une condamnation pénale."
+  answer="Dépenses déclarées par les candidats et montants retenus par la CNCCFP."
   figures={[
     {
       icon: "campaign",
@@ -51,7 +51,7 @@ const money = (v: number | null) => (v === null ? "Non renseigné" : formatEuros
       icon: "contribution",
       label: "Apports de partis retenus",
       value: money(data.totals.party),
-      note: "Apports des comptes publiés, sans attribution par parti",
+      note: "Sans détail par parti",
     },
   ]}
   provenance={data.provenance}
@@ -61,6 +61,10 @@ const money = (v: number | null) => (v === null ? "Non renseigné" : formatEuros
     { id: "municipales", label: "Municipales 2026", icon: "town" },
   ]}
 >
+  <p slot="caveat">
+    Les décisions de la CNCCFP sont administratives. Un rejet de compte n’est pas une condamnation
+    pénale.
+  </p>
   <section id="comptes" class="section">
     <div class="section-head">
       <h2>
@@ -108,7 +112,7 @@ const money = (v: number | null) => (v === null ? "Non renseigné" : formatEuros
       <button type="submit">Rechercher</button>
     </form>
     <PublicTable
-      caption={`${electionLabels[filters.election]} : comptes publiés, pas ensemble des candidatures`}
+      caption={`${electionLabels[filters.election]} : comptes publiés`}
       columns={["Candidat et circonscription", "Décision", "Déclaré", "Retenu"]}
       rows={data.accounts.map((a) => [
         {
@@ -121,7 +125,9 @@ const money = (v: number | null) => (v === null ? "Non renseigné" : formatEuros
       ])}
     />
     <PublicPagination page={filters.page} count={data.count} />
-    <Provenance provenance={data.provenance} />
+    <Provenance provenance={data.provenance}>
+      <p>Seuls les comptes publiés figurent ici, pas toutes les candidatures.</p>
+    </Provenance>
   </section>
   <section id="decisions" class="section">
     <div class="section-head">
@@ -153,16 +159,12 @@ const money = (v: number | null) => (v === null ? "Non renseigné" : formatEuros
         <Icon name="town" />
         Municipales 2026 : décisions publiées
       </h2>
+      <p>Liste partielle, contrôle des comptes en cours.</p>
     </div>
-    <p>
-      Couverture partielle pendant le contrôle des comptes. Le résultat, les montants et la date de
-      chaque décision se lisent dans le PDF officiel. Une rectification ne remplace pas
-      silencieusement la décision initiale.
-    </p>
     <details>
-      <summary>Consulter les {formatNumber(data.municipal.length)} documents indexés</summary>
+      <summary>Voir les {formatNumber(data.municipal.length)} décisions</summary>
       <PublicTable
-        caption="Décisions initiales et rectificatives du portail officiel"
+        caption="Décisions initiales et rectificatives"
         columns={["Candidat", "Territoire", "Document"]}
         rows={data.municipal.map((d) => [
           { text: d.candidate_name },
@@ -171,6 +173,11 @@ const money = (v: number | null) => (v === null ? "Non renseigné" : formatEuros
         ])}
       />
     </details>
-    <Provenance provenance={data.municipalProvenance} />
+    <Provenance provenance={data.municipalProvenance}>
+      <p>
+        Le résultat, les montants et la date de chaque décision sont dans le PDF officiel. Une
+        décision rectificative est listée à côté de la décision initiale, sans la remplacer.
+      </p>
+    </Provenance>
   </section>
 </Democracy>

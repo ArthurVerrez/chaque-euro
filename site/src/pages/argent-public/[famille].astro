@@ -25,7 +25,7 @@ const socialAccounts = sector?.code === "S1314" ? await getSocialAccounts() : nu
 const balance = family ? family.revenue - family.spending : 0;
 const answer =
   family && sector
-    ? `En ${family.year}, cette famille a dépensé ${formatEuros(family.spending)}, soit ${formatEuro(family.spending / family.households)} par ménage.`
+    ? `En ${family.year}, cette famille a dépensé ${formatEuros(family.spending)}.`
     : "Cette famille d’administrations publiques n’existe pas.";
 const figures: Figure[] = family
   ? [
@@ -53,7 +53,7 @@ const figures: Figure[] = family
         label: "Par ménage",
         term: "menage",
         value: formatEuro(family.spending / family.households),
-        note: "un repère, pas votre contribution",
+        note: "repère, pas votre facture",
       },
     ]
   : [];
@@ -100,14 +100,15 @@ const history = family?.history.filter((entry) => entry.year >= 2000) ?? [];
       {family && sector && (
         <>
           <p class="lead">{sector.description}</p>
-          {sector.code === "S13112" && (
-            <p class="small">
-              Périmètre Insee :{" "}
-              <Term id="odac">organismes divers d'administration centrale (ODAC)</Term>.
-            </p>
-          )}
           <KeyFigures figures={figures} />
-          <Provenance provenance={family.summaryProvenance} />
+          <Provenance provenance={family.summaryProvenance}>
+            {sector.code === "S13112" && (
+              <p>
+                Périmètre Insee :{" "}
+                <Term id="odac">organismes divers d'administration centrale (ODAC)</Term>.
+              </p>
+            )}
+          </Provenance>
         </>
       )}
     </div>
@@ -156,8 +157,8 @@ const history = family?.history.filter((entry) => entry.year >= 2000) ?? [];
               Recettes et dépenses
             </h2>
             <p>
-              Impôts et <Term id="cotisations-sociales">cotisations sociales</Term> financent les
-              services et les <Term id="prestations-sociales">prestations sociales</Term>.
+              Impôts et <Term id="cotisations-sociales">cotisations</Term> financent services et{" "}
+              <Term id="prestations-sociales">prestations</Term>.
             </p>
           </div>
           <div class="card">
@@ -183,10 +184,6 @@ const history = family?.history.filter((entry) => entry.year >= 2000) ?? [];
             <h2 id="titre-usages">
               <Icon name="bars" />À quoi il sert
             </h2>
-            <p>
-              <Term id="depenses-consolidees">Dépenses consolidées</Term> par usage, dernière année
-              détaillée : {family.functions.year}.
-            </p>
           </div>
           <div class="card">
             <BarList
@@ -215,7 +212,12 @@ const history = family?.history.filter((entry) => entry.year >= 2000) ?? [];
               </p>
             </Explainer>
           </div>
-          <Provenance provenance={family.functions.provenance} />
+          <Provenance provenance={family.functions.provenance}>
+            <p>
+              <Term id="depenses-consolidees">Dépenses consolidées</Term>. {family.functions.year}{" "}
+              est la dernière année détaillée par usage.
+            </p>
+          </Provenance>
         </section>
         {(members.length > 0 || sector.code === "S13111") && (
           <section class="section" id="composition" aria-labelledby="titre-composition">
@@ -224,11 +226,6 @@ const history = family?.history.filter((entry) => entry.year >= 2000) ?? [];
                 <Icon name="building" />
                 Qui la compose
               </h2>
-              {members.length > 0 && (
-                <p>
-                  Ces organismes se versent de l'argent : leur somme dépasse le total de la famille.
-                </p>
-              )}
             </div>
             {members.length > 0 ? (
               <div class="card">
@@ -245,7 +242,13 @@ const history = family?.history.filter((entry) => entry.year >= 2000) ?? [];
                 </a>
               </p>
             )}
-            <Provenance provenance={family.provenance} />
+            <Provenance provenance={family.provenance}>
+              {members.length > 0 && (
+                <p>
+                  Ces organismes se versent de l'argent : leur somme dépasse le total de la famille.
+                </p>
+              )}
+            </Provenance>
           </section>
         )}
         {protection && (
@@ -255,10 +258,6 @@ const history = family?.history.filter((entry) => entry.year >= 2000) ?? [];
                 <Icon name="socialSecurity" />
                 Les prestations par risque
               </h2>
-              <p>
-                Protection sociale au sens large, {protection.rows[0]?.year}, données
-                semi-définitives.
-              </p>
             </div>
             <div class="card">
               <BarList
@@ -282,7 +281,9 @@ const history = family?.history.filter((entry) => entry.year >= 2000) ?? [];
                 décembre 2026.
               </p>
             </Explainer>
-            <Provenance provenance={protection.provenance} />
+            <Provenance provenance={protection.provenance}>
+              <p>Données {protection.rows[0]?.year} semi-définitives.</p>
+            </Provenance>
           </section>
         )}
         <section class="section" id="evolution" aria-labelledby="titre-evolution">

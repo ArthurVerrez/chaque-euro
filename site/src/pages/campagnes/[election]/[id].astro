@@ -29,7 +29,7 @@ const totals = [
   title={a.candidate_name}
   description={`Compte de campagne publié, ${electionLabels[a.election_id] ?? a.election_id}.`}
   icon="campaign"
-  answer={`${electionLabels[a.election_id]} · ${a.constituency}. ${a.decision_code} : ${a.decision_label}. Publication du ${formatDate(a.published_on)}. Le statut judiciaire n’est pas renseigné par ce compte.`}
+  answer={`${electionLabels[a.election_id]} · ${a.constituency}. ${a.decision_code} : ${a.decision_label}.`}
   figures={[
     { icon: "spending", label: "Dépenses déclarées", value: money(a.declared_expenses_cents) },
     { icon: "scale", label: "Dépenses retenues", value: money(a.retained_expenses_cents) },
@@ -46,6 +46,10 @@ const totals = [
     { id: "details", label: "Détail publié", icon: "list" },
   ]}
 >
+  <p slot="caveat">
+    Compte publié le {formatDate(a.published_on)}. Il ne dit rien d’une éventuelle procédure
+    judiciaire.
+  </p>
   <section id="montants" class="section">
     <div class="section-head">
       <h2>
@@ -54,7 +58,7 @@ const totals = [
       </h2>
     </div>
     <PublicTable
-      caption={`Compte ${a.candidate_id}, valeurs nulles distinctes de zéro`}
+      caption="Postes du compte"
       columns={["Poste", "Montant"]}
       rows={totals.map(([label, value]) => [{ text: label }, { text: money(value) }])}
     />
@@ -68,7 +72,7 @@ const totals = [
       </h2>
     </div>
     <PublicTable
-      caption="Catégories publiées, ordre du fichier source"
+      caption="Catégories publiées"
       columns={["Base", "Poste", "Montant"]}
       rows={lines.map((l) => [
         { text: l.basis === "declared" ? "Déclaré" : "Retenu / version suivante" },

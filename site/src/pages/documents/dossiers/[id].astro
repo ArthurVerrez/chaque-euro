@@ -29,18 +29,11 @@ const next = data.events.find((event) => event.temporal_status === "annoncé");
           <Icon name="legislation" />
           <h1>{file.title_public}</h1>
         </div>
-        <Answer text={`${file.status}. Source : ${documentPublisher(file.source_id)}.`} />
+        <Answer text={`${file.status}.`} />
         <p>
           {documentKind(file.kind)}
           {file.legislature && ` · Législature ${file.legislature}`}
         </p>
-        {file.source_modified_at && (
-          <p>Modification source : {formatDate(file.source_modified_at)}</p>
-        )}
-        <a href={file.record_url}>
-          <Icon name="external" size={15} />
-          Voir la source
-        </a>
         {latest && (
           <p>
             Dernière étape datée réalisée : {latest.label_public}, {formatDate(latest.event_at)}.
@@ -51,7 +44,13 @@ const next = data.events.find((event) => event.temporal_status === "annoncé");
             Prochaine étape annoncée : {next.label_public}, {formatDate(next.event_at)}.
           </p>
         )}
-        <Provenance provenance={data.provenance} />
+        <Provenance provenance={data.provenance}>
+          <p>
+            <a href={file.record_url}>Notice officielle ({documentPublisher(file.source_id)})</a>
+          </p>
+          {file.source_modified_at && <p>Modifiée le {formatDate(file.source_modified_at)}.</p>}
+          <p>Une étape annoncée n'est pas une étape réalisée.</p>
+        </Provenance>
       </div>
     </header>
     <Toc
@@ -79,8 +78,7 @@ const next = data.events.find((event) => event.temporal_status === "annoncé");
               <h3>
                 <a href={event.record_url}>{event.label_public}</a>
               </h3>
-              {event.outcome && <p>Résultat source : {event.outcome}</p>}
-              <a href={event.record_url}>Voir la source</a>
+              {event.outcome && <p>Résultat : {event.outcome}</p>}
             </li>
           ))}
         </ol>
@@ -115,7 +113,7 @@ const next = data.events.find((event) => event.temporal_status === "annoncé");
             ))}
           </ul>
         ) : (
-          <p>Aucun raccordement exact établi dans les liens de cette notice.</p>
+          <p>Aucune autre notice reliée à ce dossier.</p>
         )}
       </div>
     </section>

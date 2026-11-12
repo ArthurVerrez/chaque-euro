@@ -36,7 +36,7 @@ const {
   </span>
   <button class="button" type="submit">
     <Icon name="search" size={18} />
-    Chercher
+    <span class="label">Chercher</span>
   </button>
 </form>
 
@@ -59,6 +59,29 @@ const {
   .field input {
     width: 100%;
     padding-left: 2.75rem;
+  }
+
+  @media (max-width: 30rem) {
+    .field :global(svg) {
+      display: none;
+    }
+
+    .field input {
+      padding-left: 1rem;
+    }
+
+    .button {
+      padding-inline: 1.125rem;
+    }
+
+    .label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
   }
 
   .hero .button {

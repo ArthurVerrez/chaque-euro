@@ -7,7 +7,7 @@ interface Props {
 const { caption, columns, rows } = Astro.props;
 ---
 
-<div class="card public-table">
+<div class:list={["card public-table", { stack: columns.length > 3 }]}>
   <table>
     <caption>{caption}</caption>
     <thead>
@@ -40,7 +40,6 @@ const { caption, columns, rows } = Astro.props;
   table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed;
     font-size: 0.9375rem;
   }
   caption {
@@ -55,7 +54,7 @@ const { caption, columns, rows } = Astro.props;
     text-align: left;
     vertical-align: top;
     border-bottom: 1px solid var(--border);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     white-space: normal;
   }
   th {
@@ -70,31 +69,43 @@ const { caption, columns, rows } = Astro.props;
     padding: 1rem;
   }
   @media (max-width: 48rem) {
-    table,
-    caption,
-    tbody,
-    tr,
+    th,
     td {
+      padding: 0.625rem 0.5rem;
+    }
+    th:first-child,
+    td:first-child {
+      padding-left: 1rem;
+    }
+    th:last-child,
+    td:last-child {
+      padding-right: 1rem;
+    }
+    .stack table,
+    .stack caption,
+    .stack tbody,
+    .stack tr,
+    .stack td {
       display: block;
     }
-    thead {
+    .stack thead {
       display: none;
     }
-    tr {
-      padding: 0.6rem 1rem;
+    .stack tr {
+      padding: 0.5rem 1rem;
       border-bottom: 1px solid var(--border);
     }
-    tr:last-child {
+    .stack tr:last-child {
       border-bottom: 0;
     }
-    td {
-      padding: 0.4rem 0;
+    .stack td {
+      padding: 0.25rem 0;
       border: 0;
       display: grid;
       grid-template-columns: minmax(5rem, 0.85fr) minmax(0, 1.5fr);
       gap: 0.65rem;
     }
-    td::before {
+    .stack td::before {
       content: attr(data-label);
       font-size: 0.8125rem;
       color: var(--text-secondary);

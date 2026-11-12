@@ -36,15 +36,15 @@ const bars = (rows: { label: string; count: number }[]) =>
           <h1>Journal officiel</h1>
         </div>
         <Answer
-          text={`Vous consultez ${formatNumber(total)} textes publiables dans ${formatNumber(data.journals.length)} éditions récentes.`}
+          text={`${formatNumber(total)} textes dans les ${formatNumber(data.journals.length)} dernières éditions.`}
         />
         <KeyFigures
           figures={[
             {
               icon: "journal",
-              label: "Textes sur la fenêtre",
+              label: "Textes récents",
               value: formatNumber(total),
-              note: "Après exclusions et références manquantes",
+              note: "Hors textes exclus",
             },
             {
               icon: "calendar",
@@ -56,13 +56,12 @@ const bars = (rows: { label: string; count: number }[]) =>
               icon: "staff",
               label: "Textes de nomination",
               value: formatNumber(nominations),
-              note: "Sur la même fenêtre, pas des personnes",
+              note: "Des textes, pas des personnes",
             },
             {
               icon: "staff",
               label: "Nominations du dernier JO",
               value: formatNumber(data.latestAppointments),
-              note: "Même règle de classification",
             },
           ]}
         />
@@ -83,12 +82,10 @@ const bars = (rows: { label: string; count: number }[]) =>
             <Icon name="journal" />
             Les publications
           </h2>
+          <p>
+            Textes du <Term id="journal-officiel">Journal officiel</Term>, en version initiale.
+          </p>
         </div>
-        <p>
-          Le <Term id="journal-officiel">Journal officiel</Term> publie des actes de nature
-          différente. Les textes initiaux ne décrivent pas toujours le droit actuellement
-          applicable.
-        </p>
         <form class="document-filters" method="get">
           <label>
             Date
@@ -147,7 +144,7 @@ const bars = (rows: { label: string; count: number }[]) =>
           <button type="submit">Filtrer</button>
           <a href="/journal-officiel">Réinitialiser</a>
         </form>
-        <p>{formatNumber(data.total)} textes correspondent à vos filtres.</p>
+        <p>{formatNumber(data.total)} textes trouvés.</p>
         <ol class="document-results">
           {data.texts.map((row) => (
             <li>
@@ -164,10 +161,6 @@ const bars = (rows: { label: string; count: number }[]) =>
                 {row.authority_label && ` · ${row.authority_label}`}
               </p>
               {row.nor && <p class="document-meta">NOR : {row.nor}</p>}
-              <a href={row.record_url}>
-                <Icon name="external" size={14} />
-                Voir la source
-              </a>
             </li>
           ))}
         </ol>
@@ -180,16 +173,16 @@ const bars = (rows: { label: string; count: number }[]) =>
         <div class="section-head">
           <h2>
             <Icon name="bars" />
-            Sur toute la fenêtre
+            Sur les éditions récentes
           </h2>
         </div>
         <LineChart
-          caption="Textes publiables par édition"
+          caption="Textes par édition"
           labels={data.days.map((row) => formatDayMonth(row.label))}
-          series={[{ label: "Textes publiables", values: data.days.map((row) => row.count) }]}
+          series={[{ label: "Textes", values: data.days.map((row) => row.count) }]}
           format={formatNumber}
         />
-        <BarList items={bars(data.natures)} caption="Textes publiables par nature" />
+        <BarList items={bars(data.natures)} caption="Textes par nature" />
         <BarList items={bars(data.appointments)} caption="Textes de nomination par ministère" />
         <details>
           <summary>Voir les tableaux de répartition</summary>
@@ -233,7 +226,7 @@ const bars = (rows: { label: string; count: number }[]) =>
             Le périmètre publié
           </h2>
         </div>
-        <Explainer title="Exclusions et couverture">
+        <Explainer title="Textes exclus et couverture">
           <p>
             Les actes protégés par le CRPA sont exclus, y compris des téléchargements :
             naturalisations, changements de nom et autres catégories protégées. Les nominations
@@ -245,22 +238,18 @@ const bars = (rows: { label: string; count: number }[]) =>
             présents dans les 50 derniers jours de livraisons. Une référence manquante reste hors
             des compteurs.
           </p>
-        </Explainer>
-        <ul class="document-results">
-          {data.journals.map((journal) => (
-            <li>
-              <h3>
-                {formatDate(journal.publication_date)} · n° {journal.issue_number}
-              </h3>
-              <p>
-                {formatNumber(journal.source_reference_count)} références source,{" "}
+          <ul>
+            {data.journals.map((journal) => (
+              <li>
+                {formatDate(journal.publication_date)}, n° {journal.issue_number} :{" "}
+                {formatNumber(journal.public_text_count)} publiées sur{" "}
+                {formatNumber(journal.source_reference_count)} références,{" "}
                 {formatNumber(journal.excluded_reference_count)} exclues,{" "}
-                {formatNumber(journal.missing_reference_count)} sans texte disponible,{" "}
-                {formatNumber(journal.public_text_count)} publiées.
-              </p>
-            </li>
-          ))}
-        </ul>
+                {formatNumber(journal.missing_reference_count)} sans texte.
+              </li>
+            ))}
+          </ul>
+        </Explainer>
       </div>
     </section>
   </DocumentContent>

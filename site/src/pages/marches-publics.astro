@@ -20,7 +20,7 @@ import {
   getProcurementOpportunities,
   type RankedOrganisation,
 } from "../lib/data";
-import { formatDate, formatEuros, formatNumber, formatPercent } from "../lib/format";
+import { formatEuros, formatNumber, formatPercent } from "../lib/format";
 
 const [data, opportunities, competition] = await Promise.all([
   getProcurement(),
@@ -129,7 +129,7 @@ const toc = [
         <h1>Les marchés publics</h1>
       </div>
       <Answer
-        text={`${formatNumber(count)} marchés notifiés depuis 2019, pour ${formatEuros(total)} de montants contractuels publiés.`}
+        text={`${formatNumber(count)} marchés notifiés depuis 2019, pour ${formatEuros(total)} prévus aux contrats.`}
       />
       <KeyFigures
         figures={[
@@ -138,20 +138,20 @@ const toc = [
             label: "Marchés notifiés",
             value: formatNumber(count),
             term: "notification",
-            note: "Depuis 2019, dernière version connue",
+            note: "Depuis 2019",
           },
           {
             icon: "euro",
             label: "Montants contractuels HT",
             term: "montant-marche",
             value: formatEuros(total),
-            note: "Hors montants signalés par le consolidateur",
+            note: "Hors montants peu fiables",
           },
           {
             icon: "hidden",
             label: "Montants non comptés",
             value: formatNumber(count - priced),
-            note: "Absents, signalés, non positifs ou hors plafond",
+            note: "Absents ou peu fiables",
           },
         ]}
       />
@@ -181,8 +181,7 @@ const toc = [
           Les notifications mois par mois
         </h2>
         <p>
-          Première <Term id="notification">notification</Term> connue, y compris pour les contrats
-          modifiés.
+          Selon la première <Term id="notification">notification</Term> connue.
         </p>
       </div>
       <div class="grid two">
@@ -197,7 +196,7 @@ const toc = [
         </div>
         <div class="card">
           <LineChart
-            caption="Montants contractuels notifiés, hors taxes"
+            caption="Montants prévus, hors taxes"
             maxLabels={4}
             labels={months.map((row) => row.label)}
             series={[{ label: "Montant HT", values: months.map((row) => row.amount) }]}
@@ -217,7 +216,7 @@ const toc = [
       </div>
       <div class="card">
         <ChoroplethMap
-          caption="Montants contractuels selon le siège de l'acheteur"
+          caption="Montants selon le siège de l'acheteur"
           areas={mapAreas}
           classes={classes}
           viewBox={data.viewBox}
@@ -267,7 +266,7 @@ const toc = [
           <Icon name="layers" />
           Types de contrats et procédures
         </h2>
-        <p>Montants contractuels depuis 2019.</p>
+        <p>Montants prévus depuis 2019.</p>
       </div>
       <div class="grid two">
         <div class="card">
@@ -285,14 +284,14 @@ const toc = [
           <Icon name="building" />
           Principaux acheteurs et titulaires
         </h2>
-        <p>Personnes morales identifiées, depuis 2019.</p>
+        <p>Depuis 2019.</p>
       </div>
       <div class="grid two">
         <div class="card">
-          <BarList caption="Les dix principaux acheteurs" items={ranked(data.buyers)} />
+          <BarList caption="Principaux acheteurs" items={ranked(data.buyers)} />
         </div>
         <div class="card">
-          <BarList caption="Les dix principaux titulaires" items={ranked(data.winners)} />
+          <BarList caption="Principaux titulaires" items={ranked(data.winners)} />
         </div>
       </div>
       <Provenance provenance={data.provenance} />
@@ -304,12 +303,12 @@ const toc = [
           <Icon name="calendar" />
           Les données sont-elles publiées à temps ?
         </h2>
-        <p>Part publiée dans les deux mois, parmi les dates exploitables.</p>
+        <p>Part publiée dans les deux mois.</p>
       </div>
       <div class="grid two">
         <div class="card">
           <LineChart
-            caption="Publication dans les deux mois, par année de notification"
+            caption="Part publiée à temps, par année"
             maxLabels={4}
             labels={years.map((row) => String(row.year))}
             series={[
@@ -349,7 +348,7 @@ const toc = [
           </details>
         </div>
         <div class="card">
-          <BarList caption="Par catégorie d'acheteur, toutes années" items={qualityCategories} />
+          <BarList caption="Par type d'acheteur" items={qualityCategories} />
         </div>
       </div>
       <Explainer title="Méthode et limites du délai légal">
@@ -379,15 +378,9 @@ const toc = [
           <Icon name="contract" />
           Derniers marchés notifiés
         </h2>
-        <p>Les quinze notifications les plus récentes disponibles.</p>
       </div>
       <div class="card">
-        <ContractList
-          contracts={data.latest}
-          role="titulaire"
-          caption="Dernières notifications"
-          intro="Marchés classés par première date de notification connue."
-        />
+        <ContractList contracts={data.latest} role="titulaire" caption="Dernières notifications" />
       </div>
       <Provenance provenance={data.provenance} />
     </section>
@@ -398,7 +391,7 @@ const toc = [
           <Icon name="scale" />
           Sanctions de l'Autorité de la concurrence
         </h2>
-        <p>Toutes activités confondues, avant appels et recours.</p>
+        <p>Tous secteurs, montants avant recours.</p>
       </div>
       <KeyFigures
         figures={[
@@ -416,7 +409,7 @@ const toc = [
           },
         ]}
       />
-      <Explainer title="Ces sanctions ne sont pas un classement des marchés publics">
+      <Explainer title="Pas seulement des marchés publics">
         <p>
           Ces décisions portent sur l'ensemble des pratiques sanctionnées par l'Autorité. Elles ne
           concernent pas nécessairement un marché public. Le montant est celui prononcé
@@ -460,9 +453,6 @@ const toc = [
       </ol>
       <Provenance provenance={data.sanctionsProvenance} />
     </section>
-    <p class="small muted">
-      Avis et projets collectés le {formatDate(data.asOf)}. Les échéances dépassées sont masquées.
-    </p>
   </div>
 </Base>
 <style>
