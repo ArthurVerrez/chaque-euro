@@ -69,7 +69,12 @@ Always give figures with their source links and data date, and link the Chaque E
 Prefer filtered calls (query, departement, organisation, group, source) to unfiltered lists. Large tools return their headline figures and a sections list by default; pass section to get one part.
 Amounts are in euros, except fields ending in _cents. Paths such as /commune/69123 are relative to ${PUBLIC_ORIGIN}.`;
 
-const annotations = { readOnlyHint: true, openWorldHint: false, idempotentHint: true };
+const annotations = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  openWorldHint: false,
+  idempotentHint: true,
+};
 const PAGE_SIZE = 50;
 
 const text = z.string().trim().max(100);
@@ -159,6 +164,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "search",
     {
+      title: "Rechercher",
       description:
         "Search by name across organisations (companies, associations, public bodies), communes, elected officials, public officials heading an administration and site topics. Each result has a site path whose last segment is the id for the detail tools (/organisation/<SIREN>, /commune/<INSEE>, /elus/<id>, /administrations/<id>). An acronym may only match subsidiaries or namesakes: then search the legal name (Electricité de France for EDF). Find an administration by its own name with list_administrations.",
       inputSchema: { query: z.string().trim().min(2).max(200) },
@@ -170,6 +176,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_overview",
     {
+      title: "Vue d'ensemble",
       description:
         "Home page headline figures: national key facts with their period, public contracts per year and median commune spending per inhabitant by population band. The State budget and the largest recipients are in get_state_budget and list_organisations.",
       annotations,
@@ -180,6 +187,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "list_organisations",
     {
+      title: "Organisations en tête",
       description:
         "Largest public contract winners (companies), largest recipients of State payments (associations) and largest public buyers, with national totals.",
       annotations,
@@ -190,6 +198,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_organisation",
     {
+      title: "Organisation",
       description:
         "One organisation by SIREN: identity, public contracts won and awarded since 2019 (yearly totals, main counterparts, largest and latest contracts), State payments, documented corporate group, lobbying declarations (HATVP and EU register), competition on its tenders and its upcoming tenders.",
       inputSchema: { siren },
@@ -217,6 +226,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "list_communes",
     {
+      title: "Communes",
       description:
         "Communes overview: number of communes, largest communes with spending per inhabitant, median spending per inhabitant by population band, spending per inhabitant of each département's communes, and the national DGF grant history in commune accounts.",
       annotations,
@@ -230,6 +240,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_commune",
     {
+      title: "Commune",
       description:
         "One commune by INSEE code (Paris, Lyon and Marseille arrondissements map to their commune). By default, its accounts per inhabitant for one year against the median of communes of the same size. Sections: history (yearly accounts since 2018), functions (spending by service), local (local tax rates, income tax, electoral turnout, DGF), buyer (public contracts as buyer), representatives (deputies and senators). `year` selects the accounts year; the latest by default.",
       inputSchema: {
@@ -263,6 +274,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_departement",
     {
+      title: "Département",
       description:
         "One département by code (01 to 95, 2A, 2B, 971 to 976): spending per inhabitant of its communes against the median of communes of the same size (most populous first, 50 per page), accounts of the département council and its region over time, and electoral turnout.",
       inputSchema: {
@@ -292,6 +304,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "list_local_authorities",
     {
+      title: "Régions et intercommunalités",
       description:
         "Accounts of regions (level region) or intercommunalités (level epci) for one year: spending, revenue and debt, also per inhabitant, 50 per page, filterable by name or SIREN, with the 8 highest spenders per inhabitant among matches.",
       inputSchema: {
@@ -321,6 +334,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_state_budget",
     {
+      title: "Budget de l'État",
       description:
         "The State's general budget (budget général). By default: total executed spending, by mission and programme, revenue by tax and budget voted for next year. Use it for the State budget; get_public_money family etat is a different perimeter (Insee national accounts of all State administrations). Sections: publicFinances (public finances by sub-sector since 1949), execution (monthly execution, spending by type and ministry, State balance sheet, green budget), legislation (the related finance laws).",
       inputSchema: { section: sectionInput(BUDGET_SECTIONS) },
@@ -342,6 +356,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_public_money",
     {
+      title: "Argent public",
       description:
         "All French public money in Insee national accounts (State, State operators, local authorities, social security) by sector and by function, compulsory levies, European comparisons and quarterly debt. Pass `family` for one family's detailed accounts. Family etat covers all State administrations in national accounts, not the State's general budget: use get_state_budget for that. For securite-sociale, section socialAccounts gives the social security branches, ONDAM, health payers, pensions, family benefits and unemployment insurance.",
       inputSchema: {
@@ -390,6 +405,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_analysis",
     {
+      title: "Analyses",
       description:
         "Thematic analyses. Without `slug`, lists them. With a slug, returns that analysis's data series and sources: public deficit and debt by presidency, France and the EU budget, Paris spending, rail funding, student support.",
       inputSchema: {
@@ -409,6 +425,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_procurement",
     {
+      title: "Marchés publics",
       description:
         "Public procurement overview. By default: latest contracts, largest buyers and winners, contracts by buyer département. Sections: breakdown (contracts by month, procedure and type), quality (publication quality), sanctions (Competition Authority sanctions), opportunities (upcoming tenders), competition (single-bid rates).",
       inputSchema: { section: sectionInput(PROCUREMENT_SECTIONS) },
@@ -430,6 +447,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_lobbying",
     {
+      title: "Lobbying",
       description:
         "Lobbying registers (HATVP for France, EU Transparency Register). By default: totals, organisations with the most declared activities, targeted institutions and ministries, declared budgets and links with public contracts and State payments. Sections: defaults (HATVP declaration defaults, 50 per page), european (EU register). `organisation` filters lists by name.",
       inputSchema: {
@@ -451,6 +469,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_political_finance",
     {
+      title: "Financement des partis",
       description:
         "Political party accounts (CNCCFP): 2024 resources, donations and public aid of every party (50 per page, largest first), total public aid per year since 2021, the selected party's history and parties deprived of public aid. `party` is a CNCCFP party code from the accounts list; it selects the party detailed on the page.",
       inputSchema: { party: text.optional(), page },
@@ -470,6 +489,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "list_campaign_accounts",
     {
+      title: "Comptes de campagne",
       description:
         "Candidates' campaign accounts for the 2024 legislative or European elections (CNCCFP), 50 per page, with totals and counts by decision code. Filter by candidate or constituency name, département code or decision code. With `query`, also the matching entries of the index of 2026 municipal decisions (same page). Amounts are in cents.",
       inputSchema: {
@@ -512,6 +532,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_campaign_account",
     {
+      title: "Compte de campagne",
       description:
         "One candidate's campaign account (CNCCFP) with every line. `id` is the candidate_id from list_campaign_accounts. Amounts are in cents.",
       inputSchema: { election, id },
@@ -527,6 +548,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "list_alerts",
     {
+      title: "Alertes",
       description:
         "Campaign account alerts from CNCCFP decisions: rejected accounts, accounts not filed and accounts filed late, newest first, 50 per page. They are official decisions, not proof of an offence.",
       inputSchema: {
@@ -548,6 +570,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "list_elected",
     {
+      title: "Élus nationaux",
       description:
         "Current deputies, senators and members of the government, 50 per page, filterable by name, chamber, parliamentary group and département code, with counts per chamber and the latest public votes.",
       inputSchema: {
@@ -576,6 +599,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "find_representatives",
     {
+      title: "Trouver ses élus",
       description:
         "Deputies and senators of a commune given by name or INSEE code. An ambiguous name returns candidate communes. A commune split between several constituencies has several deputies: pass the address longitude and latitude (WGS84) to get the single deputy of that address, as the site's address finder does; none is given within 200 m of a boundary. Without coordinates, the result gives the public geocoder to use for the user's address.",
       inputSchema: {
@@ -626,6 +650,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_elected_person",
     {
+      title: "Élu",
       description:
         "One deputy, senator or member of the government by id (e.g. PA841605, from search or list_elected): mandates, voting participation, latest votes and summary of HATVP declarations of interests.",
       inputSchema: { id },
@@ -641,6 +666,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "list_local_executives",
     {
+      title: "Élus locaux",
       description:
         "National register of elected officials (RNE): counts of mandate rows by kind, sex, age band and département, optionally for one département, and mayors searchable by name or commune, 50 per page.",
       inputSchema: { query: text.optional(), departement: department.optional(), page },
@@ -660,6 +686,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_local_executive",
     {
+      title: "Élu local",
       description:
         "One mayor from the national register of elected officials, by id (from list_local_executives).",
       inputSchema: { id },
@@ -675,6 +702,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "list_votes",
     {
+      title: "Votes",
       description:
         "Public votes of the Assemblée nationale and the Sénat, newest first, 50 per page, filterable by chamber and by title words or vote number.",
       inputSchema: { chamber: z.enum(["AN", "SENAT"]).optional(), query: text.optional(), page },
@@ -689,6 +717,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_vote",
     {
+      title: "Vote",
       description:
         "One public vote by id (e.g. VTANR5L17V9469 or SEN2026-46, from list_votes): result, counts by group and position, and vote corrections. Pass `group` (a group_label from groups) for each of its members' positions.",
       inputSchema: { id, group: text.optional() },
@@ -708,6 +737,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_official_journal",
     {
+      title: "Journal officiel",
       description:
         "Latest editions of the Journal officiel: published texts, 40 per page, filterable by date, nature, ministry and appointment class, with counts by nature, ministry and day and the number of appointments.",
       inputSchema: {
@@ -734,6 +764,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "list_legislative_files",
     {
+      title: "Dossiers législatifs",
       description:
         "Legislative files from DILA (DOLE), the Assemblée nationale and the Sénat, 40 per page, filterable by title words, source, status, legislature and finance laws.",
       inputSchema: {
@@ -762,6 +793,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_legislative_file",
     {
+      title: "Dossier législatif",
       description:
         "One legislative file by id (e.g. an-DLR5L17N53329, from list_legislative_files): steps (50 per page), documents and the same law's files at other publishers.",
       inputSchema: { id, page },
@@ -782,6 +814,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "list_administrations",
     {
+      title: "Administrations",
       description:
         "Directory of State administrations (ROAE and DILA directory), 40 per page, filterable by name, by category, or to bodies headed by a member of the government.",
       inputSchema: {
@@ -806,6 +839,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_administration",
     {
+      title: "Administration",
       description:
         "One administration by id (a UUID, from list_administrations or search): parent bodies, then child bodies and communes covered, 50 per page each.",
       inputSchema: { id, page },
@@ -828,6 +862,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_public_expenses",
     {
+      title: "Moyens publics",
       description:
         "Means of public office: reference allowances of parliamentarians, members of the government and local officials, ministerial cabinet staff, CADA opinions on access to documents, and the Pouvoirs publics budget.",
       annotations,
@@ -838,6 +873,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_glossary",
     {
+      title: "Lexique",
       description:
         "Definitions of the terms the site uses (marché public, strate, médiane, épargne brute...), grouped by theme.",
       annotations,
@@ -848,6 +884,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "get_methodology",
     {
+      title: "Sources et méthode",
       description:
         "Every source the site uses with its id, name, publisher, data date and freshness, plus the social protection total quoted on the methodology page. `source` filters by source name, publisher or id and gives each match in full: licence, coverage, rows, SHA-256, known limits, the first URL fetched and how many (every URL is in `allUrls`).",
       inputSchema: { source: text.optional() },
@@ -889,6 +926,7 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "list_downloads",
     {
+      title: "Téléchargements",
       description: `Derived data tables published under Licence Ouverte 2.0, with formats and sizes. Each file is at ${PUBLIC_ORIGIN}/telechargements/fichiers/<file>. \`table\` gives one table with the SHA-256 of its files.`,
       inputSchema: { table: text.optional() },
       annotations,

@@ -1,0 +1,70 @@
+---
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import Icon from "../components/Icon.astro";
+import Base from "../layouts/Base.astro";
+import type { IconName } from "../lib/icons";
+
+const sections: { id: string; title: string; icon: IconName; text: string }[] = [
+  {
+    id: "service",
+    title: "Le service",
+    icon: "info",
+    text: "Chaque Euro est un site gratuit, sans compte et sans publicité. Il présente des données publiques officielles avec leurs sources. L’éditeur est indiqué dans les mentions légales.",
+  },
+  {
+    id: "donnees",
+    title: "Les chiffres",
+    icon: "source",
+    text: "Les chiffres viennent des producteurs officiels et sont présentés tels que publiés, avec leur date. Ils peuvent contenir des erreurs ou ne plus être à jour : vérifiez la source avant de vous en servir pour une décision. Vous pouvez signaler une erreur avec le formulaire de contact.",
+  },
+  {
+    id: "reutilisation",
+    title: "Réutilisation",
+    icon: "download",
+    text: "Les données calculées sont publiées sous Licence Ouverte 2.0 : citez Chaque Euro avec un lien. Chaque source garde sa propre licence. Le code du site est publié sous licence AGPL-3.0.",
+  },
+  {
+    id: "mcp",
+    title: "Serveur MCP",
+    icon: "assistant",
+    text: "Le serveur MCP est en accès libre et en lecture seule. Utilisez-le raisonnablement : le nombre de requêtes par adresse est limité et un usage abusif peut être bloqué. Les réponses de votre assistant d’IA sont rédigées par lui, pas par Chaque Euro : vérifiez les chiffres sur la page indiquée.",
+  },
+  {
+    id: "responsabilite",
+    title: "Responsabilité",
+    icon: "scale",
+    text: "Le service est fourni en l’état, sans garantie de disponibilité ni d’exactitude. Il peut évoluer ou s’interrompre. Ces conditions relèvent du droit français.",
+  },
+];
+---
+
+<Base
+  title="Conditions d’utilisation"
+  description="Conditions d’utilisation de Chaque Euro et de son serveur MCP : service gratuit, chiffres sourcés, réutilisation sous Licence Ouverte."
+>
+  <header class="page-head">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Conditions d’utilisation" }]} />
+      <div class="entity">
+        <Icon name="scale" />
+        <h1>Conditions d’utilisation</h1>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    {sections.map((section) => (
+      <section class="section" id={section.id} aria-labelledby={`titre-${section.id}`}>
+        <h2 id={`titre-${section.id}`}>
+          <Icon name={section.icon} />
+          {section.title}
+        </h2>
+        <p>{section.text}</p>
+      </section>
+    ))}
+    <p class="muted">
+      Voir aussi les <a href="/mentions-legales">mentions légales et données personnelles</a> et le{" "}
+      <a href="/contact">formulaire de contact</a>.
+    </p>
+  </div>
+</Base>
