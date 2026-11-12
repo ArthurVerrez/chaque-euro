@@ -185,7 +185,10 @@ const doors = [
             </div>
           ))}
         </dl>
-        <Provenance provenance={keyFigures.map((figure) => figure.provenance)} />
+        <Provenance
+          provenance={keyFigures.map((figure) => figure.provenance)}
+          labels={keyFigures.map((figure) => `${figure.value} ${figure.label}`)}
+        />
       </aside>
     </div>
   </section>
@@ -535,13 +538,42 @@ const doors = [
   }
 
   .hero-panel :global(.provenance) {
+    --text: #fff;
     --text-muted: #c8d3ea;
     --surface: rgb(255 255 255 / 8%);
-    --border: rgb(255 255 255 / 25%);
-    --navy-50: rgb(255 255 255 / 16%);
-    margin-top: 0.25rem;
+    --border: rgb(255 255 255 / 20%);
+    --navy-50: rgb(255 255 255 / 4%);
+    --navy-100: rgb(255 255 255 / 16%);
+    --navy-900: #fff;
+    margin: 0.25rem 0 0.75rem;
     border-top: 1px solid rgb(255 255 255 / 12%);
-    padding-top: 0.25rem;
+    padding-top: 0.75rem;
+  }
+
+  .hero-panel :global(.provenance .panel) {
+    max-height: min(26rem, 70vh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  @media (min-width: 64rem) {
+    .hero-panel {
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero-panel :global(.provenance details) {
+      position: relative;
+    }
+
+    .hero-panel :global(.provenance .panel) {
+      position: absolute;
+      top: calc(100% + 0.5rem);
+      right: 0;
+      left: 0;
+      background: #122a5c;
+      box-shadow: 0 1.25rem 2.5rem rgb(0 0 0 / 35%);
+    }
   }
 
   .hero h1 {

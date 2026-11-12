@@ -5,8 +5,10 @@ import Icon from "./Icon.astro";
 
 interface Props {
   provenance: Provenance | Provenance[];
+  labels?: string[];
 }
 
+const { labels = [] } = Astro.props;
 const entries = [Astro.props.provenance].flat();
 const dates = [
   ...new Set(
@@ -14,12 +16,6 @@ const dates = [
   ),
 ];
 const summaryDate = dates.length === 1 && dates[0] ? formatDate(dates[0]) : null;
-const tagger = (provenance: Provenance) => {
-  const shortNames = provenance.citations.map(({ source }) => source.shortName);
-  const ambiguous = new Set(shortNames).size < shortNames.length;
-  return (source: Provenance["citations"][number]["source"]) =>
-    ambiguous ? (source.name.split(/ : | \(/)[0] ?? source.name) : source.shortName;
-};
 ---
 
 <footer class="provenance">
@@ -28,104 +24,108 @@ const tagger = (provenance: Provenance) => {
       <Icon name="source" size={16} />
       Sources
       {summaryDate && <span class="summary-date">données au {summaryDate}</span>}
+      <span class="chevron">
+        <Icon name="expand" size={16} />
+      </span>
     </summary>
-    <slot />
-    {entries.map((provenance) => {
-      const tag = tagger(provenance);
-      const several = provenance.citations.length > 1;
-      return (
-        <div class="entry">
-          <div class="line">
-            {provenance.citations.map(({ source, recordUrl }) => (
-              <a href={recordUrl ?? source.fileUrl ?? source.pageUrl}>
-                <Icon name="external" size={14} />
-                Voir la source
-                {several && <span class="muted">({tag(source)})</span>}
-              </a>
-            ))}
-            <a href={provenance.calculationUrl}>
+    <div class="panel">
+      {Astro.slots.has("default") && (
+        <div class="note">
+          <slot />
+        </div>
+      )}
+      {entries.map((provenance, index) => (
+        <section class="entry">
+          {labels[index] && <p class="entry-label">{labels[index]}</p>}
+          <ul class="sources">
+            {provenance.citations.map(({ source, recordUrl }) => {
+              const href = recordUrl ?? source.fileUrl ?? source.pageUrl;
+              return (
+                <li class="source">
+                  <div class="source-text">
+                    <p class="source-tag">
+                      <strong>{source.shortName}</strong>
+                      {source.dataDate && <span>données au {formatDate(source.dataDate)}</span>}
+                    </p>
+                    <a class="source-name" href={source.pageUrl}>
+                      {source.name}
+                    </a>
+                    <p class="meta">
+                      <span>{source.publisher}</span>
+                      {source.coverage && <span>{source.coverage}</span>}
+                      {source.publishedAt && (
+                        <span>Mis à jour le {formatDate(source.publishedAt)}</span>
+                      )}
+                      {source.retrievedAt && (
+                        <span>Récupéré le {formatDate(source.retrievedAt)}</span>
+                      )}
+                      {source.fileUrl && source.fileUrl !== href && (
+                        <a href={source.fileUrl}>Fichier source</a>
+                      )}
+                      <a href={source.licence.url}>{source.licence.name}</a>
+                    </p>
+                  </div>
+                  <a class="action" href={href}>
+                    <Icon name="external" size={14} />
+                    Voir la source
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+          <div class="calc">
+            <p>{provenance.method}</p>
+            <a class="action" href={provenance.calculationUrl}>
               <Icon name="code" size={14} />
               Voir le calcul
             </a>
           </div>
-          <span class="label">
-            Source :{" "}
-            {[...new Set(provenance.citations.map(({ source }) => source.shortName))].join(", ")}
-          </span>
-          {provenance.citations
-            .filter(({ source }) => source.dataDate)
-            .map(({ source }) => (
-              <span class="data-date">
-                {several && `${tag(source)} : `}
-                données au {formatDate(source.dataDate)}
-              </span>
-            ))}
-          <p>{provenance.method}</p>
-          <ul>
-            {provenance.citations.map(({ source }) => (
-              <li>
-                <a href={source.pageUrl}>{source.name}</a>, {source.publisher}.{" "}
-                {source.fileUrl && (
-                  <>
-                    <a href={source.fileUrl}>Fichier source</a>.{" "}
-                  </>
-                )}
-                {source.coverage && <>{source.coverage}. </>}
-                {source.publishedAt && (
-                  <>Fichier mis à jour le {formatDate(source.publishedAt)}. </>
-                )}
-                {source.retrievedAt && <>Récupéré le {formatDate(source.retrievedAt)}. </>}
-                <a href={source.licence.url}>{source.licence.name}</a>.
-              </li>
-            ))}
-          </ul>
-        </div>
-      );
-    })}
-    <p>
-      <a href="/methodologie#sources">Toutes les sources et leurs limites</a>
-    </p>
+        </section>
+      ))}
+      <a class="all" href="/methodologie#sources">
+        Toutes les sources et leurs limites
+      </a>
+    </div>
   </details>
 </footer>
 
 <style>
   .provenance {
-    margin-top: 0.5rem;
+    margin-top: 0.75rem;
     font-size: 0.875rem;
     color: var(--text-muted);
   }
 
   summary {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    min-height: 44px;
     max-width: 100%;
-    width: fit-content;
-    padding: 0 0.25rem;
-    border-radius: 0.375rem;
+    min-height: 2.25rem;
+    padding: 0 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
     color: var(--link);
-    font-weight: 600;
+    font-size: 0.8125rem;
+    font-weight: 650;
     white-space: nowrap;
     list-style: none;
+    cursor: pointer;
+  }
+
+  summary:hover {
+    border-color: var(--link);
   }
 
   summary::-webkit-details-marker {
     display: none;
   }
 
-  summary::after {
-    content: "+";
-    font-weight: 700;
-  }
-
-  [open] > summary::after {
-    content: "−";
-  }
-
-  summary:focus-visible {
-    outline: 2px solid var(--link);
-    outline-offset: 0;
+  summary:focus-visible,
+  .action:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
   }
 
   .summary-date {
@@ -133,7 +133,6 @@ const tagger = (provenance: Provenance) => {
     overflow: hidden;
     text-overflow: ellipsis;
     color: var(--text-muted);
-    font-size: 0.8125rem;
     font-weight: 400;
   }
 
@@ -141,56 +140,164 @@ const tagger = (provenance: Provenance) => {
     content: "· ";
   }
 
+  .chevron {
+    display: inline-flex;
+    transition: transform 0.15s ease;
+  }
+
+  [open] > summary .chevron {
+    transform: rotate(180deg);
+  }
+
+  .panel {
+    display: grid;
+    gap: 0.875rem;
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--navy-50);
+    line-height: 1.5;
+  }
+
+  .note :global(p),
+  .note :global(ul) {
+    margin: 0 0 0.5rem;
+  }
+
+  .note :global(ul) {
+    padding-left: 1.25rem;
+  }
+
+  .entry {
+    display: grid;
+    gap: 0.5rem;
+  }
+
   .entry + .entry {
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
+    padding-top: 0.875rem;
     border-top: 1px solid var(--border);
   }
 
-  .line {
+  .entry-label {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.8125rem;
+    font-weight: 650;
+  }
+
+  .sources {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .source {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.25rem;
+    gap: 0.625rem 1rem;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
   }
 
-  .line > a {
-    display: inline-flex;
+  .source-text {
+    flex: 1 1 15rem;
+    min-width: 0;
+  }
+
+  .source-tag {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.3rem;
-    min-height: 44px;
-    padding: 0.25rem 0.75rem;
+    gap: 0.25rem 0.5rem;
+    margin: 0;
+    font-size: 0.75rem;
+  }
+
+  .source-tag strong {
+    padding: 0.0625rem 0.5rem;
+    border-radius: 999px;
+    background: var(--navy-100);
+    color: var(--navy-900);
+    font-weight: 650;
+  }
+
+  .source-name {
+    display: block;
+    margin-top: 0.375rem;
+    color: var(--text);
+    font-weight: 600;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+
+  .source-name:hover {
+    color: var(--link);
+    text-decoration: underline;
+  }
+
+  .meta {
+    margin: 0.25rem 0 0;
+    font-size: 0.75rem;
+    overflow-wrap: anywhere;
+  }
+
+  .meta > :not(:first-child)::before {
+    content: "·";
+    display: inline-block;
+    margin: 0 0.4em;
+    color: var(--text-muted);
+  }
+
+  .action {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.25rem;
+    padding: 0 0.75rem;
     border: 1px solid var(--border);
-    border-radius: 0.875rem;
-    line-height: 1.4;
+    border-radius: 999px;
     background: var(--surface);
     color: var(--link);
     font-size: 0.8125rem;
     font-weight: 650;
     text-decoration: none;
+    white-space: nowrap;
   }
 
-  .line > a:hover {
+  .action:hover {
     border-color: var(--link);
-    background: var(--navy-50);
   }
 
-  .label {
-    font-weight: 550;
+  .calc {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
   }
 
-  .data-date::before {
-    content: " · ";
+  .calc p {
+    flex: 1 1 15rem;
+    margin: 0;
+    font-size: 0.8125rem;
   }
 
-  details :global(p),
-  details :global(ul) {
-    margin: 0.5rem 0;
-    line-height: 1.6;
+  .all {
+    justify-self: start;
+    font-size: 0.8125rem;
+    font-weight: 600;
   }
 
-  details :global(ul) {
-    padding-left: 1.25rem;
+  @media (pointer: coarse) {
+    summary,
+    .action {
+      min-height: 44px;
+    }
   }
 </style>
