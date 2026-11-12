@@ -89,7 +89,8 @@ Astro sessions and the Cloudflare Images binding are disabled so a future deploy
 
 The public site is https://chaqueeuro.fr. Hosting and deployment are not part of this repository.
 
-## Open questions
+## Licence
 
-- Licence for the code and for the derived data (for example MIT or AGPL for code, Licence Ouverte 2.0 for derived data). Not chosen yet; no `LICENSE` file is committed.
-- "Voir le calcul" points to `https://github.com/ArthurVerrez/chaque-euro/blob/main/...`, which 404s while the repository is private. Set `PUBLIC_REPO_URL` and `CODE_REF` in `site/wrangler.jsonc` once public, ideally to the deployed commit.
+Code: [GNU AGPL-3.0](LICENSE), copyright 2026 Arthur Verrez.
+
+Derived data published on `/telechargements`: [Licence Ouverte 2.0](https://www.data.gouv.fr/pages/legal/licences/etalab-2-0). Cite Chaque Euro with a link. Each source keeps its own licence, listed on `/methodologie`.
