@@ -1,0 +1,24 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "fr.chaqueeuro/mcp",
+  "title": "Chaque Euro",
+  "description": "Argent public français avec sources : budget de l'État, communes, marchés publics, élus.",
+  "websiteUrl": "https://chaqueeuro.fr/ia",
+  "repository": {
+    "url": "https://github.com/ArthurVerrez/chaque-euro",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "icons": [
+    {
+      "src": "https://chaqueeuro.fr/logo.svg",
+      "mimeType": "image/svg+xml"
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://chaqueeuro.fr/mcp"
+    }
+  ]
+}
