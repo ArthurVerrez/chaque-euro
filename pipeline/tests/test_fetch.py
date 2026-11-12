@@ -19,27 +19,29 @@ class FetchTlsTest(unittest.TestCase):
         self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
         self.assertTrue(context.check_hostname)
 
-    def test_tls_fallback_verifies_https_and_saves_hash_and_final_url(self) -> None:
+    def test_tls_and_reset_fallback_verifies_https_and_saves_hash_and_final_url(self) -> None:
         source = next(source for source in load_registry() if source.id == "dss-branches-2026")
         assert source.file_url
-        with tempfile.TemporaryDirectory() as directory:
 
-            def download(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
-                Path(args[args.index("--output") + 1]).write_bytes(b"official workbook")
-                self.assertNotIn("--insecure", args)
-                self.assertIn("--fail", args)
-                self.assertEqual(args[args.index("--proto") + 1], "=https")
-                self.assertEqual(args[args.index("--proto-redir") + 1], "=https")
-                return subprocess.CompletedProcess(args, 0, stdout=source.file_url)
+        def download(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            Path(args[args.index("--output") + 1]).write_bytes(b"official workbook")
+            self.assertNotIn("--insecure", args)
+            self.assertIn("--fail", args)
+            self.assertEqual(args[args.index("--proto") + 1], "=https")
+            self.assertEqual(args[args.index("--proto-redir") + 1], "=https")
+            return subprocess.CompletedProcess(args, 0, stdout=source.file_url)
 
+        for error in (urllib.error.URLError(ssl.SSLError()), ConnectionResetError(104, "reset")):
             with (
-                patch("chaque_euro.fetch._open", side_effect=urllib.error.URLError(ssl.SSLError())),
+                self.subTest(error=error),
+                tempfile.TemporaryDirectory() as directory,
+                patch("chaque_euro.fetch._open", side_effect=error),
                 patch("chaque_euro.fetch.subprocess.run", side_effect=download),
             ):
                 record = fetch_file(source, Path(directory), True)
-            self.assertEqual(record.urls, [source.file_url])
-            self.assertEqual(record.sha256, sha256_of(Path(record.path)))
-            self.assertTrue(Path(record.path + ".fetch.json").is_file())
+                self.assertEqual(record.urls, [source.file_url])
+                self.assertEqual(record.sha256, sha256_of(Path(record.path)))
+                self.assertTrue(Path(record.path + ".fetch.json").is_file())
 
 
 class RefreshTest(unittest.TestCase):
@@ -196,6 +198,60 @@ class RefreshTest(unittest.TestCase):
         self.assertEqual(first.sha256, failed.sha256)
         self.assertTrue(failed.error)
         self.assertEqual((Path(first.path) / filename).read_bytes(), b"official data")
+
+    def test_rolling_deliveries_outlive_index_purge_until_window_ends(self) -> None:
+        from dataclasses import replace
+        from datetime import UTC, datetime, timedelta
+
+        from chaque_euro.fetch import fetch
+
+        base = self.source.file_url.removesuffix("/data")
+        now = datetime.now(UTC)
+        old, recent, latest = (
+            f"JORF_{(now - timedelta(days=age)).strftime('%Y%m%d')}.tar.gz" for age in (40, 5, 0)
+        )
+        self.responses["/index/"] = "".join(
+            f'<a href="{name}">journal</a>' for name in (old, recent, latest)
+        ).encode()
+        source = replace(
+            self.source,
+            kind="files",
+            file_url=base + "/index/",
+            delivery_pattern="JORF",
+            rolling_days=60,
+        )
+        fetch(source, self.raw, False)
+        directory = self.raw / source.id
+        (directory / "index.html.fetch.json").unlink()
+        self.responses["/index/"] = f'<a href="{latest}">journal</a>'.encode()
+        record = fetch(replace(source, rolling_days=30), self.raw, True)
+        assert record
+        self.assertFalse((directory / old).exists())
+        self.assertTrue((directory / recent).exists())
+        self.assertIn(base + "/index/" + recent, record.urls)
+        self.assertIsNone(record.error)
+
+    def test_new_stock_supersedes_older_stock_and_deliveries(self) -> None:
+        from dataclasses import replace
+
+        from chaque_euro.fetch import fetch
+
+        base = self.source.file_url.removesuffix("/data")
+        before = ["Freemium_dole_20250101-140000.tar.gz", "DOLE_20250102-210000.tar.gz"]
+        after = ["Freemium_dole_20260101-140000.tar.gz", "DOLE_20260102-210000.tar.gz"]
+        source = replace(
+            self.source, kind="files", file_url=base + "/index/", delivery_pattern="DOLE"
+        )
+        directory = self.raw / source.id
+        for listed, kept in ((before, before), (before[:1] + after, after)):
+            directory.joinpath("index.html.fetch.json").unlink(missing_ok=True)
+            self.responses["/index/"] = "".join(
+                f'<a href="{name}">dossiers</a>' for name in listed
+            ).encode()
+            record = fetch(source, self.raw, True)
+            assert record
+            self.assertIsNone(record.error)
+            self.assertEqual(sorted(path.name for path in directory.glob("*.tar.gz")), sorted(kept))
 
     def test_ofgl_queries_use_validators_and_keep_output_on_failure(self) -> None:
         import json

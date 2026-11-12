@@ -154,8 +154,10 @@ def fetch_file(source: Source, raw_dir: Path, refresh: bool) -> FetchRecord:
                         error=None,
                     )
                 )
-        except urllib.error.URLError as error:
-            if not isinstance(error.reason, ssl.SSLError):
+        except (urllib.error.URLError, ConnectionError) as error:
+            if isinstance(error, urllib.error.URLError) and not isinstance(
+                error.reason, ssl.SSLError
+            ):
                 raise
             result = subprocess.run(
                 [
@@ -332,15 +334,42 @@ def fetch(source: Source, raw_dir: Path, refresh: bool) -> FetchRecord | None:
             index = _cached(directory / "index.html")
             assert index
             records.append(index)
+        if source.rolling_days:
+            records += _retained(source, directory)
         record = _collection(source, directory, records)
-        if source.delivery_pattern and source.rolling_days and not record.error:
-            for old in directory.glob(source.delivery_pattern + "_*.tar.gz"):
-                if old.name not in source.files:
-                    old.unlink()
-                    _sidecar(old).unlink(missing_ok=True)
+        if source.delivery_pattern and not source.rolling_days and not record.error:
+            _drop_superseded(source, directory)
         return _save(record)
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
         return _fallback(previous, error)
+
+
+def _window_start(source: Source) -> str:
+    return (datetime.now(UTC) - timedelta(days=source.rolling_days)).strftime("%Y%m%d")
+
+
+def _retained(source: Source, directory: Path) -> list[FetchRecord]:
+    assert source.delivery_pattern
+    start = _window_start(source)
+    kept = []
+    for path in sorted(directory.glob(source.delivery_pattern + "_*.tar.gz")):
+        if path.name in source.files:
+            continue
+        record = _cached(path)
+        if record and path.name.split("_")[-1][:8] >= start:
+            kept.append(record)
+        else:
+            path.unlink()
+            _sidecar(path).unlink(missing_ok=True)
+    return kept
+
+
+def _drop_superseded(source: Source, directory: Path) -> None:
+    stock = next(name for name in source.files if name.startswith("Freemium_"))
+    for path in directory.glob("*.tar.gz"):
+        if path.name not in source.files and path.name.split("_")[-1] < stock.split("_")[-1]:
+            path.unlink()
+            _sidecar(path).unlink(missing_ok=True)
 
 
 def _deliveries(source: Source, raw_dir: Path, refresh: bool) -> Source:
@@ -348,12 +377,12 @@ def _deliveries(source: Source, raw_dir: Path, refresh: bool) -> Source:
     index = fetch_file(replace(source, filename="index.html"), raw_dir, refresh)
     names = set(re.findall(r'href="([^"/]+\.tar\.gz)"', Path(index.path).read_text()))
     stocks = sorted(name for name in names if name.startswith("Freemium_"))
-    cutoff = (datetime.now(UTC) - timedelta(days=source.rolling_days)).strftime("%Y%m%d")
+    start = _window_start(source)
     selected = sorted(
         name
         for name in names
         if name.startswith(source.delivery_pattern + "_")
-        and (not source.rolling_days or name.split("_")[-1][:8] >= cutoff)
+        and (not source.rolling_days or name.split("_")[-1][:8] >= start)
     )
     if not source.rolling_days:
         if not stocks:

@@ -46,6 +46,21 @@ class PublicationTest(unittest.TestCase):
                 self.assertFalse(gate(candidate, self.old))
             self.assertIn("FAIL: records", report.getvalue())
 
+    def test_gate_lets_source_urls_shrink_but_not_vanish(self) -> None:
+        def with_urls(name: str, count: int) -> Path:
+            path = self.database(name, 10)
+            with sqlite3.connect(path) as db:
+                db.execute("create table source_urls (url text)")
+                db.executemany(
+                    "insert into source_urls values (?)", [(str(i),) for i in range(count)]
+                )
+            return path
+
+        published = with_urls("urls-old.sqlite", 100)
+        with redirect_stdout(StringIO()):
+            self.assertTrue(gate(with_urls("urls-merged.sqlite", 2), published))
+            self.assertFalse(gate(with_urls("urls-empty.sqlite", 0), published))
+
     def test_prepare_preserves_miniflare_metadata_without_changing_inputs(self) -> None:
         with sqlite3.connect(self.old) as db:
             db.execute("create table _cf_METADATA (key integer primary key, value blob)")

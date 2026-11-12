@@ -3,6 +3,8 @@ from pathlib import Path
 
 from .fetch import FetchRecord
 
+PACKAGING_TABLES = {"source_urls"}
+
 
 def _read(path: Path) -> sqlite3.Connection:
     return sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
@@ -38,7 +40,11 @@ def gate(candidate: Path, published: Path | None) -> bool:
             for table in sorted(_tables(old)):
                 before = _count(old, table)
                 after = _count(new, table) if table in tables else None
-                valid = after is not None and after > 0 and after >= before * 0.8
+                valid = (
+                    after is not None
+                    and after > 0
+                    and (table in PACKAGING_TABLES or after >= before * 0.8)
+                )
                 print(f"{'PASS' if valid else 'FAIL'}: {table}: {before} -> {after}")
                 passed = passed and valid
         return passed
