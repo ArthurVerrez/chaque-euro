@@ -65,10 +65,10 @@ const groups: { id: string; title: string; icon: IconName; clients: Client[] }[]
       },
       {
         name: "Cursor",
-        steps: "Installez en un clic, ou ajoutez à ~/.cursor/mcp.json\u00a0:",
+        steps: "Installez en un clic, ou ajoutez ce bloc à ~/.cursor/mcp.json.",
         snippet: json({ mcpServers: { [server]: { url: endpoint } } }),
         install: {
-          label: "Ajouter à Cursor",
+          label: "Installer",
           href: `cursor://anysphere.cursor-deeplink/mcp/install?name=${server}&config=${encodeURIComponent(btoa(JSON.stringify({ url: endpoint })))}`,
         },
       },
@@ -79,7 +79,7 @@ const groups: { id: string; title: string; icon: IconName; clients: Client[] }[]
       },
       {
         name: "Windsurf",
-        steps: "Ajoutez à ~/.codeium/windsurf/mcp_config.json\u00a0:",
+        steps: "Ajoutez ce bloc au fichier mcp_config.json de Windsurf.",
         snippet: json({ mcpServers: { [server]: { serverUrl: endpoint } } }),
       },
       {
@@ -138,19 +138,21 @@ const examples = [
             <li class="client">
               <h3>{client.name}</h3>
               <p>{client.steps}</p>
-              <div class="snippet">
-                <pre><code>{client.snippet}</code></pre>
-                <button type="button" data-copy={client.snippet}>
-                  <Icon name="copy" size={16} />
-                  <span>Copier</span>
-                </button>
+              <div class="use">
+                <pre class="snippet"><code>{client.snippet}</code></pre>
+                <div class="actions">
+                  <button type="button" data-copy={client.snippet}>
+                    <Icon name="copy" size={16} />
+                    <span>Copier</span>
+                  </button>
+                  {client.install && (
+                    <a class="install" href={client.install.href}>
+                      <Icon name="download" size={16} />
+                      {client.install.label}
+                    </a>
+                  )}
+                </div>
               </div>
-              {client.install && (
-                <a class="install" href={client.install.href}>
-                  <Icon name="download" size={16} />
-                  {client.install.label}
-                </a>
-              )}
             </li>
           ))}
         </ul>
@@ -231,14 +233,6 @@ const examples = [
     color: #fff;
   }
 
-  .install {
-    justify-self: start;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--link);
-    text-decoration: none;
-  }
-
   button:focus-visible,
   .install:focus-visible {
     outline: 2px solid var(--focus);
@@ -255,13 +249,49 @@ const examples = [
   }
 
   .client {
-    display: grid;
-    align-content: start;
+    display: flex;
+    flex-direction: column;
     gap: 0.75rem;
     padding: 1.25rem;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background: var(--surface);
+  }
+
+  .use {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .snippet {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 0.75rem;
+    border-radius: 10px;
+    background: var(--navy-50);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .actions {
+    display: grid;
+    grid-auto-columns: 1fr;
+    grid-auto-flow: column;
+    gap: 0.5rem;
+  }
+
+  .actions button,
+  .install {
+    justify-content: center;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--link);
+    text-decoration: none;
   }
 
   .client h3 {
@@ -273,30 +303,6 @@ const examples = [
     margin: 0;
     color: var(--text-secondary);
     overflow-wrap: break-word;
-  }
-
-  .snippet {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.75rem;
-    padding: 0.75rem;
-    border-radius: 10px;
-    background: var(--navy-50);
-  }
-
-  .snippet pre {
-    margin: 0;
-    font-size: 0.8125rem;
-    line-height: 1.5;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-  }
-
-  .snippet button {
-    justify-self: start;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--link);
   }
 
   .examples {
