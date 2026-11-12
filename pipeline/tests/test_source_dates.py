@@ -69,6 +69,11 @@ class SourceDatesTests(unittest.TestCase):
             "2026-11-01",
         )
 
+    def test_undated_decision_index_uses_the_date_it_was_read(self) -> None:
+        source = self.sources["cnccfp-mun2026"]
+        record = replace(self.record("."), retrieved_at="2026-11-02T20:20:30+00:00")
+        self.assertEqual(source_data_date(source, record), "2026-11-02")
+
     def test_local_dates_follow_exercise_and_revenue_year(self) -> None:
         with duckdb.connect() as con:
             con.execute("create table coverage_dates (source_id varchar, data_date date)")

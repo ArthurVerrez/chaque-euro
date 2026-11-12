@@ -1219,6 +1219,7 @@ limits = ["Revenus 2024, déclaration 2025. Montants en milliers d’euros conve
 
 [[sources]]
 id = "municipales-2026-t1"
+data_date = "2026-03-15"
 short_name = "Ministère de l’Intérieur"
 name = "Municipales 2026, premier tour"
 publisher = "Ministère de l’Intérieur"
@@ -1233,6 +1234,7 @@ limits = ["Participation uniquement. Les effectifs incohérents sont exclus et s
 
 [[sources]]
 id = "municipales-2026-t2"
+data_date = "2026-03-22"
 short_name = "Ministère de l’Intérieur"
 name = "Municipales 2026, second tour"
 publisher = "Ministère de l’Intérieur"
@@ -1247,6 +1249,7 @@ limits = ["Participation uniquement : inscrits et votants. Aucun résultat de li
 
 [[sources]]
 id = "europeennes-2024"
+data_date = "2024-06-09"
 short_name = "Ministère de l’Intérieur"
 name = "Européennes 2024"
 publisher = "Ministère de l’Intérieur"
@@ -1261,6 +1264,7 @@ limits = ["Participation uniquement : inscrits et votants. Aucun résultat de li
 
 [[sources]]
 id = "legislatives-2024-t1"
+data_date = "2024-06-30"
 short_name = "Ministère de l’Intérieur"
 name = "Législatives 2024, premier tour"
 publisher = "Ministère de l’Intérieur"
@@ -1275,6 +1279,7 @@ limits = ["Participation uniquement : inscrits et votants. Aucun résultat de li
 
 [[sources]]
 id = "legislatives-2024-t2"
+data_date = "2024-07-07"
 short_name = "Ministère de l’Intérieur"
 name = "Législatives 2024, second tour"
 publisher = "Ministère de l’Intérieur"

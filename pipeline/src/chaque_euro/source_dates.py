@@ -35,6 +35,8 @@ def source_data_date(source: Source, record: FetchRecord | None) -> str | None:
     if source.id == "cnccfp-status":
         match = re.search(r"Dernière mise à jour le (\d{2}/\d{2}/\d{4})", path.read_text())
         return datetime.strptime(match[1], "%d/%m/%Y").date().isoformat() if match else None
+    if source.id == "cnccfp-mun2026":
+        return datetime.fromisoformat(record.retrieved_at).date().isoformat()
     if source.id == "competition-sanctions" and record.published_at:
         return parsedate_to_datetime(record.published_at).date().isoformat()
     return None
