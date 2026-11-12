@@ -55,6 +55,10 @@ const groups: { title: string; items: NavItem[] }[] = [
     title: "Vos représentants",
     items: [{ href: "/elus", label: "Élus", icon: "elected" }],
   },
+  {
+    title: "Avec une IA",
+    items: [{ href: "/ia", label: "MCP", icon: "assistant" }],
+  },
 ];
 const secondary: NavItem[] = [
   { href: "/argent-public/operateurs", label: "Opérateurs de l'État", icon: "building" },
@@ -77,7 +81,6 @@ const secondary: NavItem[] = [
   { href: "/lexique", label: "Lexique", icon: "book" },
   { href: "/methodologie", label: "Méthode et sources", icon: "method" },
   { href: "/telechargements", label: "Télécharger les données", icon: "download" },
-  { href: "/ia", label: "Utiliser avec une IA", icon: "assistant" },
 ];
 const exact = new Set(["/", "/analyses"]);
 const current = (href: string) =>
@@ -234,7 +237,7 @@ const current = (href: string) =>
                 <li>
                   <a href="/ia">
                     <Icon name="assistant" size={16} />
-                    Utiliser avec une IA
+                    MCP pour les assistants IA
                   </a>
                 </li>
                 <li>

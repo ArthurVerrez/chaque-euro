@@ -2,7 +2,7 @@
 
 **Où va l'argent public, avec la source de chaque chiffre.**
 
-[chaqueeuro.fr](https://chaqueeuro.fr) · [Utiliser avec une IA](https://chaqueeuro.fr/ia) · [Télécharger les données](https://chaqueeuro.fr/telechargements) · [Méthode et sources](https://chaqueeuro.fr/methodologie)
+[chaqueeuro.fr](https://chaqueeuro.fr) · [MCP pour les assistants IA](https://chaqueeuro.fr/ia) · [Télécharger les données](https://chaqueeuro.fr/telechargements) · [Méthode et sources](https://chaqueeuro.fr/methodologie)
 
 ![Page d'accueil de Chaque Euro](docs/screenshots/readme-home.png)
 
@@ -33,13 +33,14 @@ Chaque chiffre renvoie au fichier de son producteur et au code de ce dépôt qui
 - **Neutre.** Les chiffres sont présentés tels que publiés, à côté de repères justes comme les communes de même taille ou les années précédentes. Pas de note, pas d'accusation.
 - **Vie privée.** Les entrepreneurs individuels et les unités non diffusibles ne sont jamais nommés. Les élus n'apparaissent que dans leur rôle public. Aucun cookie, seulement des statistiques d'audience agrégées.
 
-## Utiliser avec une IA
+## Serveur MCP pour les assistants IA
 
-Le serveur MCP en lecture seule `https://chaqueeuro.fr/mcp` donne à Claude, ChatGPT et aux autres assistants les mêmes données que le site, avec leurs sources. Aucun compte n'est nécessaire.
+Le serveur MCP en lecture seule `https://chaqueeuro.fr/mcp` donne à Claude, ChatGPT, Le Chat, Codex et aux autres assistants les mêmes données que le site, avec leurs sources. Aucun compte n'est nécessaire.
 
 - **Claude** (offre gratuite comprise) : dans les connecteurs, ajoutez un connecteur personnalisé avec cette adresse, sans connexion.
 - **Claude Code** : `claude mcp add --transport http chaque-euro https://chaqueeuro.fr/mcp`
-- **Autres** : ajoutez un serveur MCP distant (Streamable HTTP) avec la même adresse.
+- **Codex** : `codex mcp add chaque-euro --url https://chaqueeuro.fr/mcp`
+- **Autres** : ajoutez un serveur MCP distant (Streamable HTTP) avec la même adresse. Les instructions pour ChatGPT, Le Chat, Gemini CLI, Cursor, VS Code et Windsurf sont sur [chaqueeuro.fr/ia](https://chaqueeuro.fr/ia).
 
 Ses 33 outils reprennent les pages du site et sont définis dans [`site/src/lib/mcp.ts`](site/src/lib/mcp.ts).
 

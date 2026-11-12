@@ -3,72 +3,159 @@ import Breadcrumbs from "../components/Breadcrumbs.astro";
 import Icon from "../components/Icon.astro";
 import Term from "../components/Term.astro";
 import Base from "../layouts/Base.astro";
+import type { IconName } from "../lib/icons";
 import { PUBLIC_ORIGIN } from "../lib/site";
 
+interface Client {
+  name: string;
+  steps: string;
+  snippet: string;
+  install?: { label: string; href: string };
+}
+
 const endpoint = new URL("/mcp", PUBLIC_ORIGIN).href;
+const server = "chaque-euro";
+const json = (value: object) => JSON.stringify(value, null, 2);
+const groups: { id: string; title: string; icon: IconName; clients: Client[] }[] = [
+  {
+    id: "applications",
+    title: "Dans une application",
+    icon: "assistant",
+    clients: [
+      {
+        name: "Claude",
+        steps:
+          "Personnaliser, Connecteurs, Ajouter, puis Ajouter un connecteur personnalisé. Nommez-le Chaque Euro, collez cette adresse et choisissez sans connexion. Possible avec l'offre gratuite.",
+        snippet: endpoint,
+      },
+      {
+        name: "ChatGPT",
+        steps:
+          "Paramètres, Applications\u00a0: activez le mode développeur dans les paramètres avancés, puis créez une application avec cette adresse, sans authentification. Selon votre abonnement.",
+        snippet: endpoint,
+      },
+      {
+        name: "Le Chat (Mistral)",
+        steps:
+          "Connecteurs, Ajouter un connecteur, onglet Connecteur MCP personnalisé. Nommez-le chaque-euro, collez cette adresse, puis Connecter.",
+        snippet: endpoint,
+      },
+    ],
+  },
+  {
+    id: "developpeurs",
+    title: "Dans un outil de développement",
+    icon: "code",
+    clients: [
+      {
+        name: "Claude Code",
+        steps: "Dans un terminal\u00a0:",
+        snippet: `claude mcp add --transport http ${server} ${endpoint}`,
+      },
+      {
+        name: "Codex",
+        steps:
+          "Dans un terminal. L'extension et l'application Codex utilisent la même configuration.",
+        snippet: `codex mcp add ${server} --url ${endpoint}`,
+      },
+      {
+        name: "Gemini CLI",
+        steps: "Dans un terminal\u00a0:",
+        snippet: `gemini mcp add --transport http --scope user ${server} ${endpoint}`,
+      },
+      {
+        name: "Cursor",
+        steps: "Installez en un clic, ou ajoutez à ~/.cursor/mcp.json\u00a0:",
+        snippet: json({ mcpServers: { [server]: { url: endpoint } } }),
+        install: {
+          label: "Ajouter à Cursor",
+          href: `cursor://anysphere.cursor-deeplink/mcp/install?name=${server}&config=${encodeURIComponent(btoa(JSON.stringify({ url: endpoint })))}`,
+        },
+      },
+      {
+        name: "VS Code",
+        steps: "Dans un terminal, pour GitHub Copilot\u00a0:",
+        snippet: `code --add-mcp '${JSON.stringify({ name: server, type: "http", url: endpoint })}'`,
+      },
+      {
+        name: "Windsurf",
+        steps: "Ajoutez à ~/.codeium/windsurf/mcp_config.json\u00a0:",
+        snippet: json({ mcpServers: { [server]: { serverUrl: endpoint } } }),
+      },
+      {
+        name: "Autres",
+        steps: "Serveur MCP distant, transport Streamable HTTP, sans authentification\u00a0:",
+        snippet: endpoint,
+      },
+    ],
+  },
+];
 const examples = [
-  "Combien Lyon dépense-t-elle par habitant, comparé aux villes de même taille\u00a0?",
-  "Quel argent public reçoit la SNCF\u00a0?",
-  "Qui sont les députés de Rennes\u00a0?",
-  "Où va le budget de l'État\u00a0?",
+  "Combien Lyon dépense-t-elle par habitant, comparé aux villes de même taille ?",
+  "Quel argent public reçoit la SNCF ?",
+  "Qui sont les députés de Rennes ?",
+  "Où va le budget de l'État ?",
 ];
 ---
 
 <Base
-  title="Utiliser avec une IA"
-  description="Posez vos questions sur l'argent public à Claude, ChatGPT ou un autre assistant : il interroge les données de Chaque Euro et cite les sources."
+  title="MCP"
+  description="Le serveur MCP de Chaque Euro : posez vos questions sur l'argent public à Claude, ChatGPT, Le Chat, Codex ou un autre assistant, qui interroge les données du site et cite les sources."
 >
   <header class="page-head">
     <div class="container">
-      <Breadcrumbs items={[{ label: "Utiliser avec une IA" }]} />
+      <Breadcrumbs items={[{ label: "MCP" }]} />
       <div class="entity">
         <Icon name="assistant" />
-        <h1>Utiliser avec une IA</h1>
+        <h1>MCP</h1>
       </div>
-      <p class="lead">Votre assistant interroge les données du site et cite les sources.</p>
-    </div>
-  </header>
-
-  <div class="container">
-    <section class="section" aria-labelledby="titre-ajouter">
-      <h2 id="titre-ajouter">
-        <Icon name="assistant" />
-        Ajouter Chaque Euro à votre assistant
-      </h2>
-      <p>
-        Adresse du serveur <Term id="mcp">MCP</Term>, gratuit, sans compte et en lecture seule :
+      <p class="lead">
+        Votre assistant d'IA interroge les données du site et cite les sources. Gratuit, sans
+        compte, en lecture seule.
       </p>
       <div class="endpoint">
+        <span>
+          Adresse du serveur <Term id="mcp">MCP</Term>
+        </span>
         <code>{endpoint}</code>
         <button type="button" data-copy={endpoint}>
           <Icon name="copy" size={16} />
           <span>Copier</span>
         </button>
       </div>
-      <dl class="steps">
-        <div>
-          <dt>Claude</dt>
-          <dd>
-            Dans les connecteurs, ajoutez un connecteur personnalisé avec cette adresse, sans
-            connexion. Possible avec l'offre gratuite.
-          </dd>
-        </div>
-        <div>
-          <dt>ChatGPT</dt>
-          <dd>
-            Activez le mode développeur dans les réglages des applications, puis créez une
-            application avec cette adresse, sans authentification. Selon votre abonnement.
-          </dd>
-        </div>
-        <div>
-          <dt>Autres</dt>
-          <dd>
-            Ajoutez un serveur MCP distant (HTTP) avec cette adresse. Avec Claude Code :
-            <code>claude mcp add --transport http chaque-euro {endpoint}</code>
-          </dd>
-        </div>
-      </dl>
-    </section>
+    </div>
+  </header>
+
+  <div class="container">
+    {groups.map((group) => (
+      <section class="section" aria-labelledby={`titre-${group.id}`}>
+        <h2 id={`titre-${group.id}`}>
+          <Icon name={group.icon} />
+          {group.title}
+        </h2>
+        <ul class="clients">
+          {group.clients.map((client) => (
+            <li class="client">
+              <h3>{client.name}</h3>
+              <p>{client.steps}</p>
+              <div class="snippet">
+                <pre><code>{client.snippet}</code></pre>
+                <button type="button" data-copy={client.snippet}>
+                  <Icon name="copy" size={16} />
+                  <span>Copier</span>
+                </button>
+              </div>
+              {client.install && (
+                <a class="install" href={client.install.href}>
+                  <Icon name="download" size={16} />
+                  {client.install.label}
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
 
     <section class="section" aria-labelledby="titre-exemples">
       <h2 id="titre-exemples">
@@ -86,10 +173,12 @@ const examples = [
 
 <script>
   for (const button of document.querySelectorAll<HTMLButtonElement>("[data-copy]")) {
+    const label = button.querySelector("span");
     button.addEventListener("click", async () => {
       await navigator.clipboard.writeText(button.dataset.copy ?? "");
-      const label = button.querySelector("span");
-      if (label) label.textContent = "Copié";
+      if (!label) return;
+      label.textContent = "Copié";
+      setTimeout(() => (label.textContent = "Copier"), 2000);
     });
   }
 </script>
@@ -100,11 +189,18 @@ const examples = [
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem 0.75rem;
-    margin: 0.75rem 0 1.5rem;
+    max-width: 48rem;
+    margin-top: 1.25rem;
     padding: 0.75rem 1rem;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    background: var(--navy-50);
+    background: var(--surface);
+  }
+
+  .endpoint > span {
+    flex-basis: 100%;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
   }
 
   .endpoint code {
@@ -114,56 +210,93 @@ const examples = [
     overflow-wrap: anywhere;
   }
 
-  .endpoint button {
+  button,
+  .install {
     display: inline-flex;
+    flex: none;
     align-items: center;
     gap: 0.375rem;
     min-height: 44px;
     padding: 0 1rem;
-    border: 0;
     border-radius: 999px;
-    background: var(--navy-900);
-    color: #fff;
     font: inherit;
+    font-size: 0.9375rem;
     font-weight: 650;
     cursor: pointer;
   }
 
-  .endpoint button:focus-visible {
+  button {
+    border: 0;
+    background: var(--navy-900);
+    color: #fff;
+  }
+
+  .install {
+    justify-self: start;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--link);
+    text-decoration: none;
+  }
+
+  button:focus-visible,
+  .install:focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
 
-  .steps {
-    margin: 0;
-  }
-
-  .steps div {
+  .clients {
     display: grid;
-    gap: 0.25rem 2rem;
-    padding: 1rem 0;
-    border-top: 1px solid var(--border);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+    gap: 1rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
   }
 
-  @media (min-width: 48rem) {
-    .steps div {
-      grid-template-columns: 8rem 1fr;
-    }
+  .client {
+    display: grid;
+    align-content: start;
+    gap: 0.75rem;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
   }
 
-  dt {
-    font-weight: 700;
+  .client h3 {
+    margin: 0;
+    font-size: 1.125rem;
   }
 
-  dd {
+  .client p {
     margin: 0;
     color: var(--text-secondary);
+    overflow-wrap: break-word;
   }
 
-  dd code {
-    display: block;
-    margin-top: 0.5rem;
+  .snippet {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 10px;
+    background: var(--navy-50);
+  }
+
+  .snippet pre {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
     overflow-wrap: anywhere;
+  }
+
+  .snippet button {
+    justify-self: start;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--link);
   }
 
   .examples {
