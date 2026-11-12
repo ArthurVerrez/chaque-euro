@@ -88,9 +88,9 @@ const named: { term: string; text: string }[] = [
       </h2>
       <p>
         Une donnée vous concerne et vous semble fausse, ou vous vous opposez à sa publication ?
-        Écrivez à <a href={`mailto:${CONTACT}`}>{CONTACT}</a> en indiquant l’adresse de la page.
-        Vous recevez une réponse sous un mois. Cette adresse reçoit aussi les demandes de droit de
-        réponse.
+        Utilisez le <a href="/contact?sujet=erreur">formulaire de contact</a> ou écrivez à
+        <a href={`mailto:${CONTACT}`}>{CONTACT}</a> en indiquant l’adresse de la page. Vous recevez
+        une réponse sous un mois. Cette adresse reçoit aussi les demandes de droit de réponse.
       </p>
       <p class="muted">
         Si l’erreur vient de la source officielle, signalez-la aussi à son éditeur : la page suit la
@@ -136,6 +136,10 @@ const named: { term: string; text: string }[] = [
         statistiques agrégées (pages vues, pays, navigateur, site d’origine), sans identifiant.
         Cloudflare traite votre adresse IP pour acheminer les pages. Le serveur journalise les pages
         demandées, sans adresse IP.
+      </p>
+      <p>
+        Un message envoyé avec le formulaire de contact (adresse e-mail, nom facultatif, message)
+        est transmis par e-mail à l’éditeur, uniquement pour vous répondre. Il n’est pas publié.
       </p>
     </section>
   </div>

@@ -1,0 +1,168 @@
+---
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import Icon from "../components/Icon.astro";
+import Base from "../layouts/Base.astro";
+
+const SUBJECTS = [
+  { value: "erreur", label: "Signaler une erreur" },
+  { value: "donnees", label: "Question sur les données" },
+  { value: "presse", label: "Presse" },
+  { value: "autre", label: "Autre" },
+];
+const params = Astro.url.searchParams;
+const subject = params.get("sujet") ?? "erreur";
+const page = params.get("page") ?? "";
+const status = params.has("envoye") ? "sent" : params.has("erreur") ? "error" : null;
+---
+
+<Base
+  title="Contact"
+  description="Signaler une erreur, poser une question sur les données ou faire une demande presse à Chaque Euro."
+  noindex={status !== null}
+>
+  <header class="page-head">
+    <div class="container">
+      <Breadcrumbs items={[{ label: "Contact" }]} />
+      <div class="entity">
+        <Icon name="mail" />
+        <h1>Contact</h1>
+      </div>
+      <p class="lead">
+        Une erreur dans un chiffre, une question, une demande presse : écrivez-nous.
+      </p>
+    </div>
+  </header>
+
+  <div class="container">
+    <section class="section" id="formulaire" aria-labelledby="titre-formulaire">
+      <h2 id="titre-formulaire">
+        <Icon name="mail" />
+        Votre message
+      </h2>
+      {status === "sent" && (
+        <p class="notice" role="status">
+          Merci, votre message est envoyé. Nous vous répondons par e-mail.
+        </p>
+      )}
+      {status === "error" && (
+        <p class="notice error" role="alert">
+          Le message n’est pas parti. Vérifiez votre adresse e-mail et écrivez au moins 10
+          caractères, puis réessayez.
+        </p>
+      )}
+      <form method="post" action="/contact/envoyer">
+        <label>
+          Objet
+          <select name="sujet" required>
+            {SUBJECTS.map((option) => (
+              <option value={option.value} selected={option.value === subject}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Votre adresse e-mail
+          <input name="email" type="email" autocomplete="email" maxlength="200" required />
+        </label>
+        <label>
+          <span>
+            Votre nom <span class="muted">(facultatif)</span>
+          </span>
+          <input name="nom" autocomplete="name" maxlength="100" />
+        </label>
+        <label>
+          <span>
+            Page concernée <span class="muted">(facultatif)</span>
+          </span>
+          <input
+            name="page"
+            type="url"
+            value={page}
+            placeholder="https://chaqueeuro.fr/…"
+            maxlength="500"
+          />
+        </label>
+        <label>
+          Message
+          <textarea name="message" rows="8" minlength="10" maxlength="5000" required></textarea>
+        </label>
+        <label class="trap" aria-hidden="true">
+          Site
+          <input name="site" tabindex="-1" autocomplete="off" />
+        </label>
+        <button class="button" type="submit">
+          <Icon name="mail" size={18} />
+          Envoyer
+        </button>
+      </form>
+      <p class="muted small">
+        Votre adresse et votre message servent uniquement à vous répondre. Ils ne sont pas publiés.
+      </p>
+    </section>
+  </div>
+</Base>
+
+<style>
+  form {
+    display: grid;
+    gap: 1rem;
+    max-width: 40rem;
+    margin-top: 1rem;
+  }
+
+  label {
+    display: grid;
+    gap: 0.375rem;
+    font-weight: 650;
+  }
+
+  label .muted,
+  select {
+    font-weight: 400;
+  }
+
+  input,
+  textarea {
+    min-height: 44px;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    background: var(--surface);
+    font-weight: 400;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  .button:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .button {
+    justify-self: start;
+  }
+
+  .trap {
+    position: absolute;
+    left: -100vw;
+  }
+
+  .notice {
+    max-width: 40rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid #b7e0c4;
+    border-radius: var(--radius);
+    background: #ecf8f0;
+  }
+
+  .notice.error {
+    border-color: #f2c2c2;
+    background: #fdf0f0;
+  }
+</style>
