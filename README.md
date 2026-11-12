@@ -92,5 +92,4 @@ The public site is https://chaqueeuro.fr. Hosting and deployment are not part of
 ## Open questions
 
 - Licence for the code and for the derived data (for example MIT or AGPL for code, Licence Ouverte 2.0 for derived data). Not chosen yet; no `LICENSE` file is committed.
-- Domain name and canonical URL (the Astro `site` option is not set).
 - "Voir le calcul" points to `https://github.com/ArthurVerrez/chaque-euro/blob/main/...`, which 404s while the repository is private. Set `PUBLIC_REPO_URL` and `CODE_REF` in `site/wrangler.jsonc` once public, ideally to the deployed commit.
