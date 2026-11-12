@@ -3961,3 +3961,43 @@ export async function getCommuneFunctions(insee: string, year: number) {
     ),
   };
 }
+
+export const SITEMAP_SIZE = 50000;
+const SITEMAP_SECTIONS = new Map([
+  ["organisations", "select '/organisation/' || siren as path from orgs order by siren"],
+  ["communes", "select '/commune/' || insee as path from communes order by insee"],
+  ["departements", "select '/departement/' || code as path from departements order by code"],
+  ["administrations", "select '/administrations/' || id as path from administrations order by id"],
+  [
+    "campagnes",
+    "select '/campagnes/' || election_id || '/' || candidate_id as path from campaign_accounts order by election_id, candidate_id",
+  ],
+  ["dossiers", "select '/documents/dossiers/' || id as path from legislative_files order by id"],
+  ["elus", "select '/elus/' || id as path from public_people order by id"],
+  ["elus-locaux", "select '/elus/locaux/' || id as path from local_executives order by id"],
+  ["votes", "select '/votes/' || id as path from public_ballots order by id"],
+]);
+
+export async function getSitemapFiles(): Promise<string[]> {
+  const counts = await db().batch<{ count: number }>(
+    [...SITEMAP_SECTIONS.values()].map((sql) =>
+      db().prepare(`select count(*) as count from (${sql})`),
+    ),
+  );
+  return [...SITEMAP_SECTIONS.keys()].flatMap((name, index) =>
+    Array.from(
+      { length: Math.ceil((counts[index]?.results[0]?.count ?? 0) / SITEMAP_SIZE) },
+      (_, file) => `${name}-${file + 1}`,
+    ),
+  );
+}
+
+export async function getSitemapPaths(name: string, file: number): Promise<string[]> {
+  const sql = SITEMAP_SECTIONS.get(name);
+  if (!sql || !Number.isInteger(file) || file < 1) return [];
+  const { results } = await db()
+    .prepare(`${sql} limit ?1 offset ?2`)
+    .bind(SITEMAP_SIZE, (file - 1) * SITEMAP_SIZE)
+    .all<{ path: string }>();
+  return results.map((row) => row.path);
+}
