@@ -16,27 +16,19 @@ interface Props {
 const { level } = Astro.props;
 const selected = Number(Astro.url.searchParams.get("annee") ?? 2025);
 const year = Number.isInteger(selected) && selected >= 2018 && selected <= 2025 ? selected : 2025;
-const data = await getLocalAccounts(level, year);
-const title = level === "region" ? "Régions et collectivités uniques" : "Intercommunalités";
 const query = (Astro.url.searchParams.get("q") ?? "").trim();
-const filtered = data.accounts.filter(
-  (row) =>
-    row.name.toLocaleLowerCase("fr").includes(query.toLocaleLowerCase("fr")) ||
-    row.siren.includes(query),
-);
-const pageSize = 50;
-const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
 const requestedPage = Number(Astro.url.searchParams.get("page") ?? 1);
-const page = Number.isInteger(requestedPage) ? Math.max(1, Math.min(pages, requestedPage)) : 1;
-const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
+const data = await getLocalAccounts(
+  level,
+  year,
+  query,
+  Number.isInteger(requestedPage) ? requestedPage : 1,
+);
+const title = level === "region" ? "Régions et collectivités uniques" : "Intercommunalités";
 const href = (target: number) =>
   `?${new URLSearchParams({ annee: String(year), q: query, page: String(target) })}`;
 const euros = (value: number | null) => (value === null ? "n.d." : formatEuros(value));
 const perCapita = (value: number | null) => (value === null ? "n.d." : formatEuro(value));
-const chart = [...filtered]
-  .filter((row) => row.spendingPerCapita !== null)
-  .sort((a, b) => (b.spendingPerCapita ?? 0) - (a.spendingPerCapita ?? 0))
-  .slice(0, 8);
 ---
 
 <header class="page-head" id="en-bref">
@@ -52,7 +44,7 @@ const chart = [...filtered]
         {
           icon: "administration",
           label: "Collectivités",
-          value: formatNumber(data.accounts.length),
+          value: formatNumber(data.total),
         },
         { icon: "calendar", label: "Exercice", value: String(year) },
       ]}
@@ -110,7 +102,7 @@ const chart = [...filtered]
           </tr>
         </thead>
         <tbody>
-          {visible.map((row) => (
+          {data.accounts.map((row) => (
             <tr>
               <th scope="row">
                 <a
@@ -146,15 +138,15 @@ const chart = [...filtered]
           ))}
         </tbody>
       </table>
-      {!visible.length && <p>Aucune collectivité ne correspond à votre recherche.</p>}
+      {!data.accounts.length && <p>Aucune collectivité ne correspond à votre recherche.</p>}
     </div>
-    {pages > 1 && (
+    {data.pages > 1 && (
       <nav class="pagination" aria-label="Pages des intercommunalités">
-        {page > 1 && <a href={href(page - 1)}>Précédente</a>}
+        {data.page > 1 && <a href={href(data.page - 1)}>Précédente</a>}
         <span>
-          Page {page} sur {pages}
+          Page {data.page} sur {data.pages}
         </span>
-        {page < pages && <a href={href(page + 1)}>Suivante</a>}
+        {data.page < data.pages && <a href={href(data.page + 1)}>Suivante</a>}
       </nav>
     )}
     <Provenance provenance={data.provenance}>
@@ -174,7 +166,7 @@ const chart = [...filtered]
     <div class="card">
       <BarList
         caption={`Les plus élevées en ${year}, hors remboursement de dette`}
-        items={chart.map((row) => ({
+        items={data.highestSpendingPerCapita.map((row) => ({
           label: row.name,
           value: row.spendingPerCapita ?? 0,
           display: perCapita(row.spendingPerCapita),

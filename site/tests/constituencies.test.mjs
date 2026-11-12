@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { communeCode, constituencyAt } from "../src/lib/constituencies.ts";
+import { addressConstituency, communeCode, constituencyAt } from "../src/lib/constituencies.ts";
 
 const square = (x, y, size) => [
   [x, y],
@@ -45,4 +45,14 @@ test("maps municipal arrondissement codes without confusing other communes", () 
   assert.equal(communeCode("13209"), "13055");
   assert.equal(communeCode("01001"), "01001");
   assert.equal(communeCode("97411"), "97411");
+});
+
+test("picks the address constituency only when the commune's shapes cover every deputy", () => {
+  const split = [{ constituency: 1 }, { constituency: 2 }];
+  assert.equal(addressConstituency([4, 50], [{ constituency: 3 }], []), 3);
+  assert.equal(addressConstituency([2.02, 48.02], [], shapes), null);
+  assert.equal(addressConstituency([2.02, 48.02], split, shapes), 1);
+  assert.equal(addressConstituency([2.15, 48.05], split, shapes), 2);
+  assert.equal(addressConstituency([2.02, 48.02], split, shapes.slice(0, 1)), null);
+  assert.equal(addressConstituency([2.1, 48.05], split, shapes), null);
 });

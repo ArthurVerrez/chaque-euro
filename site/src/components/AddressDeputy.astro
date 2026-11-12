@@ -58,7 +58,7 @@ const lookup = await getAddressLookup();
 </div>
 
 <script>
-  import { communeCode, constituencyAt, type Position } from "../lib/constituencies";
+  import { addressConstituency, communeCode, type Position } from "../lib/constituencies";
   import type { getAddressConstituencies } from "../lib/data";
 
   interface AddressFeature {
@@ -107,15 +107,12 @@ const lookup = await getAddressLookup();
         if (!response.ok) throw new Error();
         const local: Awaited<ReturnType<typeof getAddressConstituencies>> = await response.json();
         if (current !== request) return;
-        const numbers = new Set(local.deputies.map((person) => person.constituency));
-        const split = numbers.size > 1;
-        const complete =
-          numbers.size === new Set(local.shapes.map((shape) => shape.constituency)).size;
-        const number = split
-          ? complete
-            ? constituencyAt(feature.geometry.coordinates, local.shapes)
-            : null
-          : local.deputies[0]?.constituency;
+        const split = new Set(local.deputies.map((person) => person.constituency)).size > 1;
+        const number = addressConstituency(
+          feature.geometry.coordinates,
+          local.deputies,
+          local.shapes,
+        );
         const people = local.deputies.filter((person) => person.constituency === number);
         commune.href = `/elus?commune=${code}#trouver`;
         commune.hidden = false;

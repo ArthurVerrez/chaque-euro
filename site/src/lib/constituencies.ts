@@ -61,3 +61,15 @@ export function constituencyAt(point: Position, shapes: ConstituencyShape[]): nu
   }
   return matches.size === 1 ? ([...matches][0] ?? null) : null;
 }
+
+export function addressConstituency(
+  point: Position,
+  deputies: { constituency: number }[],
+  shapes: ConstituencyShape[],
+): number | null {
+  const numbers = new Set(deputies.map((deputy) => deputy.constituency));
+  if (numbers.size < 2) return deputies[0]?.constituency ?? null;
+  return numbers.size === new Set(shapes.map((shape) => shape.constituency)).size
+    ? constituencyAt(point, shapes)
+    : null;
+}

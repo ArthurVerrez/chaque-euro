@@ -2531,7 +2531,12 @@ export async function getPoliticalFinance(code: string | null) {
   const selected = accounts.results.find((row) => row.code === code) ?? accounts.results[0]!;
   return {
     accounts: accounts.results,
-    history: history.results,
+    aidByYear: [2021, 2022, 2023, 2024].map((year) => ({
+      year,
+      amount: history.results
+        .filter((row) => row.year === year)
+        .reduce((sum, row) => sum + row.public_aid, 0),
+    })),
     selected,
     selectedHistory: history.results.filter((row) => row.code === selected.code),
     losses: losses.results,
@@ -3009,7 +3014,14 @@ function localProvenance(index: SourceIndex, level: LocalAccount["level"], row?:
   );
 }
 
-export async function getLocalAccounts(level: LocalAccount["level"], year = 2025) {
+const LOCAL_PAGE_SIZE = 50;
+
+export async function getLocalAccounts(
+  level: LocalAccount["level"],
+  year: number,
+  query: string,
+  page: number,
+) {
   const [accounts, sources] = await db().batch([
     db()
       .prepare(`${LOCAL_ACCOUNTS_QUERY} where level = ?1 and year = ?2 order by name`)
@@ -3017,12 +3029,33 @@ export async function getLocalAccounts(level: LocalAccount["level"], year = 2025
     db().prepare(SOURCES_QUERY),
   ]);
   const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
+  const rows = (accounts?.results ?? []) as unknown as LocalAccount[];
+  const matching = rows.filter(
+    (row) =>
+      row.name.toLocaleLowerCase("fr").includes(query.toLocaleLowerCase("fr")) ||
+      row.siren.includes(query),
+  );
+  const pages = Math.max(1, Math.ceil(matching.length / LOCAL_PAGE_SIZE));
+  const current = Math.max(1, Math.min(pages, page));
+  const withProvenance = (row: LocalAccount) => ({
+    ...row,
+    provenance: localProvenance(index, level, row),
+  });
   return {
     year,
-    accounts: ((accounts?.results ?? []) as unknown as LocalAccount[]).map((row) => ({
-      ...row,
-      provenance: localProvenance(index, level, row),
-    })),
+    query,
+    total: rows.length,
+    matching: matching.length,
+    page: current,
+    pages,
+    accounts: matching
+      .slice((current - 1) * LOCAL_PAGE_SIZE, current * LOCAL_PAGE_SIZE)
+      .map(withProvenance),
+    highestSpendingPerCapita: matching
+      .filter((row) => row.spendingPerCapita !== null)
+      .sort((a, b) => (b.spendingPerCapita ?? 0) - (a.spendingPerCapita ?? 0))
+      .slice(0, 8)
+      .map(withProvenance),
     provenance: localProvenance(index, level),
   };
 }
@@ -3715,7 +3748,7 @@ export async function getPublicExpenses() {
   };
 }
 
-export async function getElectedRegister(q: string, page: number) {
+export async function getElectedRegister(q: string, page: number, department: string) {
   const [sources, statistics, executives, count] = await Promise.all([
     democracySources(),
     democracyRows<{
@@ -3744,8 +3777,20 @@ export async function getElectedRegister(q: string, page: number) {
       [`%${q}%`, `%${q}%`],
     ),
   ]);
+  const selected = statistics.filter((r) => !department || r.department_code === department);
+  const totals = (key: "mandate_kind" | "sex" | "age_band" | "department_code") =>
+    selected.reduce<Record<string, number>>((a, r) => {
+      a[r[key]] = (a[r[key]] ?? 0) + r.records;
+      return a;
+    }, {});
   return {
-    statistics,
+    department,
+    records: selected.reduce((n, r) => n + r.records, 0),
+    mayors: statistics.filter((r) => r.mandate_kind === "mai").reduce((n, r) => n + r.records, 0),
+    byMandate: totals("mandate_kind"),
+    bySex: totals("sex"),
+    byAge: totals("age_band"),
+    byDepartment: totals("department_code"),
     executives,
     count: count[0]?.count ?? 0,
     provenance: sources.provenance(

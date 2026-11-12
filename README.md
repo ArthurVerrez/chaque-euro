@@ -14,6 +14,8 @@ Index pages `/organisations` (largest contract winners, grant recipients and buy
 
 Sources, data dates, known limits and the exact files fetched are listed on `/methodologie` and in `/methodologie/manifest.json`. The dataset inventory behind the choices is in [docs/datasets.md](docs/datasets.md).
 
+AI assistants can use the public, read-only MCP server at `https://chaqueeuro.fr/mcp` (Streamable HTTP, no authentication). Its tools mirror the site's pages: each returns the same data as its page, with sources, method and calculation link, through `site/src/lib/data.ts`, plus the page URL. The server is defined in `site/src/lib/mcp.ts`.
+
 ## Layout
 
 | Path | What it holds |

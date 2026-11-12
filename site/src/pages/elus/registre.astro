@@ -11,20 +11,12 @@ import { formatDate, formatNumber } from "../../lib/format";
 const params = Astro.url.searchParams;
 const q = params.get("q") ?? "";
 const page = pageNumber(params.get("page"));
-const data = await getElectedRegister(q, page);
 const department = params.get("departement") ?? "";
-const stats = data.statistics.filter((r) => !department || r.department_code === department);
-const sum = (key: "mandate_kind" | "sex" | "age_band" | "department_code") =>
-  Object.entries(
-    stats.reduce<Record<string, number>>((a, r) => {
-      a[r[key]] = (a[r[key]] ?? 0) + r.records;
-      return a;
-    }, {}),
-  );
-const items = (key: "mandate_kind" | "sex" | "age_band" | "department_code") =>
-  sum(key).map(([label, value]) => ({
+const data = await getElectedRegister(q, page, department);
+const items = (totals: Record<string, number>, labels: Record<string, string> = {}) =>
+  Object.entries(totals).map(([label, value]) => ({
     icon: "elected" as const,
-    label: key === "mandate_kind" ? (registerLabels[label] ?? label) : label,
+    label: labels[label] ?? label,
     value,
     display: formatNumber(value),
   }));
@@ -39,15 +31,13 @@ const items = (key: "mandate_kind" | "sex" | "age_band" | "department_code") =>
     {
       icon: "list",
       label: "Lignes de mandats ou fonctions",
-      value: formatNumber(stats.reduce((n, r) => n + r.records, 0)),
+      value: formatNumber(data.records),
       note: department ? `Département ${department}` : "Toutes catégories",
     },
     {
       icon: "town",
       label: "Lignes de maires",
-      value: formatNumber(
-        data.statistics.filter((r) => r.mandate_kind === "mai").reduce((n, r) => n + r.records, 0),
-      ),
+      value: formatNumber(data.mayors),
     },
   ]}
   provenance={data.provenance}
@@ -75,16 +65,16 @@ const items = (key: "mandate_kind" | "sex" | "age_band" | "department_code") =>
       <button type="submit">Filtrer les statistiques</button>
     </form>
     <div class="reference-grid">
-      <BarList caption="Par mandat ou fonction" items={items("mandate_kind")} />
-      <BarList caption="Par sexe" items={items("sex")} />
-      <BarList caption="Par âge" items={items("age_band")} />
+      <BarList caption="Par mandat ou fonction" items={items(data.byMandate, registerLabels)} />
+      <BarList caption="Par sexe" items={items(data.bySex)} />
+      <BarList caption="Par âge" items={items(data.byAge)} />
     </div>
     <details>
       <summary>Répartition par département</summary>
       <PublicTable
         caption="Lignes par département"
         columns={["Code département", "Lignes"]}
-        rows={sum("department_code")
+        rows={Object.entries(data.byDepartment)
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([code, value]) => [{ text: code }, { text: formatNumber(value) }])}
       />

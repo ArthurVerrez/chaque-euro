@@ -21,10 +21,6 @@ const discrepancies = data.accounts.filter((r) => !r.reconciled);
 const discrepancyList =
   discrepancies.map((r) => `${r.name} (${formatEuros(r.component_difference)})`).join(" ; ") ||
   "aucun";
-const years = [2021, 2022, 2023, 2024].map((year) => ({
-  year,
-  amount: data.history.filter((r) => r.year === year).reduce((n, r) => n + r.public_aid, 0),
-}));
 const resources = [
   { label: "Cotisations des adhérents", value: party.members },
   { label: "Dons de personnes physiques, total agrégé", value: party.donations },
@@ -166,7 +162,7 @@ const sections = [
           <ColumnChart
             caption="Tous les comptes disponibles, non consolidé"
             unit="Euros"
-            columns={years.map((r) => ({
+            columns={data.aidByYear.map((r) => ({
               label: String(r.year),
               value: r.amount,
               display: formatEuros(r.amount),
