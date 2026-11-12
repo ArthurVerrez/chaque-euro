@@ -117,28 +117,10 @@ const status = params.has("envoye") ? "sent" : params.has("erreur") ? "error" : 
     font-weight: 650;
   }
 
-  label .muted,
-  select {
+  label .muted {
     font-weight: 400;
   }
 
-  input,
-  textarea {
-    min-height: 44px;
-    padding: 0.625rem 0.75rem;
-    border: 1px solid var(--border-strong);
-    border-radius: 10px;
-    background: var(--surface);
-    font-weight: 400;
-  }
-
-  textarea {
-    resize: vertical;
-  }
-
-  input:focus-visible,
-  textarea:focus-visible,
-  select:focus-visible,
   .button:focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: 2px;
