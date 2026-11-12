@@ -1,18 +1,26 @@
+create or replace macro unligatured(text) as nullif(
+    replace(replace(replace(replace(text, 'œ', 'oe'), 'Œ', 'OE'), 'æ', 'ae'), 'Æ', 'AE'),
+    text
+);
+
 create or replace table search as
 select
     name,
     kind,
     siren as ref,
     coalesce(activity::varchar, '') as detail,
-    won_amount + awarded_amount + grants_amount as weight
+    won_amount + awarded_amount + grants_amount as weight,
+    concat_ws(' ', unligatured(name), acronym) as aliases
 from orgs
+left join identities using (siren)
 union all
 select
     name,
     'Commune',
     insee,
     department_name || ' (' || department_code || ')',
-    population
+    population,
+    unligatured(name)
 from communes
 union all
 select
@@ -29,9 +37,10 @@ select
         territory_label,
         group_label
     ),
-    active
+    active,
+    unligatured(display_name)
 from public_people
 union all
 select head_name, 'Responsable public', id,
-    head_role || ' · ' || name_public, 2
+    head_role || ' · ' || name_public, 2, unligatured(head_name)
 from administrations where head_name is not null;

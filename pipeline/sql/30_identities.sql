@@ -21,7 +21,8 @@ select
     coalesce(
         nullif(nullif(denominationUniteLegale, ''), '[ND]'),
         nullif(nullif(denominationUsuelle1UniteLegale, ''), '[ND]')
-    ) as name
+    ) as name,
+    nullif(nullif(sigleUniteLegale, ''), '[ND]') as acronym
 from read_parquet(getvariable('sirene_path'))
 where siren in (select siren from needed_sirens);
 
@@ -35,7 +36,8 @@ select
         when diffusion <> 'O' or name is null then 'Nom non diffusé'
         else name
     end as label,
-    coalesce(legal_category <> '1000' and diffusion = 'O' and name is not null, false) as public
+    coalesce(legal_category <> '1000' and diffusion = 'O' and name is not null, false) as public,
+    case when public then acronym end as acronym
 from units;
 
 create or replace macro holder_label(siren, label) as coalesce(

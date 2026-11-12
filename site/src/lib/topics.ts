@@ -236,6 +236,8 @@ export function normalizeSearch(value: string): string {
       .normalize("NFD")
       .replace(/\p{Diacritic}/gu, "")
       .toLowerCase()
+      .replaceAll("œ", "oe")
+      .replaceAll("æ", "ae")
       .match(/[\p{L}\p{N}]+/gu) ?? []
   ).join(" ");
 }

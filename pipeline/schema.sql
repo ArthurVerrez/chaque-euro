@@ -262,6 +262,7 @@ CREATE VIRTUAL TABLE search USING fts5 (
   ref UNINDEXED,
   detail UNINDEXED,
   weight UNINDEXED,
+  aliases,
   tokenize = 'unicode61 remove_diacritics 2'
 );
 
