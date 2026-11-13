@@ -1,0 +1,12 @@
+---
+interface Props {
+  data: Record<string, unknown>;
+}
+
+const json = JSON.stringify({ "@context": "https://schema.org", ...Astro.props.data }).replaceAll(
+  "<",
+  "\\u003c",
+);
+---
+
+<script is:inline type="application/ld+json" set:html={json} />

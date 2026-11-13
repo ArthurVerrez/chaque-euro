@@ -1,12 +1,22 @@
 ---
+import { canonicalUrl, PUBLIC_ORIGIN } from "../lib/site";
 import Icon from "./Icon.astro";
+import JsonLd from "./JsonLd.astro";
 
 interface Props {
   items: { label: string; href?: string }[];
 }
 
 const { items } = Astro.props;
+const trail = [{ label: "Accueil", href: "/" }, ...items].map((item, index) => ({
+  "@type": "ListItem",
+  position: index + 1,
+  name: item.label,
+  item: item.href ? new URL(item.href, PUBLIC_ORIGIN).href : canonicalUrl(Astro.url),
+}));
 ---
+
+<JsonLd data={{ "@type": "BreadcrumbList", itemListElement: trail }} />
 
 <nav class="breadcrumbs" aria-label="Fil d'Ariane">
   <ol>

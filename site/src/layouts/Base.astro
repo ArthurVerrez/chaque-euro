@@ -2,7 +2,7 @@
 import "@fontsource-variable/inter";
 import "../styles/global.css";
 import Icon from "../components/Icon.astro";
-import { PUBLIC_ORIGIN } from "../lib/site";
+import { canonicalUrl, PUBLIC_ORIGIN } from "../lib/site";
 import { ANALYSES } from "../lib/analyses";
 import type { IconName } from "../lib/icons";
 
@@ -13,7 +13,7 @@ interface Props {
 }
 
 const { title, description, noindex = false } = Astro.props;
-const pageUrl = new URL(Astro.url.pathname, PUBLIC_ORIGIN).href;
+const pageUrl = canonicalUrl(Astro.url);
 const imageUrl = new URL("/share.png", PUBLIC_ORIGIN).href;
 const fullTitle = title === "Chaque Euro" ? title : `${title} · Chaque Euro`;
 const path = Astro.url.pathname.replace(/(.)\/$/, "$1");
@@ -100,7 +100,7 @@ const current = (href: string) =>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
-    {noindex && <meta name="robots" content="noindex" />}
+    {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={pageUrl} />}
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />

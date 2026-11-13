@@ -2,12 +2,14 @@
 import Breadcrumbs from "../components/Breadcrumbs.astro";
 import Explainer from "../components/Explainer.astro";
 import Icon from "../components/Icon.astro";
+import JsonLd from "../components/JsonLd.astro";
 import KeyFigures from "../components/KeyFigures.astro";
 import Toc from "../components/Toc.astro";
 import Base from "../layouts/Base.astro";
 import { getDownloads } from "../lib/data";
 import { formatBytes, formatDayMonth, formatNumber, formatYear, plural } from "../lib/format";
 import type { IconName } from "../lib/icons";
+import { canonicalUrl, PUBLIC_ORIGIN } from "../lib/site";
 
 const downloads = await getDownloads();
 const TABLES: Record<string, { label: string; icon: IconName }> = {
@@ -311,9 +313,31 @@ const groups = [
   .map((group) => ({ ...group, tables: group.tables.flatMap((name) => byName.get(name) ?? []) }))
   .filter((group) => group.tables.length > 0);
 const files = downloads.tables.flatMap((table) => table.files);
-const FORMATS: Record<string, { label: string; icon: IconName }> = {
-  csv: { label: "CSV", icon: "csv" },
-  parquet: { label: "Parquet", icon: "parquet" },
+const FORMATS: Record<string, { label: string; icon: IconName; type: string }> = {
+  csv: { label: "CSV", icon: "csv", type: "text/csv" },
+  parquet: { label: "Parquet", icon: "parquet", type: "application/vnd.apache.parquet" },
+};
+const fileUrl = (file: string) => `/telechargements/fichiers/${file}`;
+const dataset = {
+  "@type": "Dataset",
+  name: "Données de Chaque Euro",
+  description:
+    "Tables calculées par Chaque Euro à partir des sources officielles : budget et comptes de l'État, Sécurité sociale, comptes des communes et des collectivités, marchés publics, versements aux associations, lobbying, financement politique, élus, votes, Journal officiel et dossiers législatifs. Chaque table est publiée en CSV et en Parquet.",
+  url: canonicalUrl(Astro.url),
+  inLanguage: "fr",
+  isAccessibleForFree: true,
+  license: "https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+  creator: { "@type": "Organization", name: "Chaque Euro", url: `${PUBLIC_ORIGIN}/` },
+  spatialCoverage: { "@type": "Place", name: "France" },
+  dateModified: downloads.builtAt ?? undefined,
+  distribution: downloads.tables.flatMap((table) =>
+    table.files.map((file) => ({
+      "@type": "DataDownload",
+      name: `${TABLES[table.table]?.label ?? table.table} (${FORMATS[file.format]?.label ?? file.format})`,
+      encodingFormat: FORMATS[file.format]?.type,
+      contentUrl: new URL(fileUrl(file.file), PUBLIC_ORIGIN).href,
+    })),
+  ),
 };
 ---
 
@@ -321,6 +345,7 @@ const FORMATS: Record<string, { label: string; icon: IconName }> = {
   title="Télécharger les données"
   description="Toutes les tables calculées par Chaque Euro, en CSV et en Parquet : organisations, marchés publics, subventions, budget de l'État, comptes des communes."
 >
+  <JsonLd data={dataset} />
   <header class="page-head">
     <div class="container">
       <Breadcrumbs items={[{ label: "Télécharger les données" }]} />
@@ -393,7 +418,7 @@ const FORMATS: Record<string, { label: string; icon: IconName }> = {
                 {[...table.files]
                   .sort((a, b) => a.format.localeCompare(b.format))
                   .map((file) => (
-                    <a class="file" href={`/telechargements/fichiers/${file.file}`} download>
+                    <a class="file" href={fileUrl(file.file)} download>
                       <Icon name={FORMATS[file.format]?.icon ?? "download"} size={18} />
                       <span>
                         {FORMATS[file.format]?.label ?? file.format}

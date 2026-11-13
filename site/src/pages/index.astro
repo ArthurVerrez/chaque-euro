@@ -2,6 +2,7 @@
 import BarList from "../components/BarList.astro";
 import ColumnChart from "../components/ColumnChart.astro";
 import Icon from "../components/Icon.astro";
+import JsonLd from "../components/JsonLd.astro";
 import Provenance from "../components/Provenance.astro";
 import SearchForm from "../components/SearchForm.astro";
 import ShareBar from "../components/ShareBar.astro";
@@ -11,6 +12,7 @@ import type { Provenance as Evidence } from "../lib/data";
 import type { IconName } from "../lib/icons";
 import type { TermId } from "../lib/glossary";
 import { kindIcon } from "../lib/icons";
+import { PUBLIC_ORIGIN } from "../lib/site";
 import Base from "../layouts/Base.astro";
 import { getHome, getOrganisationsIndex, getStateBudget } from "../lib/data";
 import { formatCompact, formatEuro, formatEuros, formatNumber, plural } from "../lib/format";
@@ -133,6 +135,26 @@ const doors = [
   title="Chaque Euro"
   description="Où va l'argent public ? Marchés publics, subventions, budgets des communes et de l'État, expliqués simplement, chaque chiffre relié à sa source officielle."
 >
+  <JsonLd
+    data={{
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": `${PUBLIC_ORIGIN}/#organisation`,
+          name: "Chaque Euro",
+          url: `${PUBLIC_ORIGIN}/`,
+          logo: `${PUBLIC_ORIGIN}/icon-512.png`,
+        },
+        {
+          "@type": "WebSite",
+          name: "Chaque Euro",
+          url: `${PUBLIC_ORIGIN}/`,
+          inLanguage: "fr",
+          publisher: { "@id": `${PUBLIC_ORIGIN}/#organisation` },
+        },
+      ],
+    }}
+  />
   <section class="hero">
     <div class="container hero-grid">
       <div>
