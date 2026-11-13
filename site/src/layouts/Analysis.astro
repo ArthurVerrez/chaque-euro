@@ -24,7 +24,7 @@ const { article, answer, figures, provenance, sections } = Astro.props;
 const others = ANALYSES.filter((entry) => entry.slug !== article.slug).slice(0, 3);
 ---
 
-<Base title={article.title} description={answer}>
+<Base title={article.title} description={answer} image={`/partage/analyse/${article.slug}.png`}>
   <div class="analysis" style={`--accent: ${article.accent}`}>
     <header class="hero" id="en-bref">
       <div class="container">

@@ -151,7 +151,12 @@ const title = org
 const description = answer ?? "Aucune donnée publique pour ce SIREN.";
 ---
 
-<Base title={title} description={description} noindex={!org}>
+<Base
+  title={title}
+  description={description}
+  noindex={!org}
+  image={org ? `/partage/organisation/${org.siren}.png` : undefined}
+>
   {org ? (
     <>
       <header class="page-head" id="en-bref">

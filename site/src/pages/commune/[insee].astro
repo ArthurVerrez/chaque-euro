@@ -102,6 +102,7 @@ const title = commune
   title={title}
   description={answer ?? "Aucune donnée pour ce code commune."}
   noindex={!commune}
+  image={commune ? `/partage/commune/${commune.insee}.png` : undefined}
 >
   {commune && accounts ? (
     <>

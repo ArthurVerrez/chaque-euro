@@ -111,6 +111,7 @@ const figures = departement
   }
   description={answer ?? "Aucune donnée pour ce département."}
   noindex={!departement}
+  image={departement ? `/partage/departement/${departement.code}.png` : undefined}
 >
   {departement ? (
     <>
