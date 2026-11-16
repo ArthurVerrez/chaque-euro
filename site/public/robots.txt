@@ -1,5 +1,6 @@
 User-agent: *
 Disallow: /recherche
+Disallow: /*?
 Disallow: /telechargements/fichiers/
 
 Sitemap: https://chaqueeuro.fr/sitemap.xml
