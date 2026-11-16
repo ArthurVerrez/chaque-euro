@@ -135,17 +135,23 @@ const named: { term: string; text: string }[] = [
         Le site ne dépose aucun cookie. Il mesure l’audience avec Cloudflare Web Analytics, en
         statistiques agrégées (pages vues, pays, navigateur, site d’origine), sans identifiant.
         Cloudflare traite votre adresse IP pour acheminer les pages. Le serveur journalise les pages
-        demandées, sans adresse IP.
+        demandées, sans adresse IP, et efface ces journaux après 30 jours.
       </p>
       <p>
         Un message envoyé avec le formulaire de contact (adresse e-mail, nom facultatif, message)
-        est transmis par e-mail à l’éditeur, uniquement pour vous répondre. Il n’est pas publié.
+        est transmis par e-mail à l’éditeur, uniquement pour vous répondre, et conservé un an après
+        le dernier échange. Il n’est pas publié.
       </p>
       <p>
         Le serveur MCP, utilisé par les assistants d’IA, reçoit leurs requêtes (par exemple un nom
         de commune) sans compte ni identifiant. Il ne les conserve pas au-delà des journaux décrits
         ci-dessus. Ce que vous écrivez à votre assistant est traité par son éditeur, pas par Chaque
         Euro.
+      </p>
+      <p>
+        Pour accéder à ces données, les faire rectifier ou effacer, écrivez à
+        <a href={`mailto:${CONTACT}`}>{CONTACT}</a>. Vous recevez une réponse sous un mois. Vous
+        pouvez aussi saisir la <a href="https://www.cnil.fr/fr/plaintes">CNIL</a>.
       </p>
     </section>
   </div>
