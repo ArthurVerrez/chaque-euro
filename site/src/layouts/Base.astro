@@ -1,4 +1,5 @@
 ---
+import { env } from "cloudflare:workers";
 import "@fontsource-variable/inter";
 import "../styles/global.css";
 import Icon from "../components/Icon.astro";
@@ -235,6 +236,12 @@ const current = (href: string) =>
                   <a href="/telechargements">
                     <Icon name="download" size={16} />
                     Télécharger les données
+                  </a>
+                </li>
+                <li>
+                  <a href={env.PUBLIC_REPO_URL}>
+                    <Icon name="code" size={16} />
+                    Code source (GitHub)
                   </a>
                 </li>
                 <li>
