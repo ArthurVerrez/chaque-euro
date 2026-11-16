@@ -471,17 +471,17 @@ export function createMcpServer(): McpServer {
     {
       title: "Political party finance",
       description:
-        "Political party accounts (CNCCFP): 2024 resources, donations and public aid of every party (50 per page, largest first), total public aid per year since 2021, the selected party's history and parties deprived of public aid. `party` is a CNCCFP party code from the accounts list; it selects the party detailed on the page.",
+        "Political party accounts (CNCCFP): 2024 resources, donations and public aid of every party (50 per page, largest first), total public aid per year since 2021, the selected party's history and parties deprived of public aid. `party` is a party name or a CNCCFP party code from the accounts list; it selects the party detailed on the page.",
       inputSchema: { party: text.optional(), page },
       annotations,
     },
     async ({ party, page }) => {
       const data = await getPoliticalFinance(party ?? null);
-      if (party && data.selected.code !== party) return missing(`No party with code ${party}.`);
+      if (party && !data.found) return missing(`No party matching ${party}.`);
       return reply(
         "/financement-politique",
         { ...data, accounts: pageOf(data.accounts, page), accountCount: data.accounts.length },
-        { parti: party },
+        { parti: party && data.selected.code },
       );
     },
   );

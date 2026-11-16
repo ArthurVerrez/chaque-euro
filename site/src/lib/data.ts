@@ -2528,8 +2528,14 @@ export async function getPoliticalFinance(code: string | null) {
       .prepare("select * from party_aid_losses order by name")
       .all<{ code: string; name: string; exercise: number; reason: string; until_date: string }>(),
   ]);
-  const selected = accounts.results.find((row) => row.code === code) ?? accounts.results[0]!;
+  const needle = code ? normalizeSearch(code) : "";
+  const match = code
+    ? (accounts.results.find((row) => row.code === code) ??
+      accounts.results.find((row) => normalizeSearch(row.name).includes(needle)))
+    : undefined;
+  const selected = match ?? accounts.results[0]!;
   return {
+    found: Boolean(match),
     accounts: accounts.results,
     aidByYear: [2021, 2022, 2023, 2024].map((year) => ({
       year,
