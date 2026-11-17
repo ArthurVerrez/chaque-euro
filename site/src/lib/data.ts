@@ -2548,7 +2548,7 @@ export async function getPoliticalFinance(code: string | null) {
     losses: losses.results,
     provenance: index.provenance(
       [index.cite("cnccfp-parties")],
-      "Comptes en euros seulement. Produits totaux du compte de résultat, contributions, dons agrégés et aides publiques (deux fractions et autres aides). Autres ressources : solde des produits. Comptes non consolidés entre partis. Trois comptes 2023 exclus : deux en XPF, un sans monnaie. Un compte du fichier 2021 indiquant 2022 est aussi exclu. Les écarts supérieurs à un euro entre les composantes et les produits déclarés sont signalés et exclus des alertes de majorité publique.",
+      "Comptes en euros seulement. L’aide publique est versée au parti ou groupement auquel les candidats et les parlementaires se rattachent : elle peut figurer au compte d’un groupement plutôt qu’à celui d’un parti membre. Produits totaux du compte de résultat, contributions, dons agrégés et aides publiques (deux fractions et autres aides). Autres ressources : solde des produits. Comptes non consolidés entre partis. Trois comptes 2023 exclus : deux en XPF, un sans monnaie. Un compte du fichier 2021 indiquant 2022 est aussi exclu. Les écarts supérieurs à un euro entre les composantes et les produits déclarés sont signalés et exclus des alertes de majorité publique.",
       PARTY_SQL,
     ),
     lossesProvenance: index.provenance(
