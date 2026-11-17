@@ -13,9 +13,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (["GET", "HEAD"].includes(context.request.method) && html && response.status === 200) {
       response.headers.set(
         "Cache-Control",
-        context.url.pathname === "/elus" || context.url.pathname.startsWith("/elus/")
-          ? "no-store"
-          : "public, max-age=600, stale-while-revalidate=86400, stale-if-error=604800",
+        "public, max-age=600, stale-while-revalidate=86400, stale-if-error=604800",
       );
     }
     return response;
