@@ -303,7 +303,12 @@ export interface Commune {
   history: CommuneAccounts[];
   provenance: Provenance;
   buyer: { siren: string; name: string; flow: ContractFlow } | null;
+  mayor: { id: string; name: string; allowanceCap: number | null } | null;
 }
+
+const MAYOR_SCALE_FLOORS = [500, 1000, 3500, 10000, 20000, 50000, 100000];
+// Paris, Lyon and Marseille use their own scale (CGCT L2511-34), not the general one.
+const OWN_MAYOR_SCALE = new Set(["75056", "13055", "69123"]);
 
 export interface Programme {
   code: string;
@@ -1195,12 +1200,11 @@ export async function getCommune(insee: string, year?: number): Promise<Commune 
     .first<CommuneRow>();
   if (!row) return null;
 
-  const [finances, orgs, years, counterparts, contracts, sources, location] = await db().batch<
-    Record<string, unknown>
-  >([
-    db()
-      .prepare(
-        `select f.item, i.label, i.section, f.year, y.population, f.amount, f.per_capita,
+  const [finances, orgs, years, counterparts, contracts, sources, location, mayors, scale] =
+    await db().batch<Record<string, unknown>>([
+      db()
+        .prepare(
+          `select f.item, i.label, i.section, f.year, y.population, f.amount, f.per_capita,
            s.median_per_capita as median, s.label as stratum_label, s.communes as stratum_communes
          from commune_finances f
          join finance_items i using (item)
@@ -1208,30 +1212,38 @@ export async function getCommune(insee: string, year?: number): Promise<Commune 
          left join strata s on s.stratum = y.stratum and s.year = f.year and s.item = f.item
          where f.insee = ?1
          order by f.year, i.sort`,
-      )
-      .bind(insee),
-    db().prepare("select * from orgs where siren = ?1").bind(row.siren),
-    db()
-      .prepare(
-        "select role, year, amount, count from org_years where siren = ?1 and role = 'acheteur' order by year",
-      )
-      .bind(row.siren),
-    db()
-      .prepare(
-        `select role, counterpart_siren as siren, counterpart_name as name, amount, count
+        )
+        .bind(insee),
+      db().prepare("select * from orgs where siren = ?1").bind(row.siren),
+      db()
+        .prepare(
+          "select role, year, amount, count from org_years where siren = ?1 and role = 'acheteur' order by year",
+        )
+        .bind(row.siren),
+      db()
+        .prepare(
+          `select role, counterpart_siren as siren, counterpart_name as name, amount, count
          from org_counterparts where siren = ?1 and role = 'acheteur' order by rank`,
-      )
-      .bind(row.siren),
-    db().prepare(`${CONTRACTS_QUERY} and oc.role = 'acheteur'`).bind(row.siren),
-    db().prepare(SOURCES_QUERY),
-    db()
-      .prepare(
-        `select d.outline, d.viewbox as viewBox, g.cx as x, g.cy as y
+        )
+        .bind(row.siren),
+      db().prepare(`${CONTRACTS_QUERY} and oc.role = 'acheteur'`).bind(row.siren),
+      db().prepare(SOURCES_QUERY),
+      db()
+        .prepare(
+          `select d.outline, d.viewbox as viewBox, g.cx as x, g.cy as y
          from commune_shapes g join departements d on d.code = ?2
          where g.insee = ?1`,
-      )
-      .bind(insee, row.department_code),
-  ]);
+        )
+        .bind(insee, row.department_code),
+      db()
+        .prepare(
+          "select id, display_name as name from local_executives where territory_code = ?1 and role_label = 'Maire' order by starts_on desc limit 1",
+        )
+        .bind(insee),
+      db().prepare(
+        "select id, amount_cents from expense_reference_values where id like 'local-maire-%'",
+      ),
+    ]);
   const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
   const financeRows = (finances?.results ?? []) as unknown as FinanceRow[];
   const history = [...new Set(financeRows.map((line) => line.year))].map((entry) =>
@@ -1271,6 +1283,27 @@ export async function getCommune(insee: string, year?: number): Promise<Commune 
       SQL.communes,
     ),
     buyer: org && flow ? { siren: org.siren, name: org.name, flow } : null,
+    mayor: communeMayor(
+      row.insee,
+      history.at(-1)?.population ?? null,
+      mayors?.results[0] as { id: string; name: string } | undefined,
+      (scale?.results ?? []) as { id: string; amount_cents: number }[],
+    ),
+  };
+}
+
+function communeMayor(
+  insee: string,
+  population: number | null,
+  mayor: { id: string; name: string } | undefined,
+  scale: { id: string; amount_cents: number }[],
+): Commune["mayor"] {
+  if (!mayor) return null;
+  const bracket = MAYOR_SCALE_FLOORS.filter((floor) => (population ?? 0) >= floor).length;
+  const cap = scale.find((entry) => entry.id === `local-maire-${bracket}`)?.amount_cents;
+  return {
+    ...mayor,
+    allowanceCap: population && cap && !OWN_MAYOR_SCALE.has(insee) ? cap / 100 : null,
   };
 }
 

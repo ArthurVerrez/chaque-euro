@@ -94,7 +94,7 @@ const figures = accounts
     ]
   : [];
 const title = commune
-  ? `${commune.name} (${commune.departmentCode})${NBSP}: ${accounts?.year === commune.latestYear ? "budget et dépenses par habitant" : `comptes ${accounts?.year}`}`
+  ? `${commune.name} (${commune.departmentCode})${NBSP}: ${accounts?.year === commune.latestYear ? (commune.mayor?.allowanceCap ? "budget, dépenses et indemnité du maire" : "budget et dépenses par habitant") : `comptes ${accounts?.year}`}`
   : "Commune introuvable";
 ---
 
@@ -171,6 +171,21 @@ const title = commune
               Votre député et vos sénateurs
             </a>
           </p>
+          {commune.mayor && (
+            <p class="mayor">
+              <Icon name="person" size={18} />
+              <span>
+                Maire : <a href={`/elus/locaux/${commune.mayor.id}`}>{commune.mayor.name}</a>
+                {commune.mayor.allowanceCap && (
+                  <>
+                    {" "}
+                    · <a href="/train-de-vie#locaux">plafond légal de l’indemnité</a> :{" "}
+                    {formatEuro(commune.mayor.allowanceCap)} brut par mois
+                  </>
+                )}
+              </span>
+            </p>
+          )}
           {accounts.year !== commune.latestYear && (
             <p class="older small">
               Vous consultez les comptes {accounts.year}.{" "}
@@ -412,6 +427,16 @@ const title = commune
     align-items: center;
     gap: 0.375rem;
     min-height: 44px;
+  }
+
+  .mayor {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .mayor :global(svg) {
+    flex: none;
   }
 
   .years {
