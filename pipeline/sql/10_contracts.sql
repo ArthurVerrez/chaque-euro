@@ -27,6 +27,7 @@ with dates as (
         titulaire_id as holder_id,
         titulaire_activite_libelle as holder_activity,
         sourceFile as source_url,
+        sourceDataset as source_dataset,
         modification_id,
         datePublicationDonnees as published_on
     from read_parquet(getvariable('decp_path')) r
@@ -43,6 +44,30 @@ qualify row_number() over (
         subject, cpv, buyer_siren, holder_id, offers desc nulls last,
         procedure, nature, holder_activity
 ) = 1;
+
+delete from contract_rows where uid in (
+    with contracts as (
+        select uid, min(buyer_siren) as buyer_siren, min(notified_on) as notified_on,
+            min(declared_amount) as declared_amount, min(source_dataset) as source_dataset,
+            max(published_on) as published_on,
+            list_sort(list(coalesce(holder_siren, holder_id))) as holders
+        from contract_rows
+        group by uid
+        having count(coalesce(holder_siren, holder_id)) = count(*)
+    ), copies as (
+        select *, row_number() over (
+            partition by buyer_siren, notified_on, declared_amount, holders, source_dataset
+            order by uid
+        ) as copy
+        from contracts
+        where buyer_siren is not null and declared_amount > 0
+    )
+    select uid from copies
+    qualify row_number() over (
+        partition by buyer_siren, notified_on, declared_amount, holders, copy
+        order by published_on desc nulls last, uid
+    ) > 1
+);
 
 create or replace table contract_amounts as
 with retained as (

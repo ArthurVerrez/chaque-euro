@@ -2229,7 +2229,7 @@ export async function getProcurement() {
   const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
   const provenance = index.provenance(
     [index.cite("decp"), index.cite("sirene")],
-    "Un marché par identifiant uid. Valeurs retenues par version de modification décroissante, puis date de publication décroissante et identifiants stables. Mois de la notification initiale si disponible, sinon première notification connue. Avenants exclus de la datation quand une version initiale existe. Les montants signalés comme aberrants ou suspects par le consolidateur, absents, non positifs ou d’au moins 999 999 999 € ne sont pas comptés. Carte selon le département de l'acheteur, pas le lieu des travaux. Les classements reprennent les totaux par organisation, titulaires multiples à parts égales.",
+    "Un marché par identifiant uid. Un même marché publié par plusieurs flux sous des uid différents (même acheteur, titulaires, date de notification et montant) n’est compté qu’une fois. Valeurs retenues par version de modification décroissante, puis date de publication décroissante et identifiants stables. Mois de la notification initiale si disponible, sinon première notification connue. Avenants exclus de la datation quand une version initiale existe. Les montants signalés comme aberrants ou suspects par le consolidateur, absents, non positifs ou d’au moins 999 999 999 € ne sont pas comptés. Carte selon le département de l'acheteur, pas le lieu des travaux. Les classements reprennent les totaux par organisation, titulaires multiples à parts égales.",
     "pipeline/sql/41_procurement_overview.sql",
   );
   const companyRows = (companies?.results ?? []) as unknown as {

@@ -61,12 +61,13 @@ class ContractDatingTests(unittest.TestCase):
                     date '2024-01-01' as dateNotification, 40000.0 as montant,
                     null::varchar as montant_anomalie, '12345678900012' as acheteur_id,
                     '98765432100012' as titulaire_id, null::varchar as titulaire_activite_libelle,
-                    'source' as sourceFile, 0 as modification_id, false as donneesActuelles,
+                    'source' as sourceFile, 'feed' as sourceDataset, 0 as modification_id,
+                    false as donneesActuelles,
                     null::double as montant_rationalise, 1 as offresRecues
                 union all
                 select 'contract', 'Objet modifié', 'Marché', 'Ouverte', '123',
                     date '2023-12-01', 999999999.0, null, '12345678900012',
-                    '98765432100012', null, 'source', 1, true, null, 1;
+                    '98765432100012', null, 'source', 'feed', 1, true, null, 1;
             """)
             con.execute("alter table sample add column datePublicationDonnees date")
             con.execute("copy sample to ? (format parquet)", [path])
@@ -80,6 +81,36 @@ class ContractDatingTests(unittest.TestCase):
             self.assertEqual(
                 con.execute("select counted, amount_flag from contract_amounts").fetchone(),
                 (False, "hors_norme"),
+            )
+
+    def test_same_contract_from_several_feeds_counts_once(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, duckdb.connect() as con:
+            path = str(Path(directory) / "decp.parquet")
+            con.execute("""
+                create table sample as
+                select uid, 'Objet' as objet, 'Marché' as nature, 'Ouverte' as procedure,
+                    '123' as codeCPV, notified::date as dateNotification, amount as montant,
+                    null::varchar as montant_anomalie, '12345678900012' as acheteur_id,
+                    '98765432100012' as titulaire_id, null::varchar as titulaire_activite_libelle,
+                    'source' as sourceFile, feed as sourceDataset, 0 as modification_id,
+                    true as donneesActuelles, null::double as montant_rationalise,
+                    1 as offresRecues, published::date as datePublicationDonnees
+                from (values ('a', 'feed1', '2023-12-21', 200000.0, '2024-02-09'),
+                    ('b', 'feed2', '2023-12-21', 200000.0, '2024-02-09'),
+                    ('c', 'feed3', '2023-12-21', 200000.0, '2024-05-22'),
+                    ('lot1', 'feed1', '2024-03-01', 50000.0, '2024-04-01'),
+                    ('lot2', 'feed1', '2024-03-01', 50000.0, '2024-04-01'),
+                    ('lot1-copy', 'feed2', '2024-03-01', 50000.0, '2024-04-01'),
+                    ('later', 'feed2', '2024-06-01', 200000.0, '2024-07-01'))
+                    v(uid, feed, notified, amount, published);
+            """)
+            con.execute("copy sample to ? (format parquet)", [path])
+            con.execute("set variable decp_path = ?", [path])
+            con.execute("set variable decp_retrieved_on = date '2024-12-31'")
+            con.execute((SQL / "10_contracts.sql").read_text())
+            self.assertEqual(
+                con.execute("select uid from contract_amounts order by uid").fetchall(),
+                [("c",), ("later",), ("lot1",), ("lot2",)],
             )
 
 
@@ -181,8 +212,8 @@ class ProcurementAmountTests(unittest.TestCase):
                     'Ouverte' as procedure, '45000000' as codeCPV,
                     date '2024-01-01' as dateNotification, '12345678900012' as acheteur_id,
                     '98765432100012' as titulaire_id, null::varchar as titulaire_activite_libelle,
-                    'source' as sourceFile, 0 as modification_id, true as donneesActuelles,
-                    1 as offresRecues
+                    'source' as sourceFile, 'feed' as sourceDataset, 0 as modification_id,
+                    true as donneesActuelles, 1 as offresRecues
                 from (values ('clean', 50000.0, null, null),
                     ('estimated', 5000000000.0, 200000.0, 'aberrant'),
                     ('suspect', 90000.0, 90000.0, 'suspect'),

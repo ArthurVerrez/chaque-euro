@@ -67,6 +67,7 @@ The national-money extension was verified on 2 November 2026. Its new source URL
   - 131 735 contracts with several holders repeat the full amount on each holder row; we split equally.
   - `titulaire_typeIdentifiant` is inconsistent (`SIRET`, `Siret`, `siret`, `HORS_UE`, `HORS-UE`, `HORS UE`, 83 950 rows empty). 88 011 holder rows have no usable SIREN.
   - 2 622 duplicate (`uid`, holder) pairs among current rows; we keep the latest modification.
+  - The same contract can come from several upstream feeds (`sourceDataset`) under different `uid`s: 82 724 extra contracts, 84 Md€, in the 2026-11 file. We keep one per buyer, holders, notification date, amount and copy rank within each feed, so lots of one feed stay separate.
   - 982 rows have a notification date before the year 2000 (years such as 1 to 10) and 28 790 rows have none.
   - Publication threshold: contracts of 40 000 € HT or more, within two months of notification ([décret 2022-767](https://www.associatheque.fr/fr/fichiers/actualite/decret-2022-767-NOR-ECOM2200104D.pdf)).
 - Verdict: use now.
