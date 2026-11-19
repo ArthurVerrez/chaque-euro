@@ -107,8 +107,10 @@ const perCapita = (value: number | null) => (value === null ? "n.d." : formatEur
               <th scope="row">
                 <a
                   href={
-                    row.provenance.citations[0]?.recordUrl ??
-                    row.provenance.citations[0]?.source.pageUrl
+                    row.hasPage
+                      ? `/organisation/${row.siren}`
+                      : (row.provenance.citations[0]?.recordUrl ??
+                        row.provenance.citations[0]?.source.pageUrl)
                   }
                 >
                   {row.name}
@@ -168,6 +170,7 @@ const perCapita = (value: number | null) => (value === null ? "n.d." : formatEur
         caption={`Les plus élevées en ${year}, hors remboursement de dette`}
         items={data.highestSpendingPerCapita.map((row) => ({
           label: row.name,
+          href: row.hasPage ? `/organisation/${row.siren}` : null,
           value: row.spendingPerCapita ?? 0,
           display: perCapita(row.spendingPerCapita),
           note: row.category === "CTU" ? "Compétences particulières" : undefined,

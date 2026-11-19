@@ -304,6 +304,7 @@ export interface Commune {
   provenance: Provenance;
   buyer: { siren: string; name: string; flow: ContractFlow } | null;
   mayor: { id: string; name: string; allowanceCap: number | null } | null;
+  epci: Pick<LocalAccount, "siren" | "name" | "year" | "spendingPerCapita" | "hasPage"> | null;
 }
 
 const MAYOR_SCALE_FLOORS = [500, 1000, 3500, 10000, 20000, 50000, 100000];
@@ -1200,7 +1201,7 @@ export async function getCommune(insee: string, year?: number): Promise<Commune 
     .first<CommuneRow>();
   if (!row) return null;
 
-  const [finances, orgs, years, counterparts, contracts, sources, location, mayors, scale] =
+  const [finances, orgs, years, counterparts, contracts, sources, location, mayors, scale, epci] =
     await db().batch<Record<string, unknown>>([
       db()
         .prepare(
@@ -1243,6 +1244,15 @@ export async function getCommune(insee: string, year?: number): Promise<Commune 
       db().prepare(
         "select id, amount_cents from expense_reference_values where id like 'local-maire-%'",
       ),
+      db()
+        .prepare(
+          `${LOCAL_ACCOUNTS_QUERY} where level = 'epci' and siren = (
+             select authority_siren from commune_taxes
+             where insee = ?1 and authority = 'epci' and authority_siren is not null
+             group by authority_siren order by count(*) desc, authority_siren limit 1
+           ) order by year desc limit 1`,
+        )
+        .bind(insee),
     ]);
   const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
   const financeRows = (finances?.results ?? []) as unknown as FinanceRow[];
@@ -1289,6 +1299,7 @@ export async function getCommune(insee: string, year?: number): Promise<Commune 
       mayors?.results[0] as { id: string; name: string } | undefined,
       (scale?.results ?? []) as { id: string; amount_cents: number }[],
     ),
+    epci: (epci?.results[0] as LocalAccount | undefined) ?? null,
   };
 }
 
@@ -1540,6 +1551,29 @@ export async function search(query: string): Promise<SearchResult[]> {
   }));
   const order = ["Thèmes", "Responsables publics", "Élus", "Communes", "Organisations"];
   return [...topics, ...entities].sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group));
+}
+
+export async function searchCommuneCode(code: string): Promise<SearchResult[]> {
+  const { results } = await db()
+    .prepare(
+      "select insee, name, department_name, department_code, insee = ?1 as by_insee from communes where insee = ?1 or insee in (select insee from commune_postcodes where postcode = ?1) order by by_insee, population desc",
+    )
+    .bind(code)
+    .all<{
+      insee: string;
+      name: string;
+      department_name: string;
+      department_code: string;
+      by_insee: number;
+    }>();
+  return results.map((row) => ({
+    group: "Communes",
+    icon: kindIcon("Commune"),
+    kind: "Commune",
+    name: row.name,
+    detail: `${row.department_name} (${row.department_code}) · ${row.by_insee ? "code Insee" : "code postal"} ${code}`,
+    href: `/commune/${row.insee}`,
+  }));
 }
 
 export async function getPublicFamily(sector: string): Promise<PublicFamily> {
@@ -3036,11 +3070,14 @@ export interface LocalAccount {
   spendingPerCapita: number | null;
   revenuePerCapita: number | null;
   debtPerCapita: number | null;
+  hasPage: 0 | 1;
 }
 
 const LOCAL_ACCOUNTS_QUERY = `select level, code, name, siren, category, year, population,
   spending, operating, investment, revenue, debt, spending_per_capita as spendingPerCapita,
-  revenue_per_capita as revenuePerCapita, debt_per_capita as debtPerCapita from local_accounts`;
+  revenue_per_capita as revenuePerCapita, debt_per_capita as debtPerCapita,
+  exists (select 1 from orgs where orgs.siren = local_accounts.siren) as hasPage
+  from local_accounts`;
 
 const localSource = (level: LocalAccount["level"]) =>
   `ofgl-${{ departement: "departements", region: "regions", epci: "epci" }[level]}`;
@@ -3097,6 +3134,22 @@ export async function getLocalAccounts(
       .map(withProvenance),
     provenance: localProvenance(index, level),
   };
+}
+
+export async function getLocalAuthority(siren: string) {
+  const [accounts, sources] = await db().batch([
+    db()
+      .prepare(
+        `${LOCAL_ACCOUNTS_QUERY} where level in ('region', 'epci') and siren = ?1 order by year`,
+      )
+      .bind(siren),
+    db().prepare(SOURCES_QUERY),
+  ]);
+  const history = (accounts?.results ?? []) as unknown as LocalAccount[];
+  const latest = history.at(-1);
+  if (!latest) return null;
+  const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
+  return { latest, history, provenance: localProvenance(index, latest.level, latest) };
 }
 
 export async function getDepartmentLocal(code: string) {
@@ -3938,13 +3991,15 @@ export async function getAddressConstituencies(insee: string) {
   };
 }
 
-export async function getCommuneRepresentatives(query: string) {
+export async function getCommuneRepresentatives(query: string, exactInsee = false) {
   const match = ftsQuery(query);
   const communes = !match
     ? []
     : await democracyRows<CommuneChoice>(
         /^[0-9][0-9AB][0-9]{3}$/i.test(query.trim())
-          ? "select insee,name,department_code as department,department_name as departmentName from communes where insee=?"
+          ? exactInsee
+            ? "select insee,name,department_code as department,department_name as departmentName from communes where insee=?1"
+            : "select insee,name,department_code as department,department_name as departmentName from communes where insee=?1 or insee in (select insee from commune_postcodes where postcode=?1) order by insee=?1, population desc"
           : `select c.insee,c.name,c.department_code as department,c.department_name as departmentName
              from search join communes c on c.insee=search.ref
              where search match ? and search.kind='Commune' order by search.weight desc limit 20`,

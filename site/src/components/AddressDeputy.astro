@@ -114,7 +114,7 @@ const lookup = await getAddressLookup();
           local.shapes,
         );
         const people = local.deputies.filter((person) => person.constituency === number);
-        commune.href = `/elus?commune=${code}#trouver`;
+        commune.href = `/elus?insee=${code}#trouver`;
         commune.hidden = false;
         const person = people[0];
         if (people.length !== 1 || !person?.id || !person.name) {

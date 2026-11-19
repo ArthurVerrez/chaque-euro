@@ -1872,3 +1872,18 @@ frequency = "Ponctuelle"
 kind = "reference"
 usage = "Seuil légal de présentation fonctionnelle du budget communal."
 limits = ["Version en vigueur du 1er janvier 2006 au 1er janvier 2026 : présentation fonctionnelle obligatoire à partir de 3 500 habitants. Le seuil ne garantit pas la disponibilité des données dans le fichier DGFiP."]
+
+[[sources]]
+id = "laposte-codes-postaux"
+short_name = "La Poste"
+name = "Base officielle des codes postaux"
+publisher = "La Poste"
+page_url = "https://www.data.gouv.fr/datasets/base-officielle-des-codes-postaux"
+file_url = "https://data.laposte.fr/data-fair/api/v1/datasets/laposte-hexasmal/raw"
+filename = "hexasmal.csv"
+licence = "lo2"
+frequency = "Semestrielle"
+kind = "file"
+data_date = "2026-11-17"
+usage = "Recherche d'une commune par son code postal."
+limits = ["Un code postal peut desservir plusieurs communes, et une commune avoir plusieurs codes postaux. Les arrondissements de Paris, Lyon et Marseille renvoient à leur commune."]

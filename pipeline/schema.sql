@@ -174,6 +174,12 @@ CREATE INDEX communes_siren ON communes (siren);
 CREATE INDEX communes_population ON communes (population);
 CREATE INDEX communes_department ON communes (department_code);
 
+CREATE TABLE commune_postcodes (
+  postcode TEXT NOT NULL,
+  insee TEXT NOT NULL,
+  PRIMARY KEY (postcode, insee)
+) WITHOUT ROWID;
+
 CREATE TABLE finance_items (
   item TEXT PRIMARY KEY,
   aggregate TEXT NOT NULL,

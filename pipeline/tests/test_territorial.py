@@ -169,3 +169,32 @@ class TerritorialTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_postcodes_map_arrondissements_to_their_commune(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, duckdb.connect() as con:
+            path = Path(directory) / "hexasmal.csv"
+            path.write_bytes(
+                "#Code_commune_INSEE;Nom_de_la_commune;Code_postal;Libellé_d_acheminement;Ligne_5\n"
+                "75101;PARIS 01;75001;PARIS;\n"
+                "69381;LYON 01;69001;LYON;\n"
+                "69001;AFFOUX;69170;AFFOUX;\n"
+                "01001;L ABERGEMENT CLEMENCIAT;01400;L ABERGEMENT CLEMENCIAT;\n"
+                "01002;L ABERGEMENT DE VAREY;01400;L ABERGEMENT DE VAREY;\n"
+                "99999;ANCIENNE COMMUNE;01400;;\n".encode("latin-1")
+            )
+            con.execute(
+                "create table communes as select * from (values "
+                "('75056'),('69123'),('69001'),('01001'),('01002')) t(insee)"
+            )
+            con.execute("set variable postcodes_path = ?", [str(path)])
+            con.execute((SQL / "50a_commune_postcodes.sql").read_text())
+            self.assertEqual(
+                con.execute("select * from commune_postcodes order by all").fetchall(),
+                [
+                    ("01400", "01001"),
+                    ("01400", "01002"),
+                    ("69001", "69123"),
+                    ("69170", "69001"),
+                    ("75001", "75056"),
+                ],
+            )

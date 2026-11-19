@@ -81,6 +81,7 @@ import {
   Wallet,
   Vote,
   X,
+  Share2,
 } from "@lucide/astro";
 
 export const ICONS = {
@@ -162,6 +163,7 @@ export const ICONS = {
   search: Search,
   security: Siren,
   share: ChartPie,
+  shareLink: Share2,
   socialSecurity: Umbrella,
   unemployment: Briefcase,
   solidarity: HandHeart,

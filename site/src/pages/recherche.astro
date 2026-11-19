@@ -3,17 +3,16 @@ import Breadcrumbs from "../components/Breadcrumbs.astro";
 import Icon from "../components/Icon.astro";
 import SearchForm from "../components/SearchForm.astro";
 import Base from "../layouts/Base.astro";
-import { search } from "../lib/data";
+import { search, searchCommuneCode } from "../lib/data";
 import { NBSP } from "../lib/format";
 
 const query = (Astro.url.searchParams.get("q") ?? "").trim();
 const compact = query.replace(/\s/g, "");
 if (/^\d{9}$/.test(compact)) return Astro.redirect(`/organisation/${compact}`);
 if (/^\d{14}$/.test(compact)) return Astro.redirect(`/organisation/${compact.slice(0, 9)}`);
-if (/^[0-9][0-9AB][0-9]{3}$/i.test(compact)) {
-  return Astro.redirect(`/commune/${compact.toUpperCase()}`);
-}
-const results = query.length >= 2 ? await search(query) : [];
+const code = /^[0-9][0-9AB][0-9]{3}$/i.test(compact) ? compact.toUpperCase() : null;
+const results = code ? await searchCommuneCode(code) : query.length >= 2 ? await search(query) : [];
+if (results.length === 1 && code) return Astro.redirect(results[0]!.href);
 const groups = [...new Set(results.map((result) => result.group))].map((name) => ({
   name,
   results: results.filter((result) => result.group === name),

@@ -18,27 +18,84 @@ const trail = [{ label: "Accueil", href: "/" }, ...items].map((item, index) => (
 
 <JsonLd data={{ "@type": "BreadcrumbList", itemListElement: trail }} />
 
-<nav class="breadcrumbs" aria-label="Fil d'Ariane">
-  <ol>
-    <li>
-      <a href="/">
-        <Icon name="home" size={14} />
-        Accueil
-      </a>
-    </li>
-    {items.map((item) => (
+<div class="trail">
+  <nav class="breadcrumbs" aria-label="Fil d'Ariane">
+    <ol>
       <li>
-        {item.href ? (
-          <a href={item.href}>{item.label}</a>
-        ) : (
-          <span aria-current="page">{item.label}</span>
-        )}
+        <a href="/">
+          <Icon name="home" size={14} />
+          Accueil
+        </a>
       </li>
-    ))}
-  </ol>
-</nav>
+      {items.map((item) => (
+        <li>
+          {item.href ? (
+            <a href={item.href}>{item.label}</a>
+          ) : (
+            <span aria-current="page">{item.label}</span>
+          )}
+        </li>
+      ))}
+    </ol>
+  </nav>
+  <button type="button" class="share-link" hidden>
+    <Icon name="shareLink" size={16} />
+    <span>Partager</span>
+  </button>
+</div>
+
+<script>
+  for (const button of document.querySelectorAll<HTMLButtonElement>(".share-link")) {
+    const label = button.querySelector("span")!;
+    button.hidden = false;
+    button.addEventListener("click", async () => {
+      const url = location.href.split("#")[0]!;
+      if (navigator.share) {
+        await navigator.share({ title: document.title, url }).catch(() => undefined);
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      label.textContent = "Lien copié";
+      setTimeout(() => (label.textContent = "Partager"), 2000);
+    });
+  }
+</script>
 
 <style>
+  .trail {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  nav {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .share-link {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.75rem;
+    padding: 0 0.25rem;
+    border: 0;
+    background: none;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .share-link[hidden] {
+    display: none;
+  }
+
+  .share-link:hover {
+    color: var(--text);
+  }
+
   ol {
     display: flex;
     align-items: center;

@@ -125,4 +125,5 @@ union all select 'hatvp-interests',count(*),'Déclarations d’intérêts actuel
 union all select 'rne',sum(records),'Lignes de mandats ou fonctions, pas personnes uniques. Août 2026 ; AFE et consulaires mai 2026' from rne_statistics
 union all select 'cada',count(*),'Avis et conseils, séances du ' || min(session_on) || ' au ' || max(session_on) from cada_opinions
 union all select source_id,count(*),'Références datées, pas consommation individuelle' from expense_reference_values group by source_id
-union all select 'cabinet-staff',sum(value),'Effectifs au 1er juillet 2025, PLF 2026' from cabinet_statistics;
+union all select 'cabinet-staff',sum(value),'Effectifs au 1er juillet 2025, PLF 2026' from cabinet_statistics
+union all select 'laposte-codes-postaux',count(*),'Codes postaux rattachés à ' || count(distinct insee) || ' communes' from commune_postcodes;

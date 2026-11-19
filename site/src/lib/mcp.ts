@@ -261,7 +261,7 @@ export function createMcpServer(): McpServer {
       const [local, functions, representatives] = await Promise.all([
         getCommuneLocal(code),
         getCommuneFunctions(code, commune.accounts.year),
-        getCommuneRepresentatives(code),
+        getCommuneRepresentatives(code, true),
       ]);
       return reply(
         `/commune/${code}`,
@@ -610,7 +610,7 @@ export function createMcpServer(): McpServer {
       annotations,
     },
     async ({ commune, longitude, latitude }) => {
-      const local = await getCommuneRepresentatives(communeCode(commune));
+      const local = await getCommuneRepresentatives(communeCode(commune), true);
       if (!local.communes.length) return missing(`No commune matches ${commune}.`);
       if (!local.commune || longitude === undefined || latitude === undefined) {
         if (new Set(local.deputies.map((deputy) => deputy.constituency)).size < 2) {

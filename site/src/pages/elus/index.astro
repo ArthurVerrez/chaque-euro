@@ -19,8 +19,9 @@ const filters = {
   page: pageNumber(params.get("page")),
 };
 const data = await getElectedIndex(filters);
-const communeQuery = (params.get("commune") ?? "").trim();
-const local = communeQuery ? await getCommuneRepresentatives(communeQuery) : null;
+const inseeQuery = (params.get("insee") ?? "").trim();
+const communeQuery = inseeQuery || (params.get("commune") ?? "").trim();
+const local = communeQuery ? await getCommuneRepresentatives(communeQuery, !!inseeQuery) : null;
 const figure = (kind: string, label: string) => ({
   icon: "elected" as const,
   label,
@@ -61,7 +62,7 @@ const figure = (kind: string, label: string) => ({
           name="commune"
           type="search"
           value={local?.commune?.name ?? communeQuery}
-          placeholder="Nom ou code Insee"
+          placeholder="Nom ou code postal"
           required
         />
       </label>
@@ -117,12 +118,12 @@ const figure = (kind: string, label: string) => ({
             caption="Choisissez votre commune"
             columns={["Commune", "Département"]}
             rows={local.communes.map((c) => [
-              { text: c.name, href: `/elus?commune=${c.insee}#trouver` },
+              { text: c.name, href: `/elus?insee=${c.insee}#trouver` },
               { text: `${c.departmentName} (${c.department})` },
             ])}
           />
         ) : (
-          <p>Aucune commune trouvée. Essayez son code Insee ou un autre nom.</p>
+          <p>Aucune commune trouvée. Essayez son code postal ou un autre nom.</p>
         )}
         <Explainer title="Périmètre et actualisation">
           <p>

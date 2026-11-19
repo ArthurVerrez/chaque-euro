@@ -10,6 +10,8 @@ import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import ContractFlowSection from "../../components/ContractFlowSection.astro";
 import Explainer from "../../components/Explainer.astro";
 import KeyFigures from "../../components/KeyFigures.astro";
+import LocalAuthorityAccounts from "../../components/LocalAuthorityAccounts.astro";
+import LocalLevelsExplainer from "../../components/LocalLevelsExplainer.astro";
 import Provenance from "../../components/Provenance.astro";
 import Toc from "../../components/Toc.astro";
 import Term from "../../components/Term.astro";
@@ -18,6 +20,7 @@ import {
   getProcurementCompetition,
   getOrganisation,
   getOrganisationGroup,
+  getLocalAuthority,
   getOrganisationLobbying,
   getProcurementOpportunities,
 } from "../../lib/data";
@@ -32,6 +35,7 @@ const lobbying = org ? await getOrganisationLobbying(siren) : null;
 const hasLobbying = lobbying && (lobbying.french.length > 0 || lobbying.european.length > 0);
 const competition = org ? await getProcurementCompetition(siren) : null;
 const opportunities = org ? await getProcurementOpportunities(siren) : null;
+const accounts = org ? await getLocalAuthority(siren) : null;
 
 const currentYear = new Date().getFullYear();
 const summaries = org
@@ -97,6 +101,9 @@ const flows = org
   : [];
 const toc: { href: string; label: string; icon: IconName }[] = [
   { href: "#en-bref", label: "En bref", icon: "info" },
+  ...(accounts
+    ? [{ href: "#comptes", label: "Les comptes", icon: "administration" as const }]
+    : []),
   ...(group ? [{ href: "#groupe", label: group.name, icon: "group" as const }] : []),
   ...(org?.grants
     ? [{ href: "#subventions", label: "Versements de l’État", icon: "grant" as const }]
@@ -211,6 +218,18 @@ const description = answer ?? "Aucune donnée publique pour ce SIREN.";
       <Toc items={toc} />
 
       <div class="container">
+        {accounts && (
+          <section class="section" id="comptes" aria-labelledby="titre-comptes">
+            <div class="section-head">
+              <h2 id="titre-comptes">
+                <Icon name="administration" />
+                Les comptes de la collectivité
+              </h2>
+            </div>
+            <LocalAuthorityAccounts {...accounts} />
+            <LocalLevelsExplainer />
+          </section>
+        )}
         {group && <OrganisationGroup group={group} siren={siren} />}
         {org.grants && (
           <section class="section" id="subventions" aria-labelledby="titre-subventions">

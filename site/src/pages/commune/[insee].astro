@@ -166,7 +166,7 @@ const title = commune
             </ul>
           </nav>
           <p class="representatives">
-            <a href={`/elus?commune=${insee}#trouver`}>
+            <a href={`/elus?insee=${insee}#trouver`}>
               <Icon name="elected" size={18} />
               Votre député et vos sénateurs
             </a>
@@ -183,6 +183,21 @@ const title = commune
                     {formatEuro(commune.mayor.allowanceCap)} brut par mois
                   </>
                 )}
+              </span>
+            </p>
+          )}
+          {commune.epci && (
+            <p class="mayor">
+              <Icon name="intercommunalite" size={18} />
+              <span>
+                <Term id="intercommunalite">Intercommunalité</Term> :{" "}
+                {commune.epci.hasPage ? (
+                  <a href={`/organisation/${commune.epci.siren}#comptes`}>{commune.epci.name}</a>
+                ) : (
+                  commune.epci.name
+                )}
+                {commune.epci.spendingPerCapita !== null &&
+                  ` · ${formatEuro(commune.epci.spendingPerCapita)} dépensés par habitant en ${commune.epci.year}`}
               </span>
             </p>
           )}
