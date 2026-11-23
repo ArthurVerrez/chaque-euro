@@ -1,6 +1,8 @@
 ---
+import "@fontsource/spectral/latin-400.css";
+import "../styles/journal.css";
 import Base from "./Base.astro";
-import AnalysisCard from "../components/AnalysisCard.astro";
+import ArchiveStory from "../components/ArchiveStory.astro";
 import Answer from "../components/Answer.astro";
 import Breadcrumbs from "../components/Breadcrumbs.astro";
 import KeyFigures, { type Figure } from "../components/KeyFigures.astro";
@@ -8,7 +10,7 @@ import Provenance from "../components/Provenance.astro";
 import Toc from "../components/Toc.astro";
 import Explainer from "../components/Explainer.astro";
 import Icon from "../components/Icon.astro";
-import { ANALYSES, type Analysis } from "../lib/analyses";
+import { ANALYSES, analysisCover, analysisTopic, type Analysis } from "../lib/analyses";
 import type { Provenance as ProvenanceData } from "../lib/data";
 import type { IconName } from "../lib/icons";
 import { formatDate } from "../lib/format";
@@ -20,240 +22,348 @@ interface Props {
   provenance: ProvenanceData[];
   sections: { id: string; label: string; icon: IconName }[];
 }
+
 const { article, answer, figures, provenance, sections } = Astro.props;
-const others = ANALYSES.filter((entry) => entry.slug !== article.slug).slice(0, 3);
+const cover = analysisCover(article.slug);
+const topic = analysisTopic(article.slug);
+const others = ANALYSES.filter(
+  (entry) => entry.slug !== article.slug && (!topic || topic.articles.includes(entry.slug)),
+).slice(0, 2);
 ---
 
 <Base title={article.title} description={answer} image={`/partage/analyse/${article.slug}.png`}>
-  <div class="analysis" style={`--accent: ${article.accent}`}>
-    <header class="hero" id="en-bref">
-      <div class="container">
+  <div class="analysis editorial">
+    <article aria-labelledby="article-title">
+      <header id="en-bref" class="container">
         <Breadcrumbs items={[{ label: "Analyses", href: "/analyses" }, { label: article.short }]} />
-        <p class="kicker">
-          <span class="tag">
-            <Icon name="analysis" size={14} />
-            Analyse
-          </span>
-          <Icon name="calendar" size={14} />
-          <time datetime={article.published}>{formatDate(article.published)}</time>
-          {article.updated && (
-            <span>
-              Mis à jour le <time datetime={article.updated}>{formatDate(article.updated)}</time>
-            </span>
+        <div class:list={["opening", { illustrated: cover }]}>
+          <div class="headline">
+            <div class="byline">
+              {topic && (
+                <a href={`/analyses?theme=${topic.slug}#articles`}>
+                  <Icon name={article.icon} size={15} />
+                  {topic.label}
+                </a>
+              )}
+              <time datetime={article.published}>{formatDate(article.published)}</time>
+              {article.updated && (
+                <span>
+                  Mis à jour le{" "}
+                  <time datetime={article.updated}>{formatDate(article.updated)}</time>
+                </span>
+              )}
+            </div>
+            <h1 id="article-title">{article.title}</h1>
+          </div>
+          {cover && (
+            <img
+              class="cover"
+              src={cover.src}
+              srcset={`${cover.thumbnail} 360w, ${cover.src} ${cover.width}w`}
+              sizes="(max-width: 36rem) calc(100vw - 2.5rem), (max-width: 72rem) 48vw, (max-width: 92rem) calc(50vw - 11rem), 35rem"
+              width={cover.width}
+              height={Math.round((cover.width * 2) / 3)}
+              alt={cover.alt}
+              fetchpriority="high"
+            />
           )}
-        </p>
-        <div class="title">
-          <span class="badge" aria-hidden="true">
-            <Icon name={article.icon} size={30} />
-          </span>
-          <h1>{article.title}</h1>
+          <div class="standfirst">
+            <Answer text={answer} />
+          </div>
         </div>
-        <div class="short">
-          <p class="short-label">
-            <Icon name="answer" size={16} />
-            En bref
-          </p>
-          <Answer text={answer} />
+        <div class="evidence">
+          {figures.length > 0 && (
+            <details class="numbers">
+              <summary>
+                <Icon name="bars" size={16} /> Chiffres clés{" "}
+                <span>
+                  <Icon name="expand" size={15} />
+                </span>
+              </summary>
+              <KeyFigures figures={figures} />
+            </details>
+          )}
+          <Provenance provenance={provenance} />
         </div>
-        <KeyFigures figures={figures} />
-        <Provenance provenance={provenance} />
+      </header>
+      <div class="container reading">
+        <Toc
+          article
+          items={[
+            { href: "#en-bref", label: "En bref", icon: "info" },
+            ...sections.map(({ id, ...entry }) => ({ href: `#${id}`, ...entry })),
+            { href: "#methode", label: "Méthode", icon: "method" },
+          ]}
+        />
+        <div class="chapters">
+          <slot />
+          <section class="method" id="methode" aria-labelledby="titre-methode">
+            <h2 id="titre-methode">
+              <Icon name="method" size={20} /> Méthode et précautions
+            </h2>
+            <Explainer title="Le détail de la méthode">
+              <slot name="method" />
+            </Explainer>
+          </section>
+        </div>
       </div>
-    </header>
-    <Toc
-      items={[
-        { href: "#en-bref", label: "En bref", icon: "info" },
-        ...sections.map(({ id, ...entry }) => ({ href: `#${id}`, ...entry })),
-        { href: "#methode", label: "Méthode", icon: "method" },
-      ]}
-    />
-    <article class="container body" aria-label={article.question}>
-      <slot />
-      <section class="method" id="methode" aria-labelledby="titre-methode">
-        <h2 id="titre-methode">
-          <Icon name="method" size={22} />
-          Méthode et précautions
-        </h2>
-        <Explainer title="Le détail de la méthode">
-          <slot name="method" />
-        </Explainer>
-      </section>
     </article>
-    <aside class="container more" aria-labelledby="titre-autres">
-      <h2 id="titre-autres">
-        <Icon name="analysis" size={22} />À lire aussi
-      </h2>
-      <div class="cards">
-        {others.map((entry) => (
-          <AnalysisCard article={entry} />
-        ))}
+    <aside class="container recommendations" aria-labelledby="titre-autres">
+      <div class="end-head">
+        <h2 id="titre-autres">
+          <Icon name="analysis" size={21} /> À lire aussi
+        </h2>
+        <a class="more" href="/analyses">
+          Toutes les analyses
+        </a>
       </div>
-      <p class="all">
-        <a href="/analyses">Toutes les analyses</a>
-      </p>
+      {others.map((entry) => (
+        <ArchiveStory article={entry} />
+      ))}
     </aside>
   </div>
 </Base>
 
 <style>
-  .hero {
-    padding: 1.5rem 0 3rem;
-    border-bottom: 1px solid var(--border);
-    background:
-      radial-gradient(
-        56rem 26rem at 95% -15%,
-        color-mix(in srgb, var(--accent) 16%, transparent),
-        transparent 70%
-      ),
-      linear-gradient(180deg, color-mix(in srgb, var(--accent) 5%, white), var(--surface));
+  .analysis {
+    --reading-font: "Spectral", Georgia, serif;
+    padding: 0.45rem 0 clamp(3rem, 6vw, 6rem);
+    color: var(--ink);
+    background: var(--paper);
   }
 
-  .kicker {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin: 1.5rem 0 1.25rem;
-    font-size: 0.875rem;
-    color: var(--text-muted);
-  }
-
-  .tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    margin-right: 0.25rem;
-    padding: 0.25rem 0.7rem;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--accent) 14%, white);
-    color: color-mix(in srgb, var(--accent) 70%, var(--navy-950));
-    font-size: 0.75rem;
-    font-weight: 750;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .title {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
-  .badge {
+  .opening {
     display: grid;
-    flex: none;
-    place-items: center;
-    width: 3.5rem;
-    height: 3.5rem;
-    margin-top: 0.35rem;
-    border-radius: 16px;
-    background: var(--accent);
-    color: #fff;
-    box-shadow: 0 12px 28px -12px var(--accent);
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.6rem;
+    padding-block: clamp(1.1rem, 2.5vw, 2.4rem) 1.1rem;
+    border-top: 4px double var(--ink);
+  }
+
+  .byline,
+  .byline a {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .byline {
+    gap: 0.25rem 0.9rem;
+    color: var(--subtle);
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  .byline a {
+    gap: 0.375rem;
+    color: var(--red);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .byline a:hover {
+    text-decoration: underline;
   }
 
   h1 {
+    margin: 0.65rem 0 0;
+    color: var(--ink);
+    font: 400 clamp(2.65rem, 1.8rem + 2.6vw, 4.65rem) / 1.02 var(--display);
+    letter-spacing: -0.026em;
+  }
+
+  .cover {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1.5;
+    object-fit: cover;
+  }
+
+  .standfirst :global(.answer) {
+    max-width: 64ch;
     margin: 0;
-    font-size: clamp(1.75rem, 1.2rem + 3vw, 3.75rem);
-    line-height: 1.04;
-    letter-spacing: -0.035em;
-  }
-
-  .short {
-    margin: 2rem 0;
-    padding: 1.25rem 1.5rem;
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--accent);
-    border-radius: 0 var(--radius) var(--radius) 0;
-    background: var(--surface);
-    box-shadow: var(--shadow);
-  }
-
-  .short-label {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin: 0 0 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 750;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: color-mix(in srgb, var(--accent) 70%, var(--navy-950));
-  }
-
-  .short :global(.answer) {
-    max-width: none;
-    margin: 0;
-    font-size: 1.125rem;
-    font-weight: 400;
-    line-height: 1.6;
+    color: var(--ink);
+    font: 400 clamp(1.125rem, 1rem + 0.4vw, 1.45rem) / 1.5 var(--reading-font);
     letter-spacing: normal;
+    text-wrap: pretty;
+  }
+
+  .standfirst :global(strong) {
+    font-weight: 650;
+    color: var(--ink);
+  }
+
+  .evidence {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: start;
+    gap: 0.5rem 0.65rem;
+    padding-bottom: 1.15rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .evidence :global(.provenance) {
+    margin: 0;
+    min-width: 0;
+  }
+
+  .numbers[open],
+  .evidence :global(.provenance:has(details[open])) {
+    width: 100%;
+  }
+
+  .numbers > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.25rem;
+    padding: 0 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 2rem;
+    background: var(--surface);
+    color: var(--link);
+    font-size: 0.8125rem;
+    font-weight: 650;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .numbers > summary:hover {
+    border-color: var(--link);
+  }
+
+  .numbers > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary span {
+    display: inline-flex;
+  }
+
+  .numbers[open] > summary span {
+    transform: rotate(180deg);
+  }
+
+  .numbers :global(.key-figures) {
+    margin-top: 0.65rem;
+  }
+
+  .reading {
+    display: grid;
+    gap: 1.3rem;
+    margin-top: 1.1rem;
+  }
+
+  .chapters {
+    min-width: 0;
   }
 
   .method {
-    margin: 1rem 0 0;
-    padding: 1.75rem;
-    border-radius: var(--radius);
-    background: var(--surface-alt);
+    margin-top: clamp(2rem, 3vw, 3rem);
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+    scroll-margin-top: calc(var(--sticky-top) + 1rem);
   }
 
   .method h2,
-  .more h2 {
+  .end-head h2 {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 1.375rem;
+    gap: 0.6rem;
+    margin: 0 0 0.8rem;
+    color: var(--ink);
+    font: 400 clamp(1.95rem, 1.5rem + 1vw, 2.65rem) / 1.1 var(--display);
   }
 
-  .more {
-    margin-top: 4rem;
+  .analysis h2 > :global(svg) {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex: none;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--red);
   }
 
-  .cards {
-    display: grid;
-    gap: 1.25rem;
-    margin-top: 1.25rem;
+  .method :global(.explainer) {
+    background: var(--surface);
+    border-color: var(--rule);
   }
 
-  .all {
-    margin: 1.5rem 0 0;
-    font-weight: 650;
+  .method :global(.explainer .body) {
+    max-width: 70ch;
   }
 
-  @media (min-width: 48rem) {
-    .cards {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+  .recommendations {
+    margin-top: clamp(2.5rem, 5vw, 5rem);
+  }
+
+  .end-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.65rem 1rem;
+    padding: 1.2rem 0 0.9rem;
+    border-top: 4px double var(--ink);
+  }
+
+  .end-head h2 {
+    margin: 0;
+  }
+
+  .end-head a {
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 39.99rem) {
+    .evidence :global(.summary-date) {
+      display: none;
     }
   }
 
-  @media (max-width: 40rem) {
-    .hero {
-      padding: 0.75rem 0 1.5rem;
+  @media (min-width: 36rem) {
+    .opening.illustrated {
+      grid-template-columns: minmax(0, 1.07fr) minmax(0, 1fr);
+      grid-template-areas: "headline headline" "cover answer";
+      gap: 0.9rem clamp(1.6rem, 3vw, 3rem);
     }
 
-    .kicker {
-      margin: 0.25rem 0 0.75rem;
+    .illustrated .headline {
+      grid-area: headline;
+      align-self: end;
     }
 
-    .title {
-      align-items: center;
-      gap: 0.75rem;
+    .illustrated .standfirst {
+      grid-area: answer;
+      align-self: start;
     }
 
-    .badge {
-      width: 2.75rem;
-      height: 2.75rem;
-      margin: 0;
-      border-radius: 12px;
+    .cover {
+      grid-area: cover;
+      align-self: center;
     }
+  }
 
-    .badge :global(svg) {
-      width: 1.5rem;
-      height: 1.5rem;
+  @media (min-width: 50rem) {
+    .opening.illustrated {
+      grid-template-areas: "headline cover" "answer cover";
     }
+  }
 
-    .short {
-      margin: 1.25rem 0;
-      padding: 1rem 1.125rem;
+  @media (min-width: 60rem) {
+    .reading {
+      grid-template-columns: clamp(9rem, 13vw, 12rem) minmax(0, 1fr);
+      gap: clamp(1.5rem, 3.5vw, 3.75rem);
+      margin-top: clamp(1.6rem, 3vw, 2.7rem);
+    }
+  }
+
+  @media (pointer: coarse) {
+    .numbers > summary {
+      min-height: 44px;
     }
   }
 </style>

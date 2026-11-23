@@ -3,24 +3,42 @@ import Icon from "./Icon.astro";
 import Provenance from "./Provenance.astro";
 import type { Provenance as ProvenanceData } from "../lib/data";
 import type { IconName } from "../lib/icons";
+
 interface Props {
   id: string;
   title: string;
   icon: IconName;
   provenance: ProvenanceData | ProvenanceData[];
+  illustration?: { src: string; alt: string; caption: string };
 }
-const { id, title, icon, provenance } = Astro.props;
+
+const { id, title, icon, provenance, illustration } = Astro.props;
 ---
 
 <section class="chapter" id={id} aria-labelledby={`titre-${id}`}>
   <h2 id={`titre-${id}`}>
-    <Icon name={icon} />
+    <Icon name={icon} size={20} />
     {title}
   </h2>
-  <div class="prose">
-    <slot />
+  <div class:list={["narrative", { illustrated: illustration }]}>
+    {illustration && (
+      <figure class="vignette">
+        <img
+          src={illustration.src}
+          alt={illustration.alt}
+          width="780"
+          height="520"
+          loading="lazy"
+          decoding="async"
+        />
+        <figcaption>{illustration.caption}</figcaption>
+      </figure>
+    )}
+    <div class="prose">
+      <slot />
+    </div>
   </div>
-  <div class="chart card">
+  <div class="exhibit">
     <slot name="chart" />
   </div>
   <Provenance provenance={provenance}>
@@ -30,39 +48,114 @@ const { id, title, icon, provenance } = Astro.props;
 
 <style>
   .chapter {
-    padding: 3.5rem 0 1rem;
-    scroll-margin-top: 5rem;
+    container-type: inline-size;
+    min-width: 0;
+    margin: 0;
+    scroll-margin-top: calc(var(--sticky-top) + 1.25rem);
   }
 
   .chapter + .chapter {
-    border-top: 1px solid var(--border);
+    margin-top: clamp(2.35rem, 4.5vw, 4.25rem);
+    padding-top: clamp(1.5rem, 2.8vw, 2.5rem);
+    border-top: 1px solid var(--rule);
   }
 
   h2 {
-    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    max-width: 36ch;
+    margin: 0 0 1rem;
+    color: var(--ink);
+    font: 400 clamp(2rem, 1.5rem + 1.4vw, 3.15rem) / 1.08 var(--display);
+    letter-spacing: -0.02em;
+  }
+
+  h2 > :global(svg) {
+    flex: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--red);
+  }
+
+  .narrative,
+  .vignette {
+    margin: 0;
   }
 
   .prose {
-    font-size: 1.125rem;
-    line-height: 1.75;
-    color: var(--text-secondary);
+    max-width: 62ch;
+    min-width: 0;
+    color: var(--ink);
+    font: 400 clamp(1.1rem, 1.02rem + 0.28vw, 1.26rem) / 1.65 var(--reading-font);
+    overflow-wrap: break-word;
   }
 
   .prose :global(p) {
-    margin: 0 0 1rem;
+    margin: 0 0 0.85em;
   }
 
-  .prose :global(strong) {
-    color: var(--navy-900);
+  .prose :global(p:last-child) {
+    margin-bottom: 0;
   }
 
-  .chart {
-    margin: 2rem 0 0;
+  .vignette {
+    max-width: 36rem;
+    margin-bottom: 1rem;
   }
 
-  @media (min-width: 48rem) {
-    .chart {
-      padding: 2rem;
+  .vignette img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1.5;
+    object-fit: cover;
+  }
+
+  .vignette figcaption {
+    max-width: 55ch;
+    margin-top: 0.4rem;
+    color: var(--subtle);
+    font: 400 0.8125rem / 1.5 var(--sans);
+    letter-spacing: normal;
+  }
+
+  .exhibit {
+    min-width: 0;
+    margin: clamp(1.1rem, 2vw, 1.65rem) 0 0;
+    padding: clamp(0.85rem, 2vw, 1.6rem);
+    border: 1px solid var(--rule);
+    background: var(--surface);
+  }
+
+  .exhibit:has(> :global(.public-table)) {
+    padding: 0;
+  }
+
+  .exhibit :global(.public-table) {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .exhibit :global(table th),
+  .exhibit :global(table td) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  @container (min-width: 40rem) {
+    .narrative.illustrated {
+      display: flow-root;
+    }
+
+    .vignette {
+      float: inline-end;
+      width: 39%;
+      margin: 0.25rem 0 1rem clamp(1.3rem, 2.5vw, 2.4rem);
     }
   }
 </style>

@@ -114,3 +114,56 @@ export function analysis(slug: string): Analysis {
   if (!article) throw new Error(`Unknown analysis ${slug}`);
   return article;
 }
+
+export const ANALYSIS_TOPICS = [
+  {
+    slug: "finances-locales",
+    label: "Finances locales",
+    articles: ["nantes", "marseille", "lille", "comparer-les-communes", "paris"],
+  },
+  {
+    slug: "etat-et-europe",
+    label: "État et Europe",
+    articles: ["deficit-par-president", "europe"],
+  },
+  { slug: "services-publics", label: "Services publics", articles: ["rail", "etudiants"] },
+];
+
+export function analysisTopic(slug: string) {
+  return ANALYSIS_TOPICS.find((topic) => topic.articles.includes(slug));
+}
+
+const covers: Record<string, { alt: string; width: number }> = {
+  nantes: {
+    width: 1100,
+    alt: "La grue jaune des anciens chantiers navals domine les quais de la Loire.",
+  },
+  marseille: {
+    width: 760,
+    alt: "Le Vieux-Port de Marseille et la silhouette de Notre-Dame de la Garde.",
+  },
+  lille: { width: 760, alt: "Le beffroi de Lille surplombe les façades à pignons." },
+  "comparer-les-communes": { width: 1080, alt: "Les quais de Saône et les maisons du Vieux Lyon." },
+  "deficit-par-president": {
+    width: 1080,
+    alt: "Les rangées de sièges de l’hémicycle de l’Assemblée nationale.",
+  },
+  europe: { width: 1080, alt: "Le Parlement européen de Strasbourg se reflète dans l’eau." },
+  paris: { width: 1080, alt: "La façade de l’Hôtel de Ville de Paris vue depuis le parvis." },
+  rail: { width: 1080, alt: "Un train régional suit une courbe entre les champs." },
+  etudiants: {
+    width: 1080,
+    alt: "Des étudiants prennent des notes sur les bancs d’un amphithéâtre.",
+  },
+};
+
+export function analysisCover(slug: string) {
+  const cover = covers[slug];
+  return cover
+    ? {
+        ...cover,
+        src: `/images/analyses/${slug}.webp`,
+        thumbnail: `/images/analyses/miniatures/${slug}.webp`,
+      }
+    : null;
+}

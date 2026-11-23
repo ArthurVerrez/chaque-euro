@@ -1,25 +1,36 @@
 ---
 import Icon from "./Icon.astro";
-import type { Analysis } from "../lib/analyses";
+import { analysisCover, analysisTopic, type Analysis } from "../lib/analyses";
 import { formatDate } from "../lib/format";
 
 interface Props {
   article: Analysis;
-  topic: string;
-  cover?: string | undefined;
+  featured?: boolean;
 }
 
-const { article, topic, cover } = Astro.props;
+const { article, featured = false } = Astro.props;
+const topic = analysisTopic(article.slug);
+const cover = analysisCover(article.slug);
 const date = article.updated ?? article.published;
 ---
 
-<article class:list={["story", { illustrated: cover }]}>
+<article class:list={["story", { illustrated: featured && cover }]}>
   <a href={`/analyses/${article.slug}`} aria-labelledby={`title-${article.slug}`}>
-    {cover && <img src={cover} alt="" width="760" height="507" loading="lazy" decoding="async" />}
+    {cover && (
+      <img
+        class:list={{ thumbnail: !featured }}
+        src={featured ? cover.src : cover.thumbnail}
+        alt=""
+        width="360"
+        height="240"
+        loading="lazy"
+        decoding="async"
+      />
+    )}
     <div class="copy">
       <div class="meta">
         <span>
-          <Icon name={article.icon} size={15} /> {topic}
+          <Icon name={article.icon} size={15} /> {topic?.label ?? "Analyse"}
         </span>
         <time datetime={date}>
           {article.updated && "Mis à jour le "}
@@ -119,6 +130,38 @@ const date = article.updated ?? article.published;
 
   .illustrated .arrow {
     line-height: 1;
+  }
+
+  a:has(.thumbnail) {
+    grid-template-columns: clamp(5rem, 12vw, 9rem) minmax(0, 1fr) auto;
+  }
+
+  .thumbnail {
+    grid-column: auto;
+    aspect-ratio: 1.5;
+    margin: 0;
+  }
+
+  @media (max-width: 36rem) {
+    a:has(.thumbnail) {
+      grid-template-columns: minmax(0, 1fr) 4.75rem;
+      align-items: start;
+      gap: 0.6rem;
+    }
+
+    .thumbnail {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .thumbnail + .copy {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .thumbnail ~ .arrow {
+      display: none;
+    }
   }
 
   @media (min-width: 48rem) {

@@ -4,13 +4,23 @@ import Icon from "./Icon.astro";
 
 interface Props {
   items: { href: string; label: string; icon: IconName }[];
+  article?: boolean;
 }
 
-const { items } = Astro.props;
+const { items, article = false } = Astro.props;
+const Panel = article ? "details" : "div";
 ---
 
-<nav class="toc" aria-label="Sur cette page">
-  <div class="container">
+<nav class:list={["toc", { "article-toc": article }]} aria-label="Sur cette page">
+  <Panel class:list={{ container: !article }}>
+    {article && (
+      <summary>
+        <Icon name="list" size={16} /> Sommaire{" "}
+        <span>
+          <Icon name="expand" size={16} />
+        </span>
+      </summary>
+    )}
     <ul>
       {items.map((item) => (
         <li>
@@ -21,12 +31,26 @@ const { items } = Astro.props;
         </li>
       ))}
     </ul>
-  </div>
+  </Panel>
 </nav>
 
 <script>
   const list = document.querySelector<HTMLUListElement>(".toc ul");
+  const disclosure = document.querySelector<HTMLDetailsElement>(".article-toc > details");
   const links = [...document.querySelectorAll<HTMLAnchorElement>(".toc a")];
+  if (disclosure) {
+    const wide = matchMedia("(min-width: 60rem)");
+    const reset = () => {
+      disclosure.open = wide.matches;
+    };
+    reset();
+    wide.addEventListener("change", reset);
+    for (const link of links) {
+      link.addEventListener("click", () => {
+        if (!wide.matches) disclosure.open = false;
+      });
+    }
+  }
   const sections = links.flatMap((link) => {
     const target = document.querySelector(link.hash);
     return target ? [{ link, target }] : [];
@@ -36,7 +60,7 @@ const { items } = Astro.props;
     const current = sections
       .filter(({ target }) => target.getBoundingClientRect().top < line)
       .at(-1);
-    if (current && !current.link.hasAttribute("aria-current") && list) {
+    if (current && !current.link.hasAttribute("aria-current") && list && !disclosure) {
       const left = current.link.offsetLeft - (list.clientWidth - current.link.offsetWidth) / 2;
       list.scrollTo({ left, behavior: "smooth" });
     }
@@ -46,7 +70,7 @@ const { items } = Astro.props;
     }
   };
   const fade = () => {
-    if (!list) return;
+    if (!list || disclosure) return;
     list.classList.toggle("more-start", list.scrollLeft > 1);
     list.classList.toggle("more-end", list.scrollLeft + list.clientWidth < list.scrollWidth - 1);
   };
@@ -116,5 +140,86 @@ const { items } = Astro.props;
   a[aria-current="true"] {
     background: var(--navy-900);
     color: #fff;
+  }
+
+  .article-toc {
+    position: static;
+    z-index: auto;
+    align-self: start;
+    min-width: 0;
+    border-block: 1px solid var(--rule);
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    font-weight: 650;
+    font-size: 0.875rem;
+    color: var(--ink);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary span {
+    display: inline-flex;
+    margin-left: auto;
+  }
+
+  [open] > summary span {
+    transform: rotate(180deg);
+  }
+
+  .article-toc ul {
+    display: grid;
+    gap: 0;
+    padding: 0 0 0.65rem;
+    overflow: visible;
+    mask-image: none;
+  }
+
+  .article-toc a {
+    display: flex;
+    min-height: 2.45rem;
+    border-left: 2px solid var(--rule);
+    border-radius: 0;
+    padding: 0.3rem 0.65rem;
+    color: var(--subtle);
+    line-height: 1.3;
+    font-weight: 450;
+    font-size: 0.875rem;
+    white-space: normal;
+  }
+
+  .article-toc a :global(svg) {
+    flex: none;
+  }
+
+  .article-toc a[aria-current="true"],
+  .article-toc a:hover {
+    border-color: var(--red);
+    background: transparent;
+    color: var(--red);
+  }
+
+  @media (min-width: 60rem) {
+    .article-toc {
+      position: sticky;
+      top: calc(var(--sticky-top) + 1.25rem);
+      border-bottom: 0;
+    }
+  }
+
+  @media (pointer: coarse) {
+    .article-toc a {
+      min-height: 44px;
+    }
   }
 </style>
