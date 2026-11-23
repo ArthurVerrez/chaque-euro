@@ -1,5 +1,6 @@
 import csv
 import io
+import re
 import shutil
 import zipfile
 from pathlib import Path
@@ -15,6 +16,22 @@ ELECTIONS = (
     "legislatives-2024-t1",
     "legislatives-2024-t2",
 )
+REI_RATES = {
+    "rei-2021": ("REI_2021.xlsx", 2021),
+    "rei-2022": ("REI_2022.xlsx", 2022),
+    "rei-2023": ("REI_2023_V2.csv", 2023),
+    "rei-2024": ("REI_2024.csv", 2024),
+}
+REI_RATE_COLUMNS = {
+    "csv": ("DEP", "COM", "E12", "E22", "E32"),
+    "xlsx": (
+        "DEPARTEMENT",
+        "COMMUNE",
+        "FB - COMMUNE / TAUX NET",
+        "FB - SYNDICATS ET ORG. ASSIMILES / TAUX NET",
+        "FB - GFP / TAUX APPLICABLE SUR LE TERRITOIRE DE LA COMMUNE",
+    ),
+}
 
 
 def _extract(archive: str, suffix: str) -> Path:
@@ -27,6 +44,32 @@ def _extract(archive: str, suffix: str) -> Path:
     return destination
 
 
+def _load_rate_history(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -> None:
+    con.execute(
+        "create or replace table rei_rate_history (year integer, dep varchar, com varchar, "
+        "commune varchar, syndicate varchar, grouping varchar)"
+    )
+    for source_id, (member, year) in REI_RATES.items():
+        path = str(_extract(records[source_id].path, member))
+        if path.endswith(".csv"):
+            relation = (
+                "read_csv(?, delim = ';', header = true, all_varchar = true, encoding = 'latin-1')"
+            )
+            columns = REI_RATE_COLUMNS["csv"]
+        else:
+            relation = "read_xlsx(?, all_varchar = true)"
+            described = con.execute(f"describe select * from {relation}", [path]).fetchall()
+            names = {
+                re.sub(r"_x([0-9A-F]{4})_", lambda m: chr(int(m.group(1), 16)), row[0]): row[0]
+                for row in described
+            }
+            columns = tuple(names[label] for label in REI_RATE_COLUMNS["xlsx"])
+        selected = ", ".join(f'"{column}"' for column in columns)
+        con.execute(
+            f"insert into rei_rate_history select {year}, {selected} from {relation}", [path]
+        )
+
+
 def load(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -> None:
     archive = Path(records["rei-2025"].path)
     destination = archive.parent / "rei-2025-utf8.csv"
@@ -37,6 +80,7 @@ def load(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -> Non
     ):
         shutil.copyfileobj(io.TextIOWrapper(source, encoding="cp1252"), out)
     con.execute("set variable rei_path = ?", [str(destination)])
+    _load_rate_history(con, records)
     workbook = _extract(records["ircom-2025"].path, "ircom_communes_complet_revenus_2024.xlsx")
     con.execute("set variable ircom_path = ?", [str(workbook)])
     con.execute(
@@ -101,6 +145,14 @@ def validate(con: duckdb.DuckDBPyConnection) -> None:
             select count(*) from rei_rows
             where abs(rei_number(P31) - rei_number(P31_1) - rei_number(P31_2)
                 - rei_number(P31_3)) > 0.01
+        """,
+        "REI rate history": """
+            select count(*) from (select year from commune_tax_rates group by year
+                having count(*) < 30000)
+        """,
+        "REI duplicate rate": """
+            select count(*) from (select insee, year from commune_tax_rates
+                group by all having count(*) > 1)
         """,
         "IRCOM duplicate total": """
             select count(*) from (select insee from commune_income group by all having count(*) > 1)

@@ -83,6 +83,10 @@ class SourceDatesTests(unittest.TestCase):
                 "('region', 2025), ('epci', 2025)) t(level, year)"
             )
             con.execute("create table commune_taxes as select 2025 as year")
+            con.execute(
+                "create table commune_tax_rates as select * from "
+                "(values (2021), (2022), (2023), (2024), (2025)) t(year)"
+            )
             con.execute("create table commune_income as select 2024 as revenue_year")
             sql = Path(__file__).resolve().parents[1] / "sql/95_local_source_dates.sql"
             con.execute(sql.read_text())
@@ -93,4 +97,6 @@ class SourceDatesTests(unittest.TestCase):
             self.assertEqual(dates["ofgl-regions"], "2025-12-31")
             self.assertEqual(dates["ofgl-epci"], "2025-12-31")
             self.assertEqual(dates["rei-2025"], "2025-12-31")
+            self.assertEqual(dates["rei-2021"], "2021-12-31")
+            self.assertEqual(dates["rei-2024"], "2024-12-31")
             self.assertEqual(dates["ircom-2025"], "2024-12-31")

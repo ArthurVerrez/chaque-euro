@@ -63,6 +63,7 @@ DATA_TABLES = (
     "nantes_consolidation",
     "commune_spending_benchmarks",
     "commune_taxes",
+    "commune_tax_rates",
     "tax_strata",
     "commune_income",
     "commune_turnout",
@@ -209,6 +210,10 @@ DOWNLOADS = {
         "pondérés par la population."
     ),
     "commune_taxes": "REI 2025, bases en euros et taux en pourcentage, par bénéficiaire et zone.",
+    "commune_tax_rates": (
+        "Taux nets de taxe foncière sur les propriétés bâties, 2021-2025, en pourcentage : "
+        "commune, syndicats et groupement à fiscalité propre."
+    ),
     "tax_strata": "Médianes REI 2025 par strate, taxe, bénéficiaire et zone.",
     "commune_income": (
         "IRCOM, revenus 2024, foyers et montants convertis en euros, secret fiscal conservé."

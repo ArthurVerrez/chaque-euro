@@ -113,6 +113,7 @@ select 'ofgl-departements', count(*), 'Comptes 2018-2025, départements et colle
 union all select 'ofgl-regions', count(*), 'Comptes 2018-2025, régions et CTU' from local_account_rows where level = 'region'
 union all select 'ofgl-epci', count(*), 'Comptes 2018-2025, groupements à fiscalité propre' from local_account_rows where level = 'epci'
 union all select 'rei-2025', count(*), 'Fiscalité 2025, bases en euros, taux en pourcentage' from rei_rows
+union all select 'rei-' || year, count(*), 'Taux de taxe foncière bâtie par commune' from commune_tax_rates where year < 2025 group by year
 union all select 'ircom-2025', count(*), 'Revenus 2024 déclarés en 2025, cellules secrètes non reconstituées' from commune_income
 union all select source_id, count(*), 'Participation, inscrits et votants, périmètre du scrutin' from commune_turnout group by source_id;
 

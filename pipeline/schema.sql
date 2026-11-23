@@ -512,6 +512,15 @@ CREATE TABLE commune_taxes (
   PRIMARY KEY (insee, year, tax, authority, zone)
 );
 
+CREATE TABLE commune_tax_rates (
+  insee TEXT NOT NULL,
+  year INTEGER NOT NULL,
+  commune_rate REAL NOT NULL,
+  syndicate_rate REAL NOT NULL,
+  grouping_rate REAL NOT NULL,
+  PRIMARY KEY (insee, year)
+) WITHOUT ROWID;
+
 CREATE TABLE tax_strata (
   stratum TEXT NOT NULL,
   year INTEGER NOT NULL,

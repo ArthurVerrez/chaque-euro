@@ -1406,6 +1406,62 @@ usage = "Fiscalité directe locale 2025 : recensement des éléments d’imposit
 limits = ["Bases en euros, taux en pourcentage. Les taux ne donnent pas le montant payé par un foyer.", "Les bases peuvent différer selon le bénéficiaire. Les cellules non renseignées restent manquantes."]
 
 [[sources]]
+id = "rei-2021"
+short_name = "DGFiP"
+name = "Fiscalité directe locale 2021 : recensement des éléments d’imposition"
+publisher = "DGFiP"
+page_url = "https://www.data.gouv.fr/datasets/impots-locaux-fichier-de-recensement-des-elements-dimposition-a-la-fiscalite-directe-locale-rei-4"
+file_url = "https://data.economie.gouv.fr/api/v2/catalog/datasets/impots-locaux-fichier-de-recensement-des-elements-dimposition-a-la-fiscalite-dir/attachments/rei_2021_fichier_notice_trace_zip"
+filename = "rei-2021.zip"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Fiscalité directe locale 2021 : recensement des éléments d’imposition"
+limits = ["Bases en euros, taux en pourcentage. Les taux ne donnent pas le montant payé par un foyer.", "Les bases peuvent différer selon le bénéficiaire. Les cellules non renseignées restent manquantes."]
+
+[[sources]]
+id = "rei-2022"
+short_name = "DGFiP"
+name = "Fiscalité directe locale 2022 : recensement des éléments d’imposition"
+publisher = "DGFiP"
+page_url = "https://www.data.gouv.fr/datasets/impots-locaux-fichier-de-recensement-des-elements-dimposition-a-la-fiscalite-directe-locale-rei-4"
+file_url = "https://data.economie.gouv.fr/api/v2/catalog/datasets/impots-locaux-fichier-de-recensement-des-elements-dimposition-a-la-fiscalite-dir/attachments/rei_2022_fichier_notice_trace_zip"
+filename = "rei-2022.zip"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Fiscalité directe locale 2022 : recensement des éléments d’imposition"
+limits = ["Bases en euros, taux en pourcentage. Les taux ne donnent pas le montant payé par un foyer.", "Les bases peuvent différer selon le bénéficiaire. Les cellules non renseignées restent manquantes."]
+
+[[sources]]
+id = "rei-2023"
+short_name = "DGFiP"
+name = "Fiscalité directe locale 2023 : recensement des éléments d’imposition"
+publisher = "DGFiP"
+page_url = "https://www.data.gouv.fr/datasets/impots-locaux-fichier-de-recensement-des-elements-dimposition-a-la-fiscalite-directe-locale-rei-4"
+file_url = "https://data.economie.gouv.fr/api/v2/catalog/datasets/impots-locaux-fichier-de-recensement-des-elements-dimposition-a-la-fiscalite-dir/attachments/rei_2023_fichier_notice_trace_zip"
+filename = "rei-2023.zip"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Fiscalité directe locale 2023 : recensement des éléments d’imposition"
+limits = ["Bases en euros, taux en pourcentage. Les taux ne donnent pas le montant payé par un foyer.", "Les bases peuvent différer selon le bénéficiaire. Les cellules non renseignées restent manquantes."]
+
+[[sources]]
+id = "rei-2024"
+short_name = "DGFiP"
+name = "Fiscalité directe locale 2024 : recensement des éléments d’imposition"
+publisher = "DGFiP"
+page_url = "https://www.data.gouv.fr/datasets/impots-locaux-fichier-de-recensement-des-elements-dimposition-a-la-fiscalite-directe-locale-rei-4"
+file_url = "https://data.economie.gouv.fr/api/v2/catalog/datasets/impots-locaux-fichier-de-recensement-des-elements-dimposition-a-la-fiscalite-dir/attachments/rei_2024_fichier_notice_trace_zip"
+filename = "rei-2024.zip"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Fiscalité directe locale 2024 : recensement des éléments d’imposition"
+limits = ["Bases en euros, taux en pourcentage. Les taux ne donnent pas le montant payé par un foyer.", "Les bases peuvent différer selon le bénéficiaire. Les cellules non renseignées restent manquantes."]
+
+[[sources]]
 id = "ircom-2025"
 short_name = "DGFiP"
 name = "Impôt sur les revenus de 2024 déclarés en 2025"
