@@ -130,14 +130,17 @@ export function cityStats(cities: LargeCity[], city: LargeCity): CityStat[] {
   });
 }
 
+const NOTABLE_CHANGE = 0.25;
 const edge = (rank: number, count: number) => Math.min(rank, count + 1 - rank);
+const notableChange = (stat: CityStat) =>
+  stat.changeRank !== null && Math.abs(stat.change ?? 0) >= NOTABLE_CHANGE;
 const weightedEdge = (rank: number, count: number) => (rank <= count / 2 ? rank : count + 2 - rank);
 
 export function standoutStats(stats: CityStat[], limit = 4): CityStat[] {
   const score = (stat: CityStat) =>
     Math.min(
       weightedEdge(stat.rank, stat.count),
-      stat.changeRank === null ? Infinity : weightedEdge(stat.changeRank, stat.changeCount),
+      notableChange(stat) ? weightedEdge(stat.changeRank!, stat.changeCount) : Infinity,
     ) -
     Math.min(Math.abs(stat.change ?? 0), 1) +
     METRICS.indexOf(stat.metric) * 0.25;
@@ -170,8 +173,7 @@ export function cityLabel(city: LargeCity, cities: LargeCity[]): string {
 
 export function leadsWithChange(stat: CityStat): boolean {
   return (
-    stat.changeRank !== null &&
-    edge(stat.changeRank, stat.changeCount) < edge(stat.rank, stat.count)
+    notableChange(stat) && edge(stat.changeRank!, stat.changeCount) < edge(stat.rank, stat.count)
   );
 }
 
