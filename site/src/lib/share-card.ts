@@ -17,9 +17,10 @@ export interface ShareCard {
 
 const WIDTH = 1200;
 const HEIGHT = 630;
-const NAVY = "#0d2149";
+export const NAVY = "#0d2149";
+export const BLUE = "#1d4fae";
 const SECONDARY = "#3b4556";
-const MUTED = "#5a6474";
+export const MUTED = "#5a6474";
 
 const bytes = (dataUrl: string) =>
   Uint8Array.from(atob(dataUrl.slice(dataUrl.indexOf(",") + 1)), (char) => char.charCodeAt(0))
@@ -28,15 +29,15 @@ const fonts = [
   { name: "Inter", data: bytes(regularFont), weight: 400 as const },
   { name: "Inter", data: bytes(boldFont), weight: 800 as const },
 ];
-const logoUrl = `data:image/svg+xml;base64,${btoa(logo)}`;
+export const logoUrl = `data:image/svg+xml;base64,${btoa(logo)}`;
 let ready: Promise<unknown> | undefined;
 
-type Style = Record<string, string | number>;
-interface Node {
+export type Style = Record<string, string | number>;
+export interface Node {
   type: string;
   props: { style?: Style; src?: string; width?: number; height?: number; children?: unknown };
 }
-const box = (style: Style, children?: unknown): Node => ({
+export const box = (style: Style, children?: unknown): Node => ({
   type: "div",
   props: { style, children },
 });
@@ -80,7 +81,7 @@ function layout(card: ShareCard): Node {
                 fontWeight: 800,
                 letterSpacing: -1.5,
                 marginTop: 28,
-                color: "#1d4fae",
+                color: BLUE,
               },
               card.figure,
             )
@@ -97,9 +98,17 @@ function layout(card: ShareCard): Node {
   );
 }
 
-export async function renderShareCard(card: ShareCard): Promise<Uint8Array<ArrayBuffer>> {
+export async function renderPng(
+  node: Node,
+  width: number,
+  height: number,
+): Promise<Uint8Array<ArrayBuffer>> {
   ready ??= Promise.all([init(layoutWasm), initWasm(resvgWasm)]);
   await ready;
-  const svg = await satori(layout(card) as never, { width: WIDTH, height: HEIGHT, fonts });
+  const svg = await satori(node as never, { width, height, fonts });
   return new Resvg(svg).render().asPng().slice();
+}
+
+export function renderShareCard(card: ShareCard): Promise<Uint8Array<ArrayBuffer>> {
+  return renderPng(layout(card), WIDTH, HEIGHT);
 }
