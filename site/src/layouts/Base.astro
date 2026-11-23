@@ -4,7 +4,6 @@ import "@fontsource-variable/inter";
 import "../styles/global.css";
 import Icon from "../components/Icon.astro";
 import { canonicalUrl, PUBLIC_ORIGIN } from "../lib/site";
-import { ANALYSES } from "../lib/analyses";
 import type { IconName } from "../lib/icons";
 
 interface Props {
@@ -27,7 +26,7 @@ interface NavItem {
 interface NavGroup {
   title: string;
   items: NavItem[];
-  disclosure?: { icon: IconName; href?: string };
+  disclosure?: IconName;
 }
 const groups: NavGroup[] = [
   {
@@ -41,16 +40,8 @@ const groups: NavGroup[] = [
         label: "Sécurité sociale",
         icon: "socialSecurity",
       },
+      { href: "/analyses", label: "Analyses", icon: "analysis" },
     ],
-  },
-  {
-    title: "Analyses",
-    disclosure: { icon: "analysis", href: "/analyses" },
-    items: ANALYSES.map((article) => ({
-      href: `/analyses/${article.slug}`,
-      label: article.short,
-      icon: article.icon,
-    })),
   },
   {
     title: "Près de vous",
@@ -78,7 +69,7 @@ const groups: NavGroup[] = [
   },
   {
     title: "Institutions",
-    disclosure: { icon: "state" },
+    disclosure: "state",
     items: [
       { href: "/administrations", label: "Administrations", icon: "administration" },
       { href: "/argent-public/operateurs", label: "Opérateurs de l’État", icon: "building" },
@@ -87,7 +78,7 @@ const groups: NavGroup[] = [
   },
   {
     title: "Vie politique",
-    disclosure: { icon: "vote" },
+    disclosure: "vote",
     items: [
       { href: "/votes", label: "Votes", icon: "vote" },
       { href: "/documents/dossiers", label: "Dossiers législatifs", icon: "legislation" },
@@ -100,7 +91,7 @@ const groups: NavGroup[] = [
   },
   {
     title: "Sources et données",
-    disclosure: { icon: "source" },
+    disclosure: "source",
     items: [
       { href: "/methodologie", label: "Méthode et sources", icon: "method" },
       { href: "/lexique", label: "Lexique", icon: "book" },
@@ -108,10 +99,9 @@ const groups: NavGroup[] = [
     ],
   },
 ];
-const exact = new Set(["/", "/analyses"]);
 const current = (href: string) =>
   path === href ||
-  (!exact.has(href) && href !== "/argent-public" && path.startsWith(`${href}/`)) ||
+  (href !== "/" && href !== "/argent-public" && path.startsWith(`${href}/`)) ||
   (href === "/argent-public" && path === "/argent-public/etat") ||
   (href === "/organisations" && path.startsWith("/organisation/")) ||
   (href === "/communes" && (path.startsWith("/commune/") || path.startsWith("/departement/")))
@@ -197,30 +187,13 @@ const current = (href: string) =>
         <nav aria-label="Navigation principale">
           {groups.map(({ title, items, disclosure }) => {
             const Group = disclosure ? "details" : "div";
-            const href = disclosure?.href;
             return (
-              <div class:list={["group", { branch: disclosure, "has-index": href }]}>
-                {disclosure?.href && (
-                  <a
-                    class="group-index"
-                    href={disclosure.href}
-                    aria-current={current(disclosure.href)}
-                  >
-                    <Icon name={disclosure.icon} size={17} />
-                    {title}
-                  </a>
-                )}
-                <Group
-                  open={disclosure && (path === href || items.some((item) => current(item.href)))}
-                >
+              <div class:list={["group", { branch: disclosure }]}>
+                <Group open={disclosure && items.some((item) => current(item.href))}>
                   {disclosure ? (
-                    <summary aria-label={href ? `Liste des ${title.toLowerCase()}` : undefined}>
-                      {!href && (
-                        <>
-                          <Icon name={disclosure.icon} size={17} />
-                          {title}
-                        </>
-                      )}
+                    <summary>
+                      <Icon name={disclosure} size={17} />
+                      {title}
                       <span class="chevron">
                         <Icon name="expand" size={16} />
                       </span>
@@ -556,7 +529,6 @@ const current = (href: string) =>
   }
 
   .branch {
-    position: relative;
     margin-top: 0.875rem;
     border-top: 1px solid var(--border);
   }
@@ -565,8 +537,7 @@ const current = (href: string) =>
     margin-top: 0;
   }
 
-  .branch summary,
-  .group .group-index {
+  .branch summary {
     display: flex;
     align-items: center;
     gap: 0.625rem;
@@ -598,17 +569,6 @@ const current = (href: string) =>
 
   details[open] > summary .chevron {
     transform: rotate(180deg);
-  }
-
-  .group-index {
-    position: absolute;
-    top: 0;
-    inset-inline: 0 2.75rem;
-  }
-
-  .has-index summary {
-    width: 2.75rem;
-    margin-left: auto;
   }
 
   .branch details > ul {

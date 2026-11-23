@@ -57,28 +57,12 @@ const { id, title, icon, provenance, illustration } = Astro.props;
   .chapter + .chapter {
     margin-top: clamp(2.35rem, 4.5vw, 4.25rem);
     padding-top: clamp(1.5rem, 2.8vw, 2.5rem);
-    border-top: 1px solid var(--rule);
+    border-top: 1px solid var(--border);
   }
 
   h2 {
-    display: flex;
-    align-items: baseline;
-    gap: 0.6rem;
     max-width: 36ch;
-    margin: 0 0 1rem;
-    color: var(--ink);
-    font: 400 clamp(2rem, 1.5rem + 1.4vw, 3.15rem) / 1.08 var(--display);
-    letter-spacing: -0.02em;
-  }
-
-  h2 > :global(svg) {
-    flex: none;
-    width: 1.125rem;
-    height: 1.125rem;
-    margin: 0;
-    padding: 0;
-    background: transparent;
-    color: var(--red);
+    margin-bottom: 1rem;
   }
 
   .narrative,
@@ -89,8 +73,8 @@ const { id, title, icon, provenance, illustration } = Astro.props;
   .prose {
     max-width: 62ch;
     min-width: 0;
-    color: var(--ink);
-    font: 400 clamp(1.1rem, 1.02rem + 0.28vw, 1.26rem) / 1.65 var(--reading-font);
+    font-size: 1.0625rem;
+    line-height: 1.7;
     overflow-wrap: break-word;
   }
 
@@ -109,6 +93,7 @@ const { id, title, icon, provenance, illustration } = Astro.props;
 
   .vignette img {
     display: block;
+    border-radius: var(--radius);
     width: 100%;
     height: auto;
     aspect-ratio: 1.5;
@@ -118,27 +103,22 @@ const { id, title, icon, provenance, illustration } = Astro.props;
   .vignette figcaption {
     max-width: 55ch;
     margin-top: 0.4rem;
-    color: var(--subtle);
-    font: 400 0.8125rem / 1.5 var(--sans);
-    letter-spacing: normal;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    line-height: 1.5;
   }
 
   .exhibit {
     min-width: 0;
     margin: clamp(1.1rem, 2vw, 1.65rem) 0 0;
     padding: clamp(0.85rem, 2vw, 1.6rem);
-    border: 1px solid var(--rule);
-    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
   }
 
   .exhibit:has(> :global(.public-table)) {
     padding: 0;
-  }
-
-  .exhibit :global(.public-table) {
     border: 0;
-    border-radius: 0;
-    box-shadow: none;
   }
 
   .exhibit :global(table th),

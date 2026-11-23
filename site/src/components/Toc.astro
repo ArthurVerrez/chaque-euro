@@ -147,7 +147,7 @@ const Panel = article ? "details" : "div";
     z-index: auto;
     align-self: start;
     min-width: 0;
-    border-block: 1px solid var(--rule);
+    border-block: 1px solid var(--border);
     background: transparent;
     backdrop-filter: none;
   }
@@ -159,7 +159,7 @@ const Panel = article ? "details" : "div";
     min-height: 44px;
     font-weight: 650;
     font-size: 0.875rem;
-    color: var(--ink);
+    color: var(--text);
     cursor: pointer;
     list-style: none;
   }
@@ -188,10 +188,10 @@ const Panel = article ? "details" : "div";
   .article-toc a {
     display: flex;
     min-height: 2.45rem;
-    border-left: 2px solid var(--rule);
+    border-left: 2px solid var(--border);
     border-radius: 0;
     padding: 0.3rem 0.65rem;
-    color: var(--subtle);
+    color: var(--text-muted);
     line-height: 1.3;
     font-weight: 450;
     font-size: 0.875rem;
@@ -204,9 +204,9 @@ const Panel = article ? "details" : "div";
 
   .article-toc a[aria-current="true"],
   .article-toc a:hover {
-    border-color: var(--red);
+    border-color: var(--link);
     background: transparent;
-    color: var(--red);
+    color: var(--link);
   }
 
   @media (min-width: 60rem) {

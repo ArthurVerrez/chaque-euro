@@ -50,7 +50,7 @@ const date = article.updated ?? article.published;
   .story {
     min-width: 0;
     grid-column: 1 / -1;
-    border-top: 1px solid var(--rule);
+    border-top: 1px solid var(--border);
   }
 
   a {
@@ -59,7 +59,7 @@ const date = article.updated ?? article.published;
     align-items: center;
     gap: 0 1rem;
     padding-block: 1.35rem;
-    color: var(--ink);
+    color: var(--text);
     text-decoration: none;
   }
 
@@ -74,38 +74,40 @@ const date = article.updated ?? article.published;
     gap: 0.3rem 0.85rem;
     font-size: 0.75rem;
     line-height: 1.4;
-    color: var(--subtle);
+    color: var(--text-muted);
   }
 
   .meta span {
     gap: 0.375rem;
-    color: var(--ink);
+    color: var(--text);
     font-weight: 650;
   }
 
   h3 {
     margin: 0.45rem 0 0.35rem;
-    color: var(--ink);
-    font: 400 clamp(1.8rem, 1.45rem + 1.2vw, 2.6rem) / 1.06 var(--display);
-    letter-spacing: -0.018em;
+    color: var(--text);
+    font-size: clamp(1.2rem, 1.05rem + 0.5vw, 1.5rem);
+    font-weight: 750;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
   }
 
   p {
     max-width: 72ch;
     margin: 0;
-    color: var(--subtle);
+    color: var(--text-muted);
     font-size: 0.9375rem;
     line-height: 1.55;
   }
 
   .arrow {
-    color: var(--subtle);
+    color: var(--text-muted);
     font-size: 1.35rem;
   }
 
   a:is(:hover, :focus-visible) h3,
   a:hover .arrow {
-    color: var(--red);
+    color: var(--link);
   }
 
   .illustrated {
@@ -119,6 +121,7 @@ const date = article.updated ?? article.published;
 
   img {
     display: block;
+    border-radius: var(--radius);
     width: 100%;
     height: auto;
     aspect-ratio: 2.1;

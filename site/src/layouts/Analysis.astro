@@ -1,6 +1,4 @@
 ---
-import "@fontsource/spectral/latin-400.css";
-import "../styles/journal.css";
 import Base from "./Base.astro";
 import ArchiveStory from "../components/ArchiveStory.astro";
 import Answer from "../components/Answer.astro";
@@ -32,7 +30,7 @@ const others = ANALYSES.filter(
 ---
 
 <Base title={article.title} description={answer} image={`/partage/analyse/${article.slug}.png`}>
-  <div class="analysis editorial">
+  <div class="analysis">
     <article aria-labelledby="article-title">
       <header id="en-bref" class="container">
         <Breadcrumbs items={[{ label: "Analyses", href: "/analyses" }, { label: article.short }]} />
@@ -126,10 +124,7 @@ const others = ANALYSES.filter(
 
 <style>
   .analysis {
-    --reading-font: "Spectral", Georgia, serif;
     padding: 0.45rem 0 clamp(3rem, 6vw, 6rem);
-    color: var(--ink);
-    background: var(--paper);
   }
 
   .opening {
@@ -138,7 +133,6 @@ const others = ANALYSES.filter(
     gap: 1rem;
     margin-top: 0.6rem;
     padding-block: clamp(1.1rem, 2.5vw, 2.4rem) 1.1rem;
-    border-top: 4px double var(--ink);
   }
 
   .byline,
@@ -150,14 +144,14 @@ const others = ANALYSES.filter(
 
   .byline {
     gap: 0.25rem 0.9rem;
-    color: var(--subtle);
+    color: var(--text-muted);
     font-size: 0.8rem;
     line-height: 1.5;
   }
 
   .byline a {
     gap: 0.375rem;
-    color: var(--red);
+    color: var(--link);
     font-weight: 700;
     text-decoration: none;
   }
@@ -168,13 +162,11 @@ const others = ANALYSES.filter(
 
   h1 {
     margin: 0.65rem 0 0;
-    color: var(--ink);
-    font: 400 clamp(2.65rem, 1.8rem + 2.6vw, 4.65rem) / 1.02 var(--display);
-    letter-spacing: -0.026em;
   }
 
   .cover {
     display: block;
+    border-radius: var(--radius);
     width: 100%;
     height: auto;
     aspect-ratio: 1.5;
@@ -184,15 +176,15 @@ const others = ANALYSES.filter(
   .standfirst :global(.answer) {
     max-width: 64ch;
     margin: 0;
-    color: var(--ink);
-    font: 400 clamp(1.125rem, 1rem + 0.4vw, 1.45rem) / 1.5 var(--reading-font);
-    letter-spacing: normal;
+    color: var(--text-secondary);
+    font-size: clamp(1.0625rem, 1rem + 0.25vw, 1.25rem);
+    line-height: 1.6;
     text-wrap: pretty;
   }
 
   .standfirst :global(strong) {
     font-weight: 650;
-    color: var(--ink);
+    color: var(--text);
   }
 
   .evidence {
@@ -201,7 +193,7 @@ const others = ANALYSES.filter(
     align-items: start;
     gap: 0.5rem 0.65rem;
     padding-bottom: 1.15rem;
-    border-bottom: 1px solid var(--rule);
+    border-bottom: 1px solid var(--border);
   }
 
   .evidence :global(.provenance) {
@@ -263,33 +255,12 @@ const others = ANALYSES.filter(
   .method {
     margin-top: clamp(2rem, 3vw, 3rem);
     padding-top: 1.5rem;
-    border-top: 1px solid var(--rule);
+    border-top: 1px solid var(--border);
     scroll-margin-top: calc(var(--sticky-top) + 1rem);
   }
 
-  .method h2,
-  .end-head h2 {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    margin: 0 0 0.8rem;
-    color: var(--ink);
-    font: 400 clamp(1.95rem, 1.5rem + 1vw, 2.65rem) / 1.1 var(--display);
-  }
-
-  .analysis h2 > :global(svg) {
-    width: 1.25rem;
-    height: 1.25rem;
-    flex: none;
-    margin: 0;
-    padding: 0;
-    background: transparent;
-    color: var(--red);
-  }
-
-  .method :global(.explainer) {
-    background: var(--surface);
-    border-color: var(--rule);
+  .method h2 {
+    margin-bottom: 0.8rem;
   }
 
   .method :global(.explainer .body) {
@@ -307,7 +278,7 @@ const others = ANALYSES.filter(
     flex-wrap: wrap;
     gap: 0.65rem 1rem;
     padding: 1.2rem 0 0.9rem;
-    border-top: 4px double var(--ink);
+    border-top: 1px solid var(--border);
   }
 
   .end-head h2 {
