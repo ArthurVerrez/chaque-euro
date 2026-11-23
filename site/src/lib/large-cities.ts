@@ -8,17 +8,26 @@ export const LAST_YEAR = 2025;
 export interface Metric {
   item: string;
   label: string;
-  of: string;
   subject: string;
-  agreement: "fs" | "fp" | "mp";
+  agreement: "fs" | "fp" | "ms" | "mp";
   icon: IconName;
+  rate?: boolean;
+  since?: number;
 }
 
 export const METRICS: Metric[] = [
   {
+    item: "taxe_fonciere",
+    label: "Taux de taxe foncière",
+    subject: "le taux de taxe foncière",
+    agreement: "ms",
+    icon: "housing",
+    rate: true,
+    since: 2021,
+  },
+  {
     item: "dette",
     label: "Dette au 31 décembre",
-    of: "de dette",
     subject: "la dette par habitant",
     agreement: "fs",
     icon: "debt",
@@ -26,7 +35,6 @@ export const METRICS: Metric[] = [
   {
     item: "impots_locaux",
     label: "Impôts locaux",
-    of: "d’impôts locaux",
     subject: "les impôts locaux par habitant",
     agreement: "mp",
     icon: "localTax",
@@ -34,7 +42,6 @@ export const METRICS: Metric[] = [
   {
     item: "depenses",
     label: "Dépenses",
-    of: "de dépenses",
     subject: "les dépenses par habitant",
     agreement: "fp",
     icon: "spending",
@@ -42,7 +49,6 @@ export const METRICS: Metric[] = [
   {
     item: "personnel",
     label: "Frais de personnel",
-    of: "de frais de personnel",
     subject: "les frais de personnel par habitant",
     agreement: "mp",
     icon: "staff",
@@ -50,7 +56,6 @@ export const METRICS: Metric[] = [
   {
     item: "equipement",
     label: "Travaux et équipements",
-    of: "de travaux et d’équipements",
     subject: "les travaux et équipements par habitant",
     agreement: "mp",
     icon: "works",
@@ -58,7 +63,6 @@ export const METRICS: Metric[] = [
   {
     item: "interets",
     label: "Intérêts de la dette",
-    of: "d’intérêts",
     subject: "les intérêts de la dette par habitant",
     agreement: "mp",
     icon: "interest",
@@ -66,7 +70,6 @@ export const METRICS: Metric[] = [
   {
     item: "subventions_privees",
     label: "Subventions aux associations et organismes privés",
-    of: "de subventions aux associations et organismes privés",
     subject: "les subventions aux associations par habitant",
     agreement: "fp",
     icon: "association",
@@ -74,7 +77,6 @@ export const METRICS: Metric[] = [
   {
     item: "dgf",
     label: "Dotation globale de fonctionnement de l’État",
-    of: "de dotation de l’État",
     subject: "la dotation de l’État par habitant",
     agreement: "fs",
     icon: "state",
@@ -82,6 +84,14 @@ export const METRICS: Metric[] = [
 ];
 
 export const METRIC_ITEMS = METRICS.map((metric) => metric.item);
+
+export const firstYear = (metric: Metric) => metric.since ?? FIRST_YEAR;
+
+export const formatValue = (metric: Metric, value: number) =>
+  metric.rate ? formatPercent(value / 100, 2) : formatEuro(value);
+
+export const valueNote = (metric: Metric, year: number) =>
+  metric.rate ? `taux net en ${year}` : `par habitant en ${year}`;
 
 export interface CityStat {
   metric: Metric;
@@ -101,23 +111,23 @@ export function median(values: number[]): number {
   return sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
 }
 
-const changeOf = (city: LargeCity, item: string) => {
-  const first = city.perCapita[item]?.[FIRST_YEAR];
-  const last = city.perCapita[item]?.[LAST_YEAR];
+const changeOf = (city: LargeCity, metric: Metric) => {
+  const first = city.values[metric.item]?.[firstYear(metric)];
+  const last = city.values[metric.item]?.[LAST_YEAR];
   return first && last !== undefined ? last / first - 1 : null;
 };
 
 export function cityStats(cities: LargeCity[], city: LargeCity): CityStat[] {
   return METRICS.flatMap((metric) => {
-    const last = city.perCapita[metric.item]?.[LAST_YEAR];
+    const last = city.values[metric.item]?.[LAST_YEAR];
     if (last === undefined) return [];
-    const levels = cities.flatMap((other) => other.perCapita[metric.item]?.[LAST_YEAR] ?? []);
-    const changes = cities.flatMap((other) => changeOf(other, metric.item) ?? []);
-    const change = changeOf(city, metric.item);
+    const levels = cities.flatMap((other) => other.values[metric.item]?.[LAST_YEAR] ?? []);
+    const changes = cities.flatMap((other) => changeOf(other, metric) ?? []);
+    const change = changeOf(city, metric);
     return [
       {
         metric,
-        first: city.perCapita[metric.item]?.[FIRST_YEAR] ?? null,
+        first: city.values[metric.item]?.[firstYear(metric)] ?? null,
         last,
         change,
         rank: levels.filter((value) => value > last).length + 1,
@@ -162,7 +172,7 @@ export function changeRankText(rank: number, count: number): string {
 }
 
 export function medianByYear(cities: LargeCity[], item: string, years: number[]): number[] {
-  return years.map((year) => median(cities.flatMap((city) => city.perCapita[item]?.[year] ?? [])));
+  return years.map((year) => median(cities.flatMap((city) => city.values[item]?.[year] ?? [])));
 }
 
 export function cityLabel(city: LargeCity, cities: LargeCity[]): string {
@@ -171,40 +181,50 @@ export function cityLabel(city: LargeCity, cities: LargeCity[]): string {
     : city.name;
 }
 
+export function ofCity(name: string): string {
+  if (name.startsWith("Le ")) return `du ${name.slice(3)}`;
+  if (name.startsWith("Les ")) return `des ${name.slice(4)}`;
+  return /^[AEIOUYÉÈÂ]/i.test(name) ? `d’${name}` : `de ${name}`;
+}
+
 export function leadsWithChange(stat: CityStat): boolean {
   return (
     notableChange(stat) && edge(stat.changeRank!, stat.changeCount) < edge(stat.rank, stat.count)
   );
 }
 
-export function statSentence(stat: CityStat, city: string, first = true): string {
+export function statSentence(stat: CityStat, city: string): string {
+  const { metric } = stat;
+  const plural = metric.agreement[1] === "p";
+  const subject = `${metric.subject.charAt(0).toUpperCase()}${metric.subject.slice(1)} ${ofCity(city)}`;
   if (leadsWithChange(stat) && stat.first !== null && stat.change !== null) {
-    return `${first ? city : "Elle"} est passée de ${formatEuro(stat.first)} à ${formatEuro(stat.last)} ${stat.metric.of} par habitant entre ${FIRST_YEAR} et ${LAST_YEAR} (${formatChange(stat.change)}), la ${changeRankText(stat.changeRank!, stat.changeCount)}.`;
+    const passed = `passé${metric.agreement[0] === "f" ? "e" : ""}${plural ? "s" : ""}`;
+    return `${subject} ${plural ? "sont" : "est"} ${passed} de ${formatValue(metric, stat.first)} à ${formatValue(metric, stat.last)} entre ${firstYear(metric)} et ${LAST_YEAR} (${formatChange(stat.change)}), la ${changeRankText(stat.changeRank!, stat.changeCount)}.`;
   }
-  return `${first ? `En ${LAST_YEAR}, ${city} compte` : "Elle compte aussi"} ${formatEuro(stat.last)} ${stat.metric.of} par habitant, le ${rankText(stat.rank, stat.count)}.`;
+  return `En ${LAST_YEAR}, ${subject.charAt(0).toLowerCase()}${subject.slice(1)} ${plural ? "atteignent" : "atteint"} ${formatValue(metric, stat.last)}, le ${rankText(stat.rank, stat.count)}.`;
 }
 
 export function headline(stat: CityStat, city: string): string {
   const { subject, agreement } = stat.metric;
+  const feminine = agreement[0] === "f";
+  const plural = agreement[1] === "p";
   if (leadsWithChange(stat) && stat.change !== null) {
-    const verb = agreement === "fs" ? "a" : "ont";
     const moved =
       stat.change >= 1
         ? "plus que doublé"
         : `${stat.change < 0 ? "baissé" : "augmenté"} de ${formatPercent(Math.abs(stat.change))}`;
-    return `${city} : ${subject} ${verb} ${moved} depuis ${FIRST_YEAR}`;
+    return `${city} : ${subject} ${plural ? "ont" : "a"} ${moved} depuis ${firstYear(stat.metric)}`;
   }
-  const feminine = agreement[0] === "f";
-  const plural = agreement[1] === "p";
   const groups = `des ${stat.count} grandes villes`;
+  const article = plural ? "les" : feminine ? "la" : "le";
   if (stat.rank > stat.count / 2) {
-    const lowest = feminine ? (plural ? "basses" : "basse") : "bas";
+    const lowest = feminine ? `basse${plural ? "s" : ""}` : "bas";
     return stat.rank === stat.count
-      ? `${city} : ${subject} ${feminine && !plural ? "la" : "les"} plus ${lowest} ${groups}`
+      ? `${city} : ${subject} ${article} plus ${lowest} ${groups}`
       : `${city} : ${subject} parmi les plus ${feminine ? "basses" : "bas"} ${groups}`;
   }
   const highest = `élevé${feminine ? "e" : ""}${plural ? "s" : ""}`;
   return stat.rank === 1
-    ? `${city} : ${subject} ${feminine && !plural ? "la" : "les"} plus ${highest} ${groups}`
+    ? `${city} : ${subject} ${article} plus ${highest} ${groups}`
     : `${city} : ${subject} au ${stat.rank}e rang ${groups}`;
 }

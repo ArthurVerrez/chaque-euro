@@ -1,0 +1,199 @@
+---
+import Analysis from "../../layouts/Analysis.astro";
+import Section from "../../components/AnalysisSection.astro";
+import ChangeList from "../../components/ChangeList.astro";
+import { analysis } from "../../lib/analyses";
+import { getLargeCities, getPropertyTaxSummary } from "../../lib/data";
+import { formatNumber, formatPercent } from "../../lib/format";
+import { LAST_YEAR, cityLabel } from "../../lib/large-cities";
+
+const [summary, { cities }] = await Promise.all([
+  getPropertyTaxSummary(),
+  getLargeCities(["taxe_fonciere"]),
+]);
+const { firstYear, lastYear, communes, raised, lowered, raisedTenth, median } = summary;
+const share = (count: number) => formatPercent(count / communes);
+const rate = (value: number) => formatPercent(value / 100, 1);
+const ranking = cities
+  .flatMap((city) => {
+    const from = city.values.taxe_fonciere?.[firstYear];
+    const to = city.values.taxe_fonciere?.[LAST_YEAR];
+    return from === undefined || to === undefined
+      ? []
+      : [
+          {
+            label: cityLabel(city, cities),
+            href: `/analyses/grandes-villes/${city.slug}#taxe-fonciere`,
+            from,
+            to,
+          },
+        ];
+  })
+  .toSorted((a, b) => b.to - a.to);
+const highest = ranking[0];
+const lowest = ranking.at(-1);
+const figures = [
+  {
+    icon: "housing" as const,
+    label: `Taux médian des communes en ${lastYear}`,
+    value: rate(median),
+    note: "commune, intercommunalité et syndicats",
+  },
+  {
+    icon: "trend" as const,
+    label: `Communes qui l’ont relevé depuis ${firstYear}`,
+    value: share(raised),
+    note: `${formatNumber(raised)} sur ${formatNumber(communes)}`,
+  },
+  {
+    icon: "percent" as const,
+    label: "Hausse d’au moins 10 %",
+    value: formatNumber(raisedTenth),
+    note: "communes",
+  },
+];
+const sections = [
+  { id: "carte", label: "La carte", icon: "map" as const },
+  { id: "grandes-villes", label: "Les grandes villes", icon: "town" as const },
+  { id: "votre-commune", label: "Votre commune", icon: "search" as const },
+];
+---
+
+<Analysis
+  article={analysis("taxe-fonciere")}
+  answer={`Entre ${firstYear} et ${lastYear}, ${share(raised)} des communes ont relevé leur taux de taxe foncière, intercommunalité comprise. ${formatNumber(raisedTenth)} l’ont augmenté d’au moins 10 % et ${formatNumber(lowered)} l’ont baissé.`}
+  figures={figures}
+  provenance={[summary.provenance]}
+  sections={sections}
+  image="/partage/carte/taxe-fonciere.png"
+>
+  <Section
+    id="carte"
+    title={`Le taux de chaque commune en ${lastYear}`}
+    icon="map"
+    provenance={summary.provenance}
+  >
+    <p>
+      Le taux additionne la part de la commune, celle de l’intercommunalité et celle des syndicats.
+      Pour un même logement, un taux deux fois plus élevé donne une taxe deux fois plus élevée. La
+      médiane des communes est à {rate(median)}.
+    </p>
+    <img
+      slot="chart"
+      class="map"
+      src="/partage/carte/taxe-fonciere.png"
+      width="1080"
+      height="1350"
+      alt={`Carte de France des taux de taxe foncière par commune en ${lastYear}. ${share(raised)} des communes ont relevé leur taux depuis ${firstYear}.`}
+      loading="lazy"
+    />
+    <p slot="caveat">
+      Les départements d’outre-mer ne figurent pas sur la carte, mais sont comptés dans les
+      chiffres. Une commune créée ou fusionnée après {firstYear} n’est pas comparée.
+    </p>
+  </Section>
+
+  <Section
+    id="grandes-villes"
+    title={`Les ${ranking.length} grandes villes`}
+    icon="town"
+    provenance={summary.provenance}
+  >
+    <p>
+      {highest &&
+        lowest &&
+        `En ${LAST_YEAR}, le taux va de ${rate(lowest.to)} à ${lowest.label} à ${rate(highest.to)} à ${highest.label}.`}{" "}
+      Cliquez sur une ville pour voir l’évolution de son taux et le reste de ses comptes.
+    </p>
+    <ChangeList
+      slot="chart"
+      icon="housing"
+      caption="Taux net de taxe foncière sur les propriétés bâties"
+      fromLabel={String(firstYear)}
+      toLabel={String(LAST_YEAR)}
+      items={ranking}
+      format={rate}
+    />
+    <p slot="caveat">
+      Le montant payé dépend aussi de la valeur locative du logement, qui diffère d’une ville à
+      l’autre.
+    </p>
+  </Section>
+
+  <Section
+    id="votre-commune"
+    title="Le taux de votre commune"
+    icon="search"
+    provenance={summary.provenance}
+  >
+    <p>
+      Chaque fiche commune détaille ses taux de {lastYear}, partie par partie, avec la médiane des
+      communes de même taille.
+    </p>
+    <form slot="chart" class="lookup" action="/recherche" method="get">
+      <label for="commune-taxe">Nom ou code postal de la commune</label>
+      <div>
+        <input id="commune-taxe" name="q" type="search" required autocomplete="off" />
+        <button type="submit">Rechercher</button>
+      </div>
+    </form>
+  </Section>
+
+  <div slot="method">
+    <p>
+      Les taux viennent des fichiers de recensement des éléments d’imposition publiés chaque année
+      par la DGFiP. Le calcul additionne les taux nets de la commune, des syndicats et du groupement
+      à fiscalité propre sur les propriétés bâties. La comparaison part de {firstYear} : depuis
+      cette année-là, le taux communal comprend l’ancienne part du département, transférée aux
+      communes avec la suppression de la taxe d’habitation sur les résidences principales. La taxe
+      d’enlèvement des ordures ménagères, la taxe GEMAPI et les taxes spéciales d’équipement ne sont
+      pas comprises.
+    </p>
+  </div>
+</Analysis>
+
+<style>
+  .map {
+    display: block;
+    width: 100%;
+    max-width: 36rem;
+    height: auto;
+    margin: 0 auto;
+  }
+
+  .lookup {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .lookup label {
+    font-weight: 650;
+  }
+
+  .lookup div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .lookup input {
+    flex: 1 1 14rem;
+    min-height: 44px;
+    padding: 0 0.85rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    font: inherit;
+  }
+
+  .lookup button {
+    min-height: 44px;
+    padding: 0 1.1rem;
+    border: 0;
+    border-radius: 10px;
+    background: var(--navy-900);
+    color: #fff;
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+  }
+</style>

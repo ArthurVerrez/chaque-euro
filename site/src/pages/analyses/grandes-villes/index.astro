@@ -5,20 +5,20 @@ import ChangeList from "../../../components/ChangeList.astro";
 import PublicTable from "../../../components/PublicTable.astro";
 import { analysis } from "../../../lib/analyses";
 import { getLargeCities, type LargeCity } from "../../../lib/data";
-import { formatChange, formatEuro, formatNumber } from "../../../lib/format";
+import { formatChange, formatEuro, formatNumber, formatPercent } from "../../../lib/format";
 import { FIRST_YEAR, LAST_YEAR, METRIC_ITEMS, cityLabel, median } from "../../../lib/large-cities";
 
-const { cities, provenance } = await getLargeCities(METRIC_ITEMS);
-const value = (city: LargeCity, item: string, year: number) => city.perCapita[item]?.[year];
+const { cities, provenance, taxProvenance } = await getLargeCities(METRIC_ITEMS);
+const value = (city: LargeCity, item: string, year: number) => city.values[item]?.[year];
 const change = (city: LargeCity, item: string) => {
   const first = value(city, item, FIRST_YEAR);
   const last = value(city, item, LAST_YEAR);
   return first && last !== undefined ? last / first - 1 : null;
 };
-const changes = (item: string) =>
+const changes = (item: string, start = FIRST_YEAR) =>
   cities
     .flatMap((city) => {
-      const from = value(city, item, FIRST_YEAR);
+      const from = value(city, item, start);
       const to = value(city, item, LAST_YEAR);
       return from === undefined || to === undefined
         ? []
@@ -32,6 +32,7 @@ const changes = (item: string) =>
           ];
     })
     .toSorted((a, b) => b.to - a.to);
+const propertyTax = changes("taxe_fonciere", 2021);
 const debt = changes("dette");
 const taxes = changes("impots_locaux");
 const risen = debt.filter((item) => item.to > item.from);
@@ -64,6 +65,7 @@ const figures = [
   },
 ];
 const sections = [
+  { id: "taxe-fonciere", label: "La taxe foncière", icon: "housing" as const },
   { id: "dette", label: "La dette", icon: "debt" as const },
   { id: "impots", label: "Les impôts locaux", icon: "localTax" as const },
   { id: "villes", label: "Ville par ville", icon: "town" as const },
@@ -77,6 +79,32 @@ const sections = [
   provenance={[provenance]}
   sections={sections}
 >
+  <Section
+    id="taxe-fonciere"
+    title="Le taux de taxe foncière de chaque grande ville"
+    icon="housing"
+    provenance={taxProvenance}
+  >
+    <p>
+      Le taux additionne la part de la commune, de l’intercommunalité et des syndicats. Il est
+      comparé à 2021, premier taux voté après la réforme de la taxe d’habitation. Pour un même
+      logement, un taux deux fois plus élevé donne une taxe deux fois plus élevée.
+    </p>
+    <ChangeList
+      slot="chart"
+      icon="housing"
+      caption="Taux net de taxe foncière sur les propriétés bâties"
+      fromLabel="2021"
+      toLabel={String(LAST_YEAR)}
+      items={propertyTax}
+      format={(rate) => formatPercent(rate / 100, 1)}
+    />
+    <p slot="caveat">
+      Le montant payé dépend aussi de la valeur locative du logement, qui diffère d’une ville à
+      l’autre. La taxe d’enlèvement des ordures ménagères n’est pas comprise.
+    </p>
+  </Section>
+
   <Section id="dette" title="La dette de chaque grande ville" icon="debt" provenance={provenance}>
     <p>
       Le mandat municipal élu en 2020 a couvert les exercices {FIRST_YEAR + 1} à {LAST_YEAR}. Le
@@ -138,20 +166,22 @@ const sections = [
       columns={[
         "Ville",
         "Habitants",
+        "Taxe foncière",
         "Dépenses",
         "Dette",
         `Dette depuis ${FIRST_YEAR}`,
-        "Impôts locaux",
       ]}
       rows={cities.map((city) => {
         const debtChange = change(city, "dette");
         return [
           { text: cityLabel(city, cities), href: `/analyses/grandes-villes/${city.slug}` },
           { text: formatNumber(city.population) },
+          {
+            text: formatPercent((value(city, "taxe_fonciere", LAST_YEAR) ?? 0) / 100, 1),
+          },
           { text: formatEuro(value(city, "depenses", LAST_YEAR) ?? 0) },
           { text: formatEuro(value(city, "dette", LAST_YEAR) ?? 0) },
           { text: debtChange === null ? "n.d." : formatChange(debtChange) },
-          { text: formatEuro(value(city, "impots_locaux", LAST_YEAR) ?? 0) },
         ];
       })}
     />

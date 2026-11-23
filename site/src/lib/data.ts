@@ -480,6 +480,7 @@ const SQL = {
   publicAccounts: "pipeline/sql/28_sector_accounts.sql",
   orgs: "pipeline/sql/40_orgs.sql",
   communes: "pipeline/sql/50_communes.sql",
+  taxRates: "pipeline/sql/52a_tax_rates.sql",
   departements: "pipeline/sql/60_departements.sql",
   facts: "pipeline/sql/70_facts.sql",
 } as const;
@@ -2005,35 +2006,52 @@ export async function getSpendingComparison() {
   };
 }
 
+const TAX_TOTAL = "commune_rate + syndicate_rate + grouping_rate";
+
+function propertyTaxProvenance(index: SourceIndex): Provenance {
+  return index.provenance(
+    ["rei-2021", "rei-2022", "rei-2023", "rei-2024", "rei-2025"].map((id) => index.cite(id)),
+    "Taux nets de taxe foncière sur les propriétés bâties : part communale, syndicats et groupement à fiscalité propre, comparés à partir de 2021. La taxe d’enlèvement des ordures ménagères et les taxes spéciales ne sont pas comprises.",
+    SQL.taxRates,
+  );
+}
+
 export interface LargeCity {
   insee: string;
   slug: string;
   name: string;
   departmentCode: string;
   population: number;
-  perCapita: Record<string, Record<number, number>>;
+  values: Record<string, Record<number, number>>;
 }
+
+const LARGE_CITIES = `select insee from commune_years
+  where stratum = '10' and year = (select max(year) from commune_years)`;
 
 export async function getLargeCities(items: readonly string[]) {
   const [rows, sources] = await db().batch([
     db()
       .prepare(
         `select c.insee, c.name, c.department_code as departmentCode, c.population,
-          f.item, f.year, f.per_capita as perCapita
-        from commune_finances f join communes c using (insee)
-        where f.insee in (select insee from commune_years
-            where stratum = '10' and year = (select max(year) from commune_years))
-          and f.item in (select value from json_each(?1)) and f.per_capita is not null
-        order by c.population desc, f.year`,
+          v.item, v.year, v.value
+        from (
+          select insee, item, year, per_capita as value from commune_finances
+          where insee in (${LARGE_CITIES}) and per_capita is not null
+          union all
+          select insee, 'taxe_fonciere', year, ${TAX_TOTAL}
+          from commune_tax_rates where insee in (${LARGE_CITIES})
+        ) v join communes c using (insee)
+        where v.item in (select value from json_each(?1))
+        order by c.population desc, v.year`,
       )
       .bind(JSON.stringify(items)),
     db().prepare(SOURCES_QUERY),
   ]);
   const cities = new Map<string, LargeCity>();
-  for (const row of (rows?.results ?? []) as unknown as (Omit<LargeCity, "slug" | "perCapita"> & {
+  for (const row of (rows?.results ?? []) as unknown as (Omit<LargeCity, "slug" | "values"> & {
     item: string;
     year: number;
-    perCapita: number;
+    value: number;
   })[]) {
     const city = cities.get(row.insee) ?? {
       insee: row.insee,
@@ -2041,9 +2059,9 @@ export async function getLargeCities(items: readonly string[]) {
       name: row.name,
       departmentCode: row.departmentCode,
       population: row.population,
-      perCapita: {},
+      values: {},
     };
-    (city.perCapita[row.item] ??= {})[row.year] = row.perCapita;
+    (city.values[row.item] ??= {})[row.year] = row.value;
     cities.set(row.insee, city);
   }
   const list = [...cities.values()];
@@ -2061,6 +2079,64 @@ export async function getLargeCities(items: readonly string[]) {
       "Comptes consolidés des communes d’au moins 100 000 habitants au dernier exercice, budget principal et budgets annexes, en euros courants par habitant de l’exercice. La dette est l’encours au 31 décembre.",
       SQL.communes,
     ),
+    taxProvenance: propertyTaxProvenance(index),
+  };
+}
+
+export async function getPropertyTaxMap() {
+  const [areas, bounds] = await db().batch([
+    db().prepare(
+      `select s.path, ${TAX_TOTAL} as rate from commune_shapes s
+      join commune_tax_rates r on r.insee = s.insee
+        and r.year = (select max(year) from commune_tax_rates)
+      where s.insee not like '97%'`,
+    ),
+    db().prepare("select viewbox from departements where code not like '97%'"),
+  ]);
+  const boxes = ((bounds?.results ?? []) as { viewbox: string }[]).map((row) =>
+    row.viewbox.split(" ").map(Number),
+  );
+  const left = Math.min(...boxes.map(([x = 0]) => x));
+  const top = Math.min(...boxes.map(([, y = 0]) => y));
+  const right = Math.max(...boxes.map(([x = 0, , width = 0]) => x + width));
+  const bottom = Math.max(...boxes.map(([, y = 0, , height = 0]) => y + height));
+  return {
+    areas: (areas?.results ?? []) as { path: string; rate: number }[],
+    viewBox: [left, top, right - left, bottom - top] as const,
+  };
+}
+
+export async function getPropertyTaxSummary() {
+  const [summary, rates, sources] = await db().batch([
+    db().prepare(
+      `with total as (select insee, year, ${TAX_TOTAL} as rate from commune_tax_rates)
+      select min(a.year) as firstYear, max(b.year) as lastYear, count(*) as communes,
+        count(*) filter (where b.rate > a.rate + 0.005) as raised,
+        count(*) filter (where b.rate < a.rate - 0.005) as lowered,
+        count(*) filter (where b.rate >= a.rate * 1.1) as raisedTenth
+      from total a join total b on b.insee = a.insee
+        and b.year = (select max(year) from commune_tax_rates)
+      where a.year = (select min(year) from commune_tax_rates)`,
+    ),
+    db().prepare(
+      `select ${TAX_TOTAL} as rate from commune_tax_rates
+      where year = (select max(year) from commune_tax_rates) order by rate`,
+    ),
+    db().prepare(SOURCES_QUERY),
+  ]);
+  const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
+  const values = ((rates?.results ?? []) as { rate: number }[]).map((row) => row.rate);
+  return {
+    ...((summary?.results[0] ?? {}) as {
+      firstYear: number;
+      lastYear: number;
+      communes: number;
+      raised: number;
+      lowered: number;
+      raisedTenth: number;
+    }),
+    median: values[Math.floor(values.length / 2)] ?? 0,
+    provenance: propertyTaxProvenance(index),
   };
 }
 
@@ -4400,8 +4476,13 @@ export async function getCommuneFunctions(insee: string, year: number) {
 
 export const SITEMAP_SIZE = 50000;
 const SITEMAP_SECTIONS = new Map([
-  ["organisations", "select '/organisation/' || siren as path from orgs order by siren"],
-  ["communes", "select '/commune/' || insee as path from communes order by insee"],
+  [
+    "organisations",
+    `select '/organisation/' || siren as path from orgs
+    where won_amount + awarded_amount + grants_amount >= 1000000
+    order by won_amount + awarded_amount + grants_amount desc, siren`,
+  ],
+  ["communes", "select '/commune/' || insee as path from communes order by population desc, insee"],
   ["departements", "select '/departement/' || code as path from departements order by code"],
   ["administrations", "select '/administrations/' || id as path from administrations order by id"],
   [

@@ -14,6 +14,17 @@ export interface Analysis {
 
 export const ANALYSES: Analysis[] = [
   {
+    slug: "taxe-fonciere",
+    short: "Taxe foncière",
+    accent: "var(--series-2)",
+    title: "Taxe foncière : ce que votent les communes depuis 2021",
+    question: "Combien de communes ont relevé leur taux de taxe foncière, et de combien ?",
+    summary:
+      "Le taux de chaque commune, intercommunalité comprise, de 2021 à 2025, et la carte de France.",
+    icon: "housing",
+    published: "2026-11-23",
+  },
+  {
     slug: "grandes-villes",
     short: "Grandes villes",
     accent: "var(--series-1)",
@@ -130,7 +141,15 @@ export const ANALYSIS_TOPICS = [
   {
     slug: "finances-locales",
     label: "Finances locales",
-    articles: ["grandes-villes", "nantes", "marseille", "lille", "comparer-les-communes", "paris"],
+    articles: [
+      "taxe-fonciere",
+      "grandes-villes",
+      "nantes",
+      "marseille",
+      "lille",
+      "comparer-les-communes",
+      "paris",
+    ],
   },
   {
     slug: "etat-et-europe",

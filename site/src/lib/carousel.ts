@@ -1,8 +1,11 @@
-import type { LargeCity } from "./data";
-import { formatChange, formatEuro } from "./format.ts";
+import type { LargeCity, getPropertyTaxMap, getPropertyTaxSummary } from "./data";
+import { formatChange, formatNumber, formatPercent } from "./format.ts";
 import {
   FIRST_YEAR,
   LAST_YEAR,
+  firstYear,
+  formatValue,
+  valueNote,
   cityLabel,
   cityStats,
   headline,
@@ -29,7 +32,7 @@ function ranking(cities: LargeCity[], city: LargeCity, stat: CityStat): Node {
   const high = stat.rank <= stat.count / 2;
   const values = cities
     .flatMap((other) => {
-      const value = other.perCapita[stat.metric.item]?.[LAST_YEAR];
+      const value = other.values[stat.metric.item]?.[LAST_YEAR];
       return value === undefined ? [] : [{ other, value }];
     })
     .toSorted((a, b) => (high ? b.value - a.value : a.value - b.value));
@@ -46,6 +49,7 @@ function ranking(cities: LargeCity[], city: LargeCity, stat: CityStat): Node {
         box(
           {
             width: 300,
+            flexShrink: 0,
             justifyContent: "flex-end",
             textAlign: "right",
             fontSize: 28,
@@ -56,14 +60,14 @@ function ranking(cities: LargeCity[], city: LargeCity, stat: CityStat): Node {
         ),
         box({ display: "flex", alignItems: "center", flexGrow: 1, gap: 14 }, [
           box({
-            width: `${Math.max((value / max) * 78, 0.5)}%`,
+            width: `${Math.max((value / max) * 62, 0.5)}%`,
             height: 40,
             borderRadius: 8,
             background: current ? BLUE : GREY,
           }),
           box(
             { fontSize: 28, fontWeight: current ? 800 : 400, color: current ? NAVY : MUTED },
-            formatEuro(value),
+            formatValue(stat.metric, value),
           ),
         ]),
       ]);
@@ -72,8 +76,8 @@ function ranking(cities: LargeCity[], city: LargeCity, stat: CityStat): Node {
 }
 
 function trend(cities: LargeCity[], city: LargeCity, stat: CityStat): Node {
-  const years = Object.keys(city.perCapita[stat.metric.item] ?? {}).map(Number);
-  const own = years.map((year) => city.perCapita[stat.metric.item]![year]!);
+  const years = Object.keys(city.values[stat.metric.item] ?? {}).map(Number);
+  const own = years.map((year) => city.values[stat.metric.item]![year]!);
   const typical = medianByYear(cities, stat.metric.item, years);
   const max = Math.max(...own, ...typical) * 1.1;
   const { width, height } = CHART;
@@ -106,8 +110,11 @@ function figures(stat: CityStat): { value: string; label: string }[] {
     const rise = stat.changeRank <= stat.changeCount / 2;
     const position = rise ? stat.changeRank : stat.changeCount + 1 - stat.changeRank;
     return [
-      { value: formatEuro(stat.first), label: `par habitant en ${FIRST_YEAR}` },
-      { value: formatEuro(stat.last), label: `en ${LAST_YEAR}` },
+      {
+        value: formatValue(stat.metric, stat.first),
+        label: valueNote(stat.metric, firstYear(stat.metric)),
+      },
+      { value: formatValue(stat.metric, stat.last), label: `en ${LAST_YEAR}` },
       {
         value: position === 1 ? "1re" : `${position}e`,
         label: `plus forte ${rise ? "hausse" : "baisse"} sur ${stat.changeCount}`,
@@ -115,11 +122,11 @@ function figures(stat: CityStat): { value: string; label: string }[] {
     ];
   }
   return [
-    { value: formatEuro(stat.last), label: `par habitant en ${LAST_YEAR}` },
-    { value: formatEuro(stat.median), label: "grande ville médiane" },
+    { value: formatValue(stat.metric, stat.last), label: valueNote(stat.metric, LAST_YEAR) },
+    { value: formatValue(stat.metric, stat.median), label: "grande ville médiane" },
     ...(stat.change === null
       ? []
-      : [{ value: formatChange(stat.change), label: `depuis ${FIRST_YEAR}` }]),
+      : [{ value: formatChange(stat.change), label: `depuis ${firstYear(stat.metric)}` }]),
   ];
 }
 
@@ -175,7 +182,12 @@ function slide(cities: LargeCity[], city: LargeCity, stat: CityStat, page: strin
           borderTop: "2px solid #e1e5ec",
         },
         [
-          box({ fontSize: 22, color: MUTED }, "Source : OFGL, comptes des communes"),
+          box(
+            { fontSize: 22, color: MUTED },
+            stat.metric.rate
+              ? "Source : DGFiP, taux de taxe foncière 2021-2025"
+              : "Source : OFGL, comptes des communes",
+          ),
           box({ display: "flex", alignItems: "center", gap: 14 }, [
             { type: "img", props: { src: logoUrl, width: 56, height: 56 } },
             box({ fontSize: 32, fontWeight: 800, letterSpacing: -0.5 }, "chaqueeuro.fr"),
@@ -196,4 +208,96 @@ export function renderCitySlide(
   return stat
     ? renderPng(slide(cities, city, stat, `${index}/${stats.length}`), WIDTH, HEIGHT)
     : null;
+}
+
+const TAX_CLASSES = [
+  { below: 25, color: "#e3eefb" },
+  { below: 35, color: "#9cc3f0" },
+  { below: 45, color: "#4f93e0" },
+  { below: 55, color: "#1c5cab" },
+  { below: Infinity, color: "#0b2a55" },
+];
+
+export function renderTaxMap(
+  map: Awaited<ReturnType<typeof getPropertyTaxMap>>,
+  summary: Awaited<ReturnType<typeof getPropertyTaxSummary>>,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const [left, top, width, height] = map.viewBox;
+  const fill = (rate: number) => TAX_CLASSES.find((entry) => rate < entry.below)!.color;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${left} ${top} ${width} ${height}">${map.areas.map((area) => `<path d="${area.path}" fill="${fill(area.rate)}"/>`).join("")}</svg>`;
+  const mapHeight = 690;
+  const mapWidth = Math.round((mapHeight * width) / height);
+  const share = (count: number) => formatPercent(count / summary.communes);
+  const node = box(
+    {
+      display: "flex",
+      flexDirection: "column",
+      width: WIDTH,
+      height: HEIGHT,
+      padding: "56px 64px 44px",
+      background: "#ffffff",
+      fontFamily: "Inter",
+      color: NAVY,
+    },
+    [
+      box(
+        { fontSize: 26, fontWeight: 800, color: BLUE },
+        `FRANCE · TAXE FONCIÈRE ${summary.lastYear}`,
+      ),
+      box(
+        { marginTop: 18, fontSize: 54, fontWeight: 800, lineHeight: 1.1, letterSpacing: -1.5 },
+        `${share(summary.raised)} des communes ont relevé leur taux de taxe foncière depuis ${summary.firstYear}`,
+      ),
+      box({ display: "flex", justifyContent: "center", flexGrow: 1, marginTop: 16 }, [
+        svgImage(svg, mapWidth, mapHeight),
+      ]),
+      box(
+        { display: "flex", justifyContent: "center", gap: 18, fontSize: 22, color: MUTED },
+        TAX_CLASSES.map((entry, rank) =>
+          box({ display: "flex", alignItems: "center", gap: 8 }, [
+            box({ width: 26, height: 18, borderRadius: 4, background: entry.color }),
+            rank === 0
+              ? `moins de ${entry.below} %`
+              : entry.below === Infinity
+                ? `${TAX_CLASSES[rank - 1]!.below} % et plus`
+                : `${TAX_CLASSES[rank - 1]!.below} à ${entry.below} %`,
+          ]),
+        ),
+      ),
+      box(
+        { display: "flex", gap: 40, marginTop: 26 },
+        [
+          { value: formatPercent(summary.median / 100, 1), label: "taux médian des communes" },
+          { value: formatNumber(summary.raisedTenth), label: "communes à +10 % ou plus" },
+          { value: formatNumber(summary.lowered), label: "communes l’ont baissé" },
+        ].map((figure) =>
+          box({ display: "flex", flexDirection: "column", flex: 1 }, [
+            box({ fontSize: 52, fontWeight: 800, letterSpacing: -1.5 }, figure.value),
+            box({ fontSize: 23, color: MUTED }, figure.label),
+          ]),
+        ),
+      ),
+      box(
+        {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginTop: 30,
+          paddingTop: 24,
+          borderTop: "2px solid #e1e5ec",
+        },
+        [
+          box(
+            { fontSize: 21, color: MUTED },
+            "Source : DGFiP, taux 2021-2025, France métropolitaine",
+          ),
+          box({ display: "flex", alignItems: "center", gap: 14 }, [
+            { type: "img", props: { src: logoUrl, width: 56, height: 56 } },
+            box({ fontSize: 32, fontWeight: 800, letterSpacing: -0.5 }, "chaqueeuro.fr"),
+          ]),
+        ],
+      ),
+    ],
+  );
+  return renderPng(node, WIDTH, HEIGHT);
 }

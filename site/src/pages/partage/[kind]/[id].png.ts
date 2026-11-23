@@ -7,6 +7,7 @@ import {
   METRIC_ITEMS,
   cityLabel,
   cityStats,
+  formatValue,
   rankText,
   standoutStats,
 } from "../../../lib/large-cities";
@@ -60,7 +61,7 @@ const CARDS: Record<string, (id: string) => Promise<ShareCard | null>> = {
     return {
       kicker: "Les comptes du mandat 2020-2026",
       title: cityLabel(city, cities),
-      figure: `${formatEuro(top.last)} ${top.metric.of} par habitant`,
+      figure: `${top.metric.label} : ${formatValue(top.metric, top.last)}`,
       note: `En ${LAST_YEAR}, le ${rankText(top.rank, top.count)}`,
       source: "Source : OFGL, comptes des communes",
     };

@@ -8,7 +8,7 @@ import LineChart from "../../../components/LineChart.astro";
 import RankStrip from "../../../components/RankStrip.astro";
 import { analysis } from "../../../lib/analyses";
 import { getCommune, getLargeCities } from "../../../lib/data";
-import { formatChange, formatEuro } from "../../../lib/format";
+import { formatChange, formatEuro, formatPercent } from "../../../lib/format";
 import {
   FIRST_YEAR,
   LAST_YEAR,
@@ -16,13 +16,17 @@ import {
   changeRankText,
   cityLabel,
   cityStats,
+  firstYear,
+  formatValue,
   medianByYear,
   rankText,
   standoutStats,
+  ofCity,
   statSentence,
+  valueNote,
 } from "../../../lib/large-cities";
 
-const { cities, provenance } = await getLargeCities(METRIC_ITEMS);
+const { cities, provenance, taxProvenance } = await getLargeCities(METRIC_ITEMS);
 const city = cities.find((entry) => entry.slug === Astro.params.ville);
 const commune = city ? await getCommune(city.insee, LAST_YEAR) : null;
 if (!city || !commune) return new Response(null, { status: 404 });
@@ -34,8 +38,12 @@ const stat = (item: string) => stats.find((entry) => entry.metric.item === item)
 const debt = stat("dette");
 const taxes = stat("impots_locaux");
 const spending = stat("depenses");
-const years = Object.keys(city.perCapita.dette ?? {}).map(Number);
-const series = (item: string) => years.map((year) => city.perCapita[item]?.[year] ?? null);
+const propertyTax = stat("taxe_fonciere");
+const yearsOf = (item: string) => Object.keys(city.values[item] ?? {}).map(Number);
+const years = yearsOf("dette");
+const taxYears = yearsOf("taxe_fonciere");
+const series = (item: string, range = years) =>
+  range.map((year) => city.values[item]?.[year] ?? null);
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 const parent = analysis("grandes-villes");
 const article = {
@@ -45,13 +53,13 @@ const article = {
   title: `${name} : les comptes du mandat 2020-2026`,
   summary: `Dette, impôts, dépenses et marchés publics de ${name}, comparés aux ${cities.length} grandes villes.`,
 };
-const figures = [spending, debt, taxes].flatMap((entry) =>
+const figures = [propertyTax, debt, spending].flatMap((entry) =>
   entry
     ? [
         {
           icon: entry.metric.icon,
-          label: `${entry.metric.label} par habitant`,
-          value: formatEuro(entry.last),
+          label: entry.metric.rate ? entry.metric.label : `${entry.metric.label} par habitant`,
+          value: formatValue(entry.metric, entry.last),
           note: capitalize(rankText(entry.rank, entry.count)),
         },
       ]
@@ -62,6 +70,9 @@ const sections = [
   { id: "classement", label: "Parmi les grandes villes", icon: "compare" as const },
   { id: "dette", label: "La dette", icon: "debt" as const },
   { id: "depenses", label: "Les dépenses", icon: "spending" as const },
+  ...(propertyTax
+    ? [{ id: "taxe-fonciere", label: "La taxe foncière", icon: "housing" as const }]
+    : []),
   { id: "recettes", label: "Impôts et dotation", icon: "localTax" as const },
   ...(commune.buyer ? [{ id: "marches", label: "Les marchés", icon: "contract" as const }] : []),
 ];
@@ -71,10 +82,10 @@ const sections = [
   article={article}
   answer={standout
     .slice(0, 2)
-    .map((entry, at) => statSentence(entry, name, at === 0))
+    .map((entry) => statSentence(entry, name))
     .join(" ")}
   figures={figures}
-  provenance={[provenance]}
+  provenance={[provenance, taxProvenance]}
   sections={sections}
   parent={{ label: "Grandes villes", href: "/analyses/grandes-villes" }}
   image={`/partage/ville/${city.slug}.png`}
@@ -83,12 +94,14 @@ const sections = [
     id="en-chiffres"
     title={`Ce qui distingue ${name}`}
     icon="analysis"
-    provenance={provenance}
+    provenance={[provenance, taxProvenance]}
   >
     <p>
       Les {cities.length} communes d’au moins 100 000 habitants publient des comptes comparables.
       Voici les postes où {name} s’écarte le plus des autres, entre la fin de {FIRST_YEAR}, avant
-      les élections municipales de 2020, et {LAST_YEAR}, dernier exercice du mandat.
+      les élections municipales de 2020, et {LAST_YEAR}, dernier exercice du mandat. La taxe
+      foncière est comparée à partir de 2021, premier taux voté après la réforme de la taxe
+      d’habitation.
     </p>
     <ul slot="chart" class="facts">
       {standout.map((entry) => (
@@ -98,13 +111,15 @@ const sections = [
             {entry.metric.label}
           </p>
           <p class="fact-value num">
-            {formatEuro(entry.last)} <span>par habitant en {LAST_YEAR}</span>
+            {formatValue(entry.metric, entry.last)}{" "}
+            <span>{valueNote(entry.metric, LAST_YEAR)}</span>
           </p>
           <p class="fact-rank">{capitalize(rankText(entry.rank, entry.count))}</p>
           {entry.change !== null && entry.first !== null && (
             <p class="fact-change">
-              <strong>{formatChange(entry.change)}</strong> depuis {FIRST_YEAR} (
-              {formatEuro(entry.first)}), {changeRankText(entry.changeRank!, entry.changeCount)}
+              <strong>{formatChange(entry.change)}</strong> depuis {firstYear(entry.metric)} (
+              {formatValue(entry.metric, entry.first)}),{" "}
+              {changeRankText(entry.changeRank!, entry.changeCount)}
             </p>
           )}
         </li>
@@ -116,11 +131,11 @@ const sections = [
     id="classement"
     title={`${name} parmi les ${cities.length} grandes villes`}
     icon="compare"
-    provenance={provenance}
+    provenance={[provenance, taxProvenance]}
   >
     <p>
       Chaque point est une grande ville. Le point bleu situe {name} en {LAST_YEAR}, en euros par
-      habitant.
+      habitant, et en pourcentage pour le taux de taxe foncière.
     </p>
     <div slot="chart" class="strips">
       {stats.map((entry) => (
@@ -129,11 +144,11 @@ const sections = [
           caption={entry.metric.label}
           highlight={name}
           points={cities.flatMap((other) => {
-            const value = other.perCapita[entry.metric.item]?.[LAST_YEAR];
+            const value = other.values[entry.metric.item]?.[LAST_YEAR];
             return value === undefined ? [] : [{ label: cityLabel(other, cities), value }];
           })}
-          note={`${capitalize(rankText(entry.rank, entry.count))}${entry.change === null ? "" : `. ${formatChange(entry.change)} depuis ${FIRST_YEAR}`}.`}
-          format={formatEuro}
+          note={`${capitalize(rankText(entry.rank, entry.count))}${entry.change === null ? "" : `. ${formatChange(entry.change)} depuis ${firstYear(entry.metric)}`}.`}
+          format={(value) => formatValue(entry.metric, value)}
         />
       ))}
     </div>
@@ -190,6 +205,39 @@ const sections = [
       lines={commune.accounts.lines.filter((line) => line.section === "depense")}
     />
   </Section>
+
+  {propertyTax && (
+    <Section
+      id="taxe-fonciere"
+      title={`Le taux de taxe foncière ${ofCity(name)}`}
+      icon="housing"
+      provenance={taxProvenance}
+    >
+      <p>
+        {statSentence(propertyTax, name)} Le taux additionne la part de la commune, celle de
+        l’intercommunalité et celle des syndicats. Le montant payé dépend aussi de la valeur
+        locative de chaque logement.
+      </p>
+      <LineChart
+        slot="chart"
+        caption="Taux net de taxe foncière sur les propriétés bâties"
+        labels={taxYears.map(String)}
+        series={[
+          { label: name, values: series("taxe_fonciere", taxYears) },
+          {
+            label: "Grande ville médiane",
+            values: medianByYear(cities, "taxe_fonciere", taxYears),
+            muted: true,
+          },
+        ]}
+        format={(value) => formatPercent(value / 100, 1)}
+      />
+      <p slot="caveat">
+        La taxe d’enlèvement des ordures ménagères, la taxe GEMAPI et les taxes spéciales
+        d’équipement ne sont pas comprises.
+      </p>
+    </Section>
+  )}
 
   <Section
     id="recettes"
