@@ -1,32 +1,182 @@
 import type { LargeCity, getPropertyTaxMap, getPropertyTaxSummary } from "./data";
-import { formatChange, formatNumber, formatPercent } from "./format.ts";
+import { formatChange, formatEuro, formatNumber, formatPercent } from "./format.ts";
 import {
   FIRST_YEAR,
   LAST_YEAR,
-  firstYear,
-  formatValue,
-  valueNote,
+  atCity,
   cityLabel,
   cityStats,
+  firstYear,
+  formatValue,
   headline,
   leadsWithChange,
+  median,
   medianByYear,
   standoutStats,
+  valueNote,
   type CityStat,
 } from "./large-cities.ts";
 import { BLUE, MUTED, NAVY, box, logoUrl, renderPng, type Node } from "./share-card";
 
 export const SLIDES = 3;
+export const TAX_SLIDES = 5;
 const WIDTH = 1080;
 const HEIGHT = 1350;
 const CHART = { width: 952, height: 560 };
+const MAP_HEIGHT = 690;
 const GREY = "#c7cdd8";
 const ROWS = 8;
+
+interface Figure {
+  value: string;
+  label: string;
+}
+
+interface Bar {
+  label: string;
+  value: number;
+  display: string;
+  highlight?: boolean;
+}
+
+interface Legend {
+  label: string;
+  color: string;
+}
 
 const svgImage = (svg: string, width: number, height: number): Node => ({
   type: "img",
   props: { src: `data:image/svg+xml;base64,${btoa(svg)}`, width, height },
 });
+
+function frame(slide: {
+  kicker: string;
+  page: string;
+  title: string;
+  chart: Node;
+  figures: Figure[];
+  source: string;
+}): Node {
+  return box(
+    {
+      display: "flex",
+      flexDirection: "column",
+      width: WIDTH,
+      height: HEIGHT,
+      padding: "60px 64px 44px",
+      background: "#ffffff",
+      fontFamily: "Inter",
+      color: NAVY,
+    },
+    [
+      box({ display: "flex", justifyContent: "space-between", fontSize: 26, fontWeight: 800 }, [
+        box({ color: BLUE }, slide.kicker),
+        box({ color: MUTED }, slide.page),
+      ]),
+      box(
+        {
+          marginTop: 22,
+          fontSize: slide.title.length > 80 ? 52 : 60,
+          fontWeight: 800,
+          lineHeight: 1.1,
+          letterSpacing: -1.5,
+        },
+        slide.title,
+      ),
+      box(
+        { display: "flex", alignItems: "center", justifyContent: "center", flexGrow: 1 },
+        slide.chart,
+      ),
+      box(
+        { display: "flex", gap: 40, marginTop: 24 },
+        slide.figures.map((figure) =>
+          box({ display: "flex", flexDirection: "column", flex: 1 }, [
+            box({ fontSize: 54, fontWeight: 800, letterSpacing: -1.5 }, figure.value),
+            box({ fontSize: 24, color: MUTED }, figure.label),
+          ]),
+        ),
+      ),
+      box(
+        {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 24,
+          marginTop: 30,
+          paddingTop: 24,
+          borderTop: "2px solid #e1e5ec",
+        },
+        [
+          box({ fontSize: 21, color: MUTED, flexShrink: 1 }, slide.source),
+          box({ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }, [
+            { type: "img", props: { src: logoUrl, width: 56, height: 56 } },
+            box({ fontSize: 32, fontWeight: 800, letterSpacing: -0.5 }, "chaqueeuro.fr"),
+          ]),
+        ],
+      ),
+    ],
+  );
+}
+
+function bars(rows: (Bar | null)[], caption?: string): Node {
+  const max = Math.max(...rows.map((row) => row?.value ?? 0), 1);
+  return box({ display: "flex", flexDirection: "column", gap: 14, width: "100%" }, [
+    ...(caption ? [box({ fontSize: 26, color: MUTED, marginBottom: 6 }, caption)] : []),
+    ...rows.map((row) =>
+      row
+        ? box({ display: "flex", alignItems: "center", gap: 18, height: 50 }, [
+            box(
+              {
+                width: 310,
+                flexShrink: 0,
+                justifyContent: "flex-end",
+                textAlign: "right",
+                fontSize: 28,
+                fontWeight: row.highlight ? 800 : 400,
+                color: row.highlight ? NAVY : MUTED,
+              },
+              row.label,
+            ),
+            box({ display: "flex", alignItems: "center", flexGrow: 1, gap: 14 }, [
+              box({
+                width: `${Math.max((row.value / max) * 62, 0.5)}%`,
+                height: 40,
+                borderRadius: 8,
+                background: row.highlight ? BLUE : GREY,
+              }),
+              box(
+                {
+                  fontSize: 28,
+                  fontWeight: row.highlight ? 800 : 400,
+                  color: row.highlight ? NAVY : MUTED,
+                },
+                row.display,
+              ),
+            ]),
+          ])
+        : box({ display: "flex", justifyContent: "center", fontSize: 28, color: MUTED }, "…"),
+    ),
+  ]);
+}
+
+function legend(entries: Legend[]): Node {
+  return box(
+    {
+      display: "flex",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      gap: "8px 18px",
+      fontSize: 22,
+      color: MUTED,
+    },
+    entries.map((entry) =>
+      box({ display: "flex", alignItems: "center", gap: 8 }, [
+        box({ width: 26, height: 18, borderRadius: 4, background: entry.color }),
+        entry.label,
+      ]),
+    ),
+  );
+}
 
 function ranking(cities: LargeCity[], city: LargeCity, stat: CityStat): Node {
   const high = stat.rank <= stat.count / 2;
@@ -40,38 +190,13 @@ function ranking(cities: LargeCity[], city: LargeCity, stat: CityStat): Node {
   if (!rows.some((row) => row.other === city)) {
     rows[ROWS - 1] = values.find((row) => row.other === city)!;
   }
-  const max = Math.max(...rows.map((row) => row.value), 1);
-  return box(
-    { display: "flex", flexDirection: "column", gap: 14, width: "100%" },
-    rows.map(({ other, value }) => {
-      const current = other === city;
-      return box({ display: "flex", alignItems: "center", gap: 18, height: 52 }, [
-        box(
-          {
-            width: 300,
-            flexShrink: 0,
-            justifyContent: "flex-end",
-            textAlign: "right",
-            fontSize: 28,
-            fontWeight: current ? 800 : 400,
-            color: current ? NAVY : MUTED,
-          },
-          cityLabel(other, cities),
-        ),
-        box({ display: "flex", alignItems: "center", flexGrow: 1, gap: 14 }, [
-          box({
-            width: `${Math.max((value / max) * 62, 0.5)}%`,
-            height: 40,
-            borderRadius: 8,
-            background: current ? BLUE : GREY,
-          }),
-          box(
-            { fontSize: 28, fontWeight: current ? 800 : 400, color: current ? NAVY : MUTED },
-            formatValue(stat.metric, value),
-          ),
-        ]),
-      ]);
-    }),
+  return bars(
+    rows.map(({ other, value }) => ({
+      label: cityLabel(other, cities),
+      value,
+      display: formatValue(stat.metric, value),
+      highlight: other === city,
+    })),
   );
 }
 
@@ -87,15 +212,9 @@ function trend(cities: LargeCity[], city: LargeCity, stat: CityStat): Node {
     `<polyline points="${values.map((value, index) => `${x(index)},${y(value)}`).join(" ")}" fill="none" stroke-linecap="round" stroke-linejoin="round" ${style}/>`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><line x1="0" x2="${width}" y1="${height - 16}" y2="${height - 16}" stroke="${GREY}" stroke-width="2"/>${line(typical, `stroke="${GREY}" stroke-width="8" stroke-dasharray="4 18"`)}${line(own, `stroke="${BLUE}" stroke-width="12"`)}<circle cx="${x(own.length - 1)}" cy="${y(own.at(-1)!)}" r="16" fill="${BLUE}"/></svg>`;
   return box({ display: "flex", flexDirection: "column", width: "100%" }, [
-    box({ display: "flex", gap: 36, fontSize: 26, color: MUTED, marginBottom: 12 }, [
-      box({ display: "flex", alignItems: "center", gap: 12 }, [
-        box({ width: 36, height: 10, borderRadius: 5, background: BLUE }),
-        cityLabel(city, cities),
-      ]),
-      box({ display: "flex", alignItems: "center", gap: 12 }, [
-        box({ width: 36, height: 10, borderRadius: 5, background: GREY }),
-        "Grande ville médiane",
-      ]),
+    legendLine([
+      { label: cityLabel(city, cities), color: BLUE },
+      { label: "Grande ville médiane", color: GREY },
     ]),
     svgImage(svg, width, height),
     box({ display: "flex", justifyContent: "space-between", fontSize: 26, color: MUTED }, [
@@ -105,7 +224,19 @@ function trend(cities: LargeCity[], city: LargeCity, stat: CityStat): Node {
   ]);
 }
 
-function figures(stat: CityStat): { value: string; label: string }[] {
+function legendLine(entries: Legend[]): Node {
+  return box(
+    { display: "flex", gap: 36, fontSize: 26, color: MUTED, marginBottom: 12 },
+    entries.map((entry) =>
+      box({ display: "flex", alignItems: "center", gap: 12 }, [
+        box({ width: 36, height: 10, borderRadius: 5, background: entry.color }),
+        entry.label,
+      ]),
+    ),
+  );
+}
+
+function cityFigures(stat: CityStat): Figure[] {
   if (leadsWithChange(stat) && stat.first !== null && stat.changeRank !== null) {
     const rise = stat.changeRank <= stat.changeCount / 2;
     const position = rise ? stat.changeRank : stat.changeCount + 1 - stat.changeRank;
@@ -130,74 +261,6 @@ function figures(stat: CityStat): { value: string; label: string }[] {
   ];
 }
 
-function slide(cities: LargeCity[], city: LargeCity, stat: CityStat, page: string): Node {
-  const name = cityLabel(city, cities);
-  const title = headline(stat, name);
-  return box(
-    {
-      display: "flex",
-      flexDirection: "column",
-      width: WIDTH,
-      height: HEIGHT,
-      padding: "64px 64px 48px",
-      background: "#ffffff",
-      fontFamily: "Inter",
-      color: NAVY,
-    },
-    [
-      box({ display: "flex", justifyContent: "space-between", fontSize: 26, fontWeight: 800 }, [
-        box({ color: BLUE }, `${name.toUpperCase()} · COMPTES ${FIRST_YEAR}-${LAST_YEAR}`),
-        box({ color: MUTED }, page),
-      ]),
-      box(
-        {
-          marginTop: 24,
-          fontSize: title.length > 80 ? 54 : 62,
-          fontWeight: 800,
-          lineHeight: 1.1,
-          letterSpacing: -1.5,
-        },
-        title,
-      ),
-      box(
-        { display: "flex", alignItems: "center", flexGrow: 1, marginTop: 36 },
-        leadsWithChange(stat) ? trend(cities, city, stat) : ranking(cities, city, stat),
-      ),
-      box(
-        { display: "flex", gap: 40, marginTop: 28 },
-        figures(stat).map((figure) =>
-          box({ display: "flex", flexDirection: "column", flex: 1 }, [
-            box({ fontSize: 56, fontWeight: 800, letterSpacing: -1.5 }, figure.value),
-            box({ fontSize: 24, color: MUTED }, figure.label),
-          ]),
-        ),
-      ),
-      box(
-        {
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginTop: 36,
-          paddingTop: 28,
-          borderTop: "2px solid #e1e5ec",
-        },
-        [
-          box(
-            { fontSize: 22, color: MUTED },
-            stat.metric.rate
-              ? "Source : DGFiP, taux de taxe foncière 2021-2025"
-              : "Source : OFGL, comptes des communes",
-          ),
-          box({ display: "flex", alignItems: "center", gap: 14 }, [
-            { type: "img", props: { src: logoUrl, width: 56, height: 56 } },
-            box({ fontSize: 32, fontWeight: 800, letterSpacing: -0.5 }, "chaqueeuro.fr"),
-          ]),
-        ],
-      ),
-    ],
-  );
-}
-
 export function renderCitySlide(
   cities: LargeCity[],
   city: LargeCity,
@@ -205,99 +268,197 @@ export function renderCitySlide(
 ): Promise<Uint8Array<ArrayBuffer>> | null {
   const stats = standoutStats(cityStats(cities, city), SLIDES);
   const stat = stats[index - 1];
-  return stat
-    ? renderPng(slide(cities, city, stat, `${index}/${stats.length}`), WIDTH, HEIGHT)
-    : null;
+  if (!stat) return null;
+  const name = cityLabel(city, cities);
+  return renderPng(
+    frame({
+      kicker: `${name.toUpperCase()} · COMPTES ${FIRST_YEAR}-${LAST_YEAR}`,
+      page: `${index}/${stats.length}`,
+      title: headline(stat, name),
+      chart: leadsWithChange(stat) ? trend(cities, city, stat) : ranking(cities, city, stat),
+      figures: cityFigures(stat),
+      source: stat.metric.rate
+        ? "Source : DGFiP, taux de taxe foncière 2021-2025"
+        : "Source : OFGL, comptes des communes",
+    }),
+    WIDTH,
+    HEIGHT,
+  );
 }
 
-const TAX_CLASSES = [
-  { below: 25, color: "#e3eefb" },
-  { below: 35, color: "#9cc3f0" },
-  { below: 45, color: "#4f93e0" },
-  { below: 55, color: "#1c5cab" },
-  { below: Infinity, color: "#0b2a55" },
+const RATE_CLASSES = [
+  { below: 25, color: "#e3eefb", label: "moins de 25 %" },
+  { below: 35, color: "#9cc3f0", label: "25 à 35 %" },
+  { below: 45, color: "#4f93e0", label: "35 à 45 %" },
+  { below: 55, color: "#1c5cab", label: "45 à 55 %" },
+  { below: Infinity, color: "#0b2a55", label: "55 % et plus" },
 ];
 
-export function renderTaxMap(
+const CHANGE_CLASSES = [
+  { below: -0.005, color: "#6da7ec", label: "en baisse" },
+  { below: 0.005, color: "#e2e0db", label: "inchangé" },
+  { below: 0.05, color: "#f6c3a5", label: "moins de +5 %" },
+  { below: 0.1, color: "#ef8f63", label: "+5 à 10 %" },
+  { below: Infinity, color: "#b8441a", label: "+10 % et plus" },
+];
+
+const NO_DATA = "#f1f2f4";
+
+function franceMap(
+  map: Awaited<ReturnType<typeof getPropertyTaxMap>>,
+  fill: (area: (typeof map.areas)[number]) => string,
+): Node {
+  const [left, top, width, height] = map.viewBox;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${left} ${top} ${width} ${height}">${map.areas.map((area) => `<path d="${area.path}" fill="${fill(area)}"/>`).join("")}</svg>`;
+  return svgImage(svg, Math.round((MAP_HEIGHT * width) / height), MAP_HEIGHT);
+}
+
+export function renderTaxSlide(
+  index: number,
   map: Awaited<ReturnType<typeof getPropertyTaxMap>>,
   summary: Awaited<ReturnType<typeof getPropertyTaxSummary>>,
-): Promise<Uint8Array<ArrayBuffer>> {
-  const [left, top, width, height] = map.viewBox;
-  const fill = (rate: number) => TAX_CLASSES.find((entry) => rate < entry.below)!.color;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${left} ${top} ${width} ${height}">${map.areas.map((area) => `<path d="${area.path}" fill="${fill(area.rate)}"/>`).join("")}</svg>`;
-  const mapHeight = 690;
-  const mapWidth = Math.round((mapHeight * width) / height);
-  const share = (count: number) => formatPercent(count / summary.communes);
-  const node = box(
-    {
-      display: "flex",
-      flexDirection: "column",
-      width: WIDTH,
-      height: HEIGHT,
-      padding: "56px 64px 44px",
-      background: "#ffffff",
-      fontFamily: "Inter",
-      color: NAVY,
-    },
-    [
-      box(
-        { fontSize: 26, fontWeight: 800, color: BLUE },
-        `FRANCE · TAXE FONCIÈRE ${summary.lastYear}`,
-      ),
-      box(
-        { marginTop: 18, fontSize: 54, fontWeight: 800, lineHeight: 1.1, letterSpacing: -1.5 },
-        `${share(summary.raised)} des communes ont relevé leur taux de taxe foncière depuis ${summary.firstYear}`,
-      ),
-      box({ display: "flex", justifyContent: "center", flexGrow: 1, marginTop: 16 }, [
-        svgImage(svg, mapWidth, mapHeight),
-      ]),
-      box(
-        { display: "flex", justifyContent: "center", gap: 18, fontSize: 22, color: MUTED },
-        TAX_CLASSES.map((entry, rank) =>
-          box({ display: "flex", alignItems: "center", gap: 8 }, [
-            box({ width: 26, height: 18, borderRadius: 4, background: entry.color }),
-            rank === 0
-              ? `moins de ${entry.below} %`
-              : entry.below === Infinity
-                ? `${TAX_CLASSES[rank - 1]!.below} % et plus`
-                : `${TAX_CLASSES[rank - 1]!.below} à ${entry.below} %`,
-          ]),
-        ),
-      ),
-      box(
-        { display: "flex", gap: 40, marginTop: 26 },
-        [
-          { value: formatPercent(summary.median / 100, 1), label: "taux médian des communes" },
-          { value: formatNumber(summary.raisedTenth), label: "communes à +10 % ou plus" },
-          { value: formatNumber(summary.lowered), label: "communes l’ont baissé" },
-        ].map((figure) =>
-          box({ display: "flex", flexDirection: "column", flex: 1 }, [
-            box({ fontSize: 52, fontWeight: 800, letterSpacing: -1.5 }, figure.value),
-            box({ fontSize: 23, color: MUTED }, figure.label),
-          ]),
-        ),
-      ),
-      box(
-        {
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginTop: 30,
-          paddingTop: 24,
-          borderTop: "2px solid #e1e5ec",
-        },
-        [
-          box(
-            { fontSize: 21, color: MUTED },
-            "Source : DGFiP, taux 2021-2025, France métropolitaine",
-          ),
-          box({ display: "flex", alignItems: "center", gap: 14 }, [
-            { type: "img", props: { src: logoUrl, width: 56, height: 56 } },
-            box({ fontSize: 32, fontWeight: 800, letterSpacing: -0.5 }, "chaqueeuro.fr"),
-          ]),
+  cities: LargeCity[],
+): Promise<Uint8Array<ArrayBuffer>> | null {
+  const { firstYear: start, lastYear: end } = summary;
+  const rate = (value: number) => formatPercent(value / 100, 1);
+  const rates = cities
+    .flatMap((city) => {
+      const from = city.values.taxe_fonciere?.[start];
+      const to = city.values.taxe_fonciere?.[end];
+      return to === undefined ? [] : [{ name: cityLabel(city, cities), from, to }];
+    })
+    .toSorted((a, b) => b.to - a.to);
+  const highest = rates[0]!;
+  const lowest = rates.at(-1)!;
+  const typical = median(rates.map((city) => city.to));
+  const changes = rates
+    .flatMap((city) => (city.from ? [{ ...city, change: city.to / city.from - 1 }] : []))
+    .toSorted((a, b) => b.change - a.change);
+  const paris = rates.find((city) => city.name === "Paris");
+  const kicker = `FRANCE · TAXE FONCIÈRE ${end}`;
+  const page = `${index}/${TAX_SLIDES}`;
+  const source = `Source : DGFiP, taux nets commune et intercommunalité ${start}-${end}`;
+  const slides = [
+    () =>
+      frame({
+        kicker,
+        page,
+        title: `Le taux de taxe foncière de chaque commune en ${end}`,
+        chart: box({ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }, [
+          franceMap(map, (area) => RATE_CLASSES.find((entry) => area.rate < entry.below)!.color),
+          legend(RATE_CLASSES),
+        ]),
+        figures: [
+          { value: rate(summary.median), label: "taux médian des communes" },
+          { value: rate(highest.to), label: atCity(highest.name) },
+          { value: rate(lowest.to), label: atCity(lowest.name) },
         ],
-      ),
-    ],
-  );
-  return renderPng(node, WIDTH, HEIGHT);
+        source: `${source}, France métropolitaine`,
+      }),
+    () =>
+      frame({
+        kicker,
+        page,
+        title: `${formatPercent(summary.raised / summary.communes)} des communes ont relevé leur taux depuis ${start}`,
+        chart: box({ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }, [
+          franceMap(map, (area) =>
+            area.previous
+              ? CHANGE_CLASSES.find((entry) => area.rate / area.previous! - 1 < entry.below)!.color
+              : NO_DATA,
+          ),
+          legend(CHANGE_CLASSES),
+        ]),
+        figures: [
+          { value: formatNumber(summary.raisedTenth), label: "communes à +10 % ou plus" },
+          {
+            value: formatNumber(summary.communes - summary.raised - summary.lowered),
+            label: "communes sans changement",
+          },
+          { value: formatNumber(summary.lowered), label: "communes l’ont baissé" },
+        ],
+        source: `${source}, évolution du taux, France métropolitaine`,
+      }),
+    () =>
+      frame({
+        kicker,
+        page,
+        title: `Grandes villes : de ${rate(lowest.to)} ${atCity(lowest.name)} à ${rate(highest.to)} ${atCity(highest.name)}`,
+        chart: bars([
+          ...rates.slice(0, 6).map((city, at) => ({
+            label: city.name,
+            value: city.to,
+            display: rate(city.to),
+            highlight: at === 0,
+          })),
+          null,
+          ...rates.slice(-3).map((city, at) => ({
+            label: city.name,
+            value: city.to,
+            display: rate(city.to),
+            highlight: at === 2,
+          })),
+        ]),
+        figures: [
+          { value: rate(highest.to), label: atCity(highest.name) },
+          { value: rate(typical), label: "grande ville médiane" },
+          { value: rate(lowest.to), label: atCity(lowest.name) },
+        ],
+        source: `${source}, communes d’au moins 100 000 habitants`,
+      }),
+    () =>
+      frame({
+        kicker,
+        page,
+        title: `${changes[0]!.name} : ${formatChange(changes[0]!.change)} depuis ${start}, la plus forte hausse des grandes villes`,
+        chart: bars(
+          changes.slice(0, ROWS).map((city, at) => ({
+            label: city.name,
+            value: Math.max(city.change, 0),
+            display: formatChange(city.change),
+            highlight: at === 0,
+          })),
+          `Hausse du taux entre ${start} et ${end}`,
+        ),
+        figures: [
+          {
+            value: `${changes.filter((city) => city.change > 0.0001).length} sur ${changes.length}`,
+            label: "grandes villes l’ont relevé",
+          },
+          {
+            value: String(changes.filter((city) => Math.abs(city.change) <= 0.0001).length),
+            label: "n’y ont pas touché",
+          },
+          {
+            value: String(changes.filter((city) => city.change < -0.0001).length),
+            label: "l’ont baissé",
+          },
+        ],
+        source: `${source}, communes d’au moins 100 000 habitants`,
+      }),
+    () =>
+      frame({
+        kicker,
+        page,
+        title: `À valeur locative égale, la taxe foncière est ${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(highest.to / lowest.to)} fois plus élevée ${atCity(highest.name)} qu’${atCity(lowest.name)}`,
+        chart: bars(
+          [
+            { label: highest.name, value: highest.to, display: formatEuro(highest.to * 10) },
+            { label: "Grande ville médiane", value: typical, display: formatEuro(typical * 10) },
+            ...(paris && paris !== highest && paris !== lowest
+              ? [{ label: "Paris", value: paris.to, display: formatEuro(paris.to * 10) }]
+              : []),
+            { label: lowest.name, value: lowest.to, display: formatEuro(lowest.to * 10) },
+          ].map((row, at, all) => ({ ...row, highlight: at === 0 || at === all.length - 1 })),
+          `Taxe pour 1 000 € de base imposable en ${end}`,
+        ),
+        figures: [
+          { value: rate(highest.to), label: atCity(highest.name) },
+          { value: rate(lowest.to), label: atCity(lowest.name) },
+        ],
+        source:
+          "Source : DGFiP. Le montant payé dépend aussi de la valeur locative de chaque logement.",
+      }),
+  ];
+  const slide = slides[index - 1];
+  return slide ? renderPng(slide(), WIDTH, HEIGHT) : null;
 }

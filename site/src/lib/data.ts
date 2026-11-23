@@ -2086,7 +2086,11 @@ export async function getLargeCities(items: readonly string[]) {
 export async function getPropertyTaxMap() {
   const [areas, bounds] = await db().batch([
     db().prepare(
-      `select s.path, ${TAX_TOTAL} as rate from commune_shapes s
+      `select s.path, ${TAX_TOTAL} as rate,
+        (select a.commune_rate + a.syndicate_rate + a.grouping_rate from commune_tax_rates a
+          where a.insee = s.insee and a.year = (select min(year) from commune_tax_rates))
+          as previous
+      from commune_shapes s
       join commune_tax_rates r on r.insee = s.insee
         and r.year = (select max(year) from commune_tax_rates)
       where s.insee not like '97%'`,
@@ -2101,7 +2105,7 @@ export async function getPropertyTaxMap() {
   const right = Math.max(...boxes.map(([x = 0, , width = 0]) => x + width));
   const bottom = Math.max(...boxes.map(([, y = 0, , height = 0]) => y + height));
   return {
-    areas: (areas?.results ?? []) as { path: string; rate: number }[],
+    areas: (areas?.results ?? []) as { path: string; rate: number; previous: number | null }[],
     viewBox: [left, top, right - left, bottom - top] as const,
   };
 }

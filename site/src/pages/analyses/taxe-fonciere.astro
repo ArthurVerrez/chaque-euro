@@ -54,6 +54,7 @@ const figures = [
 ];
 const sections = [
   { id: "carte", label: "La carte", icon: "map" as const },
+  { id: "hausses", label: "Les hausses", icon: "trend" as const },
   { id: "grandes-villes", label: "Les grandes villes", icon: "town" as const },
   { id: "votre-commune", label: "Votre commune", icon: "search" as const },
 ];
@@ -65,7 +66,7 @@ const sections = [
   figures={figures}
   provenance={[summary.provenance]}
   sections={sections}
-  image="/partage/carte/taxe-fonciere.png"
+  image="/partage/carte/taxe-fonciere-2.png"
 >
   <Section
     id="carte"
@@ -81,16 +82,38 @@ const sections = [
     <img
       slot="chart"
       class="map"
-      src="/partage/carte/taxe-fonciere.png"
+      src="/partage/carte/taxe-fonciere-1.png"
       width="1080"
       height="1350"
-      alt={`Carte de France des taux de taxe foncière par commune en ${lastYear}. ${share(raised)} des communes ont relevé leur taux depuis ${firstYear}.`}
+      alt={`Carte de France des taux de taxe foncière par commune en ${lastYear}. Le taux médian est de ${rate(median)}.`}
       loading="lazy"
     />
     <p slot="caveat">
       Les départements d’outre-mer ne figurent pas sur la carte, mais sont comptés dans les
       chiffres. Une commune créée ou fusionnée après {firstYear} n’est pas comparée.
     </p>
+  </Section>
+
+  <Section
+    id="hausses"
+    title={`Où le taux a augmenté depuis ${firstYear}`}
+    icon="trend"
+    provenance={summary.provenance}
+  >
+    <p>
+      {share(raised)} des communes ont relevé leur taux entre {firstYear} et {lastYear}.{" "}
+      {formatNumber(raisedTenth)} l’ont augmenté d’au moins 10 % et {formatNumber(lowered)} l’ont
+      baissé.
+    </p>
+    <img
+      slot="chart"
+      class="map"
+      src="/partage/carte/taxe-fonciere-2.png"
+      width="1080"
+      height="1350"
+      alt={`Carte de France de l’évolution du taux de taxe foncière de chaque commune entre ${firstYear} et ${lastYear}.`}
+      loading="lazy"
+    />
   </Section>
 
   <Section

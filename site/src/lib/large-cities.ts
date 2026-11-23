@@ -187,6 +187,12 @@ export function ofCity(name: string): string {
   return /^[AEIOUYÉÈÂ]/i.test(name) ? `d’${name}` : `de ${name}`;
 }
 
+export function atCity(name: string): string {
+  if (name.startsWith("Le ")) return `au ${name.slice(3)}`;
+  if (name.startsWith("Les ")) return `aux ${name.slice(4)}`;
+  return `à ${name}`;
+}
+
 export function leadsWithChange(stat: CityStat): boolean {
   return (
     notableChange(stat) && edge(stat.changeRank!, stat.changeCount) < edge(stat.rank, stat.count)
