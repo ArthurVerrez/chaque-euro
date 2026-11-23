@@ -24,7 +24,12 @@ interface NavItem {
   label: string;
   icon: IconName;
 }
-const groups: { title: string; items: NavItem[] }[] = [
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+  disclosure?: { icon: IconName; href?: string };
+}
+const groups: NavGroup[] = [
   {
     title: "Où va l’argent ?",
     items: [
@@ -36,14 +41,24 @@ const groups: { title: string; items: NavItem[] }[] = [
         label: "Sécurité sociale",
         icon: "socialSecurity",
       },
-      { href: "/analyses", label: "Analyses", icon: "analysis" },
     ],
+  },
+  {
+    title: "Analyses",
+    disclosure: { icon: "analysis", href: "/analyses" },
+    items: ANALYSES.map((article) => ({
+      href: `/analyses/${article.slug}`,
+      label: article.short,
+      icon: article.icon,
+    })),
   },
   {
     title: "Près de vous",
     items: [
       { href: "/communes", label: "Communes", icon: "town" },
+      { href: "/intercommunalites", label: "Intercommunalités", icon: "intercommunalite" },
       { href: "/regions", label: "Régions", icon: "region" },
+      { href: "/argent-public/collectivites", label: "Collectivités locales", icon: "town" },
     ],
   },
   {
@@ -61,28 +76,37 @@ const groups: { title: string; items: NavItem[] }[] = [
     title: "Avec une IA",
     items: [{ href: "/ia", label: "MCP", icon: "assistant" }],
   },
-];
-const secondary: NavItem[] = [
-  { href: "/argent-public/operateurs", label: "Opérateurs de l'État", icon: "building" },
-  { href: "/argent-public/collectivites", label: "Collectivités locales", icon: "town" },
-  { href: "/intercommunalites", label: "Intercommunalités", icon: "intercommunalite" },
-  { href: "/votes", label: "Votes", icon: "vote" },
-  { href: "/campagnes", label: "Campagnes", icon: "campaign" },
-  { href: "/alertes", label: "Alertes", icon: "alert" },
-  { href: "/train-de-vie", label: "Moyens publics", icon: "spending" },
-  { href: "/lobbying", label: "Lobbying", icon: "lobbying" },
-  { href: "/financement-politique", label: "Financement politique", icon: "politicalFinance" },
-  { href: "/journal-officiel", label: "Journal officiel", icon: "journal" },
-  { href: "/documents/dossiers", label: "Dossiers législatifs", icon: "legislation" },
-  { href: "/administrations", label: "Administrations", icon: "administration" },
-  ...ANALYSES.map((article) => ({
-    href: `/analyses/${article.slug}`,
-    label: article.short,
-    icon: article.icon,
-  })),
-  { href: "/lexique", label: "Lexique", icon: "book" },
-  { href: "/methodologie", label: "Méthode et sources", icon: "method" },
-  { href: "/telechargements", label: "Télécharger les données", icon: "download" },
+  {
+    title: "Institutions",
+    disclosure: { icon: "state" },
+    items: [
+      { href: "/administrations", label: "Administrations", icon: "administration" },
+      { href: "/argent-public/operateurs", label: "Opérateurs de l’État", icon: "building" },
+      { href: "/train-de-vie", label: "Moyens publics", icon: "spending" },
+    ],
+  },
+  {
+    title: "Vie politique",
+    disclosure: { icon: "vote" },
+    items: [
+      { href: "/votes", label: "Votes", icon: "vote" },
+      { href: "/documents/dossiers", label: "Dossiers législatifs", icon: "legislation" },
+      { href: "/journal-officiel", label: "Journal officiel", icon: "journal" },
+      { href: "/campagnes", label: "Campagnes", icon: "campaign" },
+      { href: "/financement-politique", label: "Financement politique", icon: "politicalFinance" },
+      { href: "/lobbying", label: "Lobbying", icon: "lobbying" },
+      { href: "/alertes", label: "Alertes", icon: "alert" },
+    ],
+  },
+  {
+    title: "Sources et données",
+    disclosure: { icon: "source" },
+    items: [
+      { href: "/methodologie", label: "Méthode et sources", icon: "method" },
+      { href: "/lexique", label: "Lexique", icon: "book" },
+      { href: "/telechargements", label: "Télécharger les données", icon: "download" },
+    ],
+  },
 ];
 const exact = new Set(["/", "/analyses"]);
 const current = (href: string) =>
@@ -171,37 +195,53 @@ const current = (href: string) =>
           Rechercher
         </a>
         <nav aria-label="Navigation principale">
-          {groups.map((group) => (
-            <div class="group">
-              <p class="group-title">{group.title}</p>
-              <ul>
-                {group.items.map((item) => (
-                  <li>
-                    <a href={item.href} aria-current={current(item.href)}>
-                      <Icon name={item.icon} size={17} />
-                      {item.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-          <details class="group secondary" open={secondary.some((item) => current(item.href))}>
-            <summary>
-              <Icon name="list" size={17} />
-              Tout le site
-            </summary>
-            <ul>
-              {secondary.map((item) => (
-                <li>
-                  <a href={item.href} aria-current={current(item.href)}>
-                    <Icon name={item.icon} size={17} />
-                    {item.label}
+          {groups.map(({ title, items, disclosure }) => {
+            const Group = disclosure ? "details" : "div";
+            const href = disclosure?.href;
+            return (
+              <div class:list={["group", { branch: disclosure, "has-index": href }]}>
+                {disclosure?.href && (
+                  <a
+                    class="group-index"
+                    href={disclosure.href}
+                    aria-current={current(disclosure.href)}
+                  >
+                    <Icon name={disclosure.icon} size={17} />
+                    {title}
                   </a>
-                </li>
-              ))}
-            </ul>
-          </details>
+                )}
+                <Group
+                  open={disclosure && (path === href || items.some((item) => current(item.href)))}
+                >
+                  {disclosure ? (
+                    <summary aria-label={href ? `Liste des ${title.toLowerCase()}` : undefined}>
+                      {!href && (
+                        <>
+                          <Icon name={disclosure.icon} size={17} />
+                          {title}
+                        </>
+                      )}
+                      <span class="chevron">
+                        <Icon name="expand" size={16} />
+                      </span>
+                    </summary>
+                  ) : (
+                    <p class="group-title">{title}</p>
+                  )}
+                  <ul aria-label={title}>
+                    {items.map((item) => (
+                      <li>
+                        <a href={item.href} aria-current={current(item.href)}>
+                          <Icon name={item.icon} size={17} />
+                          {item.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </Group>
+              </div>
+            );
+          })}
         </nav>
       </aside>
       <div class="page">
@@ -515,35 +555,66 @@ const current = (href: string) =>
     color: var(--text-muted);
   }
 
-  .secondary {
-    margin-top: 1.375rem;
+  .branch {
+    position: relative;
+    margin-top: 0.875rem;
     border-top: 1px solid var(--border);
-    padding-top: 0.75rem;
   }
 
-  .secondary summary {
+  .branch + .branch {
+    margin-top: 0;
+  }
+
+  .branch summary,
+  .group .group-index {
     display: flex;
     align-items: center;
     gap: 0.625rem;
-    padding: 0.625rem 0.75rem;
-    color: var(--text-secondary);
-    font-size: 0.875rem;
+    min-height: 2.75rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 9px;
+    color: var(--text);
+    font-size: 0.9375rem;
     font-weight: 650;
+  }
+
+  .branch summary {
     cursor: pointer;
     list-style: none;
   }
 
-  .secondary summary::-webkit-details-marker {
+  .branch summary::-webkit-details-marker {
     display: none;
   }
 
-  .secondary summary::after {
-    content: "+";
+  .branch summary:hover {
+    background: var(--navy-50);
+  }
+
+  .chevron {
+    display: inline-flex;
     margin-left: auto;
   }
 
-  .secondary[open] summary::after {
-    content: "−";
+  details[open] > summary .chevron {
+    transform: rotate(180deg);
+  }
+
+  .group-index {
+    position: absolute;
+    top: 0;
+    inset-inline: 0 2.75rem;
+  }
+
+  .has-index summary {
+    width: 2.75rem;
+    margin-left: auto;
+  }
+
+  .branch details > ul {
+    margin: 0 0 0.5rem 0.875rem;
+    border-left: 1px solid var(--border);
+    padding-left: 0.25rem;
   }
 
   .group ul {
@@ -566,6 +637,11 @@ const current = (href: string) =>
     font-weight: 550;
     line-height: 1.3;
     text-decoration: none;
+  }
+
+  .branch li a {
+    gap: 0.5rem;
+    padding-inline: 0.5rem;
   }
 
   .group a :global(svg) {

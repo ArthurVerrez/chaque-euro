@@ -15,7 +15,7 @@ export interface Analysis {
 export const ANALYSES: Analysis[] = [
   {
     slug: "nantes",
-    short: "Nantes Métropole",
+    short: "Nantes et sa métropole",
     accent: "var(--series-1)",
     title: "Ce que dépensent Nantes Métropole et ses communes",
     question:
@@ -27,7 +27,7 @@ export const ANALYSES: Analysis[] = [
   },
   {
     slug: "marseille",
-    short: "Marseille",
+    short: "Dépenses de Marseille",
     accent: "var(--series-2)",
     title: "À Marseille, pourquoi la dépense par habitant monte ou baisse selon le calcul",
     question: "Quelles dépenses ont progressé entre les comptes 2024 et 2025 de Marseille ?",
@@ -37,7 +37,7 @@ export const ANALYSES: Analysis[] = [
   },
   {
     slug: "lille",
-    short: "Lille",
+    short: "Dette de Lille",
     accent: "var(--series-7)",
     title: "Pourquoi Lille a davantage emprunté en 2025",
     question: "Pourquoi la dette de Lille augmente-t-elle en 2025 ?",
@@ -68,7 +68,7 @@ export const ANALYSES: Analysis[] = [
   },
   {
     slug: "europe",
-    short: "L'Europe",
+    short: "Budget de l’UE",
     accent: "var(--series-7)",
     title: "L’Europe : ce que la France verse et ce qu’elle reçoit",
     question: "Combien la France verse-t-elle au budget européen, et combien reçoit-elle ?",
@@ -78,7 +78,7 @@ export const ANALYSES: Analysis[] = [
   },
   {
     slug: "paris",
-    short: "Paris",
+    short: "Dépenses de Paris",
     accent: "var(--series-2)",
     title: "Pourquoi Paris dépense plus par habitant",
     question: "Pourquoi les dépenses par habitant sont-elles plus élevées à Paris ?",
@@ -88,7 +88,7 @@ export const ANALYSES: Analysis[] = [
   },
   {
     slug: "rail",
-    short: "Le rail",
+    short: "Financement du rail",
     accent: "var(--series-3)",
     title: "Le rail : combien pour les finances publiques",
     question: "Qui finance les trains, entre voyageurs et administrations publiques ?",
@@ -99,7 +99,7 @@ export const ANALYSES: Analysis[] = [
   },
   {
     slug: "etudiants",
-    short: "Étudiants",
+    short: "Aides aux étudiants",
     accent: "var(--series-5)",
     title: "Étudiants : ce qu’ils demandent, ce que l’État dépense",
     question: "Quels moyens publics face aux demandes des étudiants ?",
