@@ -2008,10 +2008,23 @@ export async function getSpendingComparison() {
 
 const TAX_TOTAL = "commune_rate + syndicate_rate + grouping_rate";
 
+const REVALUATION_QUERY = "select year, coefficient from property_base_revaluation order by year";
+
+function revaluationFrom(rows: unknown[] | undefined): Record<number, number> {
+  return Object.fromEntries(
+    ((rows ?? []) as { year: number; coefficient: number }[]).map((row) => [
+      row.year,
+      row.coefficient,
+    ]),
+  );
+}
+
 function propertyTaxProvenance(index: SourceIndex): Provenance {
   return index.provenance(
-    ["rei-2021", "rei-2022", "rei-2023", "rei-2024", "rei-2025"].map((id) => index.cite(id)),
-    "Taux nets de taxe foncière sur les propriétés bâties : part communale, syndicats et groupement à fiscalité propre, comparés à partir de 2021. La taxe d’enlèvement des ordures ménagères et les taxes spéciales ne sont pas comprises.",
+    ["rei-2021", "rei-2022", "rei-2023", "rei-2024", "rei-2025", "insee-ipch"].map((id) =>
+      index.cite(id),
+    ),
+    "Taux nets de taxe foncière sur les propriétés bâties : part communale, syndicats et groupement à fiscalité propre, comparés à partir de 2021. Pour un même logement, la taxe évolue comme le taux multiplié par la revalorisation légale des valeurs locatives, calculée chaque année sur l’indice des prix harmonisé de novembre. La taxe d’enlèvement des ordures ménagères et les taxes spéciales ne sont pas comprises.",
     SQL.taxRates,
   );
 }
@@ -2029,7 +2042,7 @@ const LARGE_CITIES = `select insee from commune_years
   where stratum = '10' and year = (select max(year) from commune_years)`;
 
 export async function getLargeCities(items: readonly string[]) {
-  const [rows, sources] = await db().batch([
+  const [rows, sources, revaluation] = await db().batch([
     db()
       .prepare(
         `select c.insee, c.name, c.department_code as departmentCode, c.population,
@@ -2046,6 +2059,7 @@ export async function getLargeCities(items: readonly string[]) {
       )
       .bind(JSON.stringify(items)),
     db().prepare(SOURCES_QUERY),
+    db().prepare(REVALUATION_QUERY),
   ]);
   const cities = new Map<string, LargeCity>();
   for (const row of (rows?.results ?? []) as unknown as (Omit<LargeCity, "slug" | "values"> & {
@@ -2080,6 +2094,7 @@ export async function getLargeCities(items: readonly string[]) {
       SQL.communes,
     ),
     taxProvenance: propertyTaxProvenance(index),
+    revaluation: revaluationFrom(revaluation?.results),
   };
 }
 
@@ -2111,7 +2126,7 @@ export async function getPropertyTaxMap() {
 }
 
 export async function getPropertyTaxSummary() {
-  const [summary, rates, sources] = await db().batch([
+  const [summary, rates, revaluation, sources] = await db().batch([
     db().prepare(
       `with total as (select insee, year, ${TAX_TOTAL} as rate from commune_tax_rates)
       select min(a.year) as firstYear, max(b.year) as lastYear, count(*) as communes,
@@ -2126,6 +2141,7 @@ export async function getPropertyTaxSummary() {
       `select ${TAX_TOTAL} as rate from commune_tax_rates
       where year = (select max(year) from commune_tax_rates) order by rate`,
     ),
+    db().prepare(REVALUATION_QUERY),
     db().prepare(SOURCES_QUERY),
   ]);
   const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
@@ -2140,6 +2156,7 @@ export async function getPropertyTaxSummary() {
       raisedTenth: number;
     }),
     median: values[Math.floor(values.length / 2)] ?? 0,
+    revaluation: revaluationFrom(revaluation?.results),
     provenance: propertyTaxProvenance(index),
   };
 }

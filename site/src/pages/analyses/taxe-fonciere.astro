@@ -4,8 +4,8 @@ import Section from "../../components/AnalysisSection.astro";
 import ChangeList from "../../components/ChangeList.astro";
 import { analysis } from "../../lib/analyses";
 import { getLargeCities, getPropertyTaxSummary } from "../../lib/data";
-import { formatNumber, formatPercent } from "../../lib/format";
-import { LAST_YEAR, cityLabel } from "../../lib/large-cities";
+import { formatChange, formatNumber, formatPercent } from "../../lib/format";
+import { LAST_YEAR, baseGrowth, cityLabel } from "../../lib/large-cities";
 
 const [summary, { cities }] = await Promise.all([
   getPropertyTaxSummary(),
@@ -13,6 +13,7 @@ const [summary, { cities }] = await Promise.all([
 ]);
 const { firstYear, lastYear, communes, raised, lowered, raisedTenth, median } = summary;
 const share = (count: number) => formatPercent(count / communes);
+const revaluation = formatChange(baseGrowth(summary.revaluation, firstYear, lastYear) - 1);
 const rate = (value: number) => formatPercent(value / 100, 1);
 const ranking = cities
   .flatMap((city) => {
@@ -62,11 +63,11 @@ const sections = [
 
 <Analysis
   article={analysis("taxe-fonciere")}
-  answer={`Entre ${firstYear} et ${lastYear}, ${share(raised)} des communes ont relevé leur taux de taxe foncière, intercommunalité comprise. ${formatNumber(raisedTenth)} l’ont augmenté d’au moins 10 % et ${formatNumber(lowered)} l’ont baissé.`}
+  answer={`Entre ${firstYear} et ${lastYear}, la taxe foncière d’un même logement a pris ${revaluation} sans aucune hausse du taux, par la seule revalorisation légale des valeurs locatives. ${share(raised)} des communes ont en plus relevé leur taux, intercommunalité comprise, et ${formatNumber(lowered)} l’ont baissé.`}
   figures={figures}
   provenance={[summary.provenance]}
   sections={sections}
-  image="/partage/carte/taxe-fonciere-2.png"
+  image="/partage/carte/taxe-fonciere-1.png"
 >
   <Section
     id="carte"
@@ -82,7 +83,7 @@ const sections = [
     <img
       slot="chart"
       class="map"
-      src="/partage/carte/taxe-fonciere-1.png"
+      src="/partage/carte/taxe-fonciere-5.png"
       width="1080"
       height="1350"
       alt={`Carte de France des taux de taxe foncière par commune en ${lastYear}. Le taux médian est de ${rate(median)}.`}
@@ -96,22 +97,23 @@ const sections = [
 
   <Section
     id="hausses"
-    title={`Où le taux a augmenté depuis ${firstYear}`}
+    title={`Ce que paie un même logement depuis ${firstYear}`}
     icon="trend"
     provenance={summary.provenance}
   >
     <p>
-      {share(raised)} des communes ont relevé leur taux entre {firstYear} et {lastYear}.{" "}
-      {formatNumber(raisedTenth)} l’ont augmenté d’au moins 10 % et {formatNumber(lowered)} l’ont
-      baissé.
+      La taxe suit le taux et la valeur locative du logement. Cette valeur est relevée chaque année
+      avec l’inflation, sans vote local : {revaluation} entre {firstYear} et {lastYear}.{" "}
+      {share(raised)} des communes ont en plus relevé leur taux, {formatNumber(raisedTenth)} d’au
+      moins 10 %.
     </p>
     <img
       slot="chart"
       class="map"
-      src="/partage/carte/taxe-fonciere-2.png"
+      src="/partage/carte/taxe-fonciere-3.png"
       width="1080"
       height="1350"
-      alt={`Carte de France de l’évolution du taux de taxe foncière de chaque commune entre ${firstYear} et ${lastYear}.`}
+      alt={`Carte de France de la hausse de la taxe foncière d’un même logement dans chaque commune entre ${firstYear} et ${lastYear}, taux et revalorisation légale compris.`}
       loading="lazy"
     />
   </Section>

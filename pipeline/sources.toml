@@ -1406,6 +1406,20 @@ usage = "Fiscalité directe locale 2025 : recensement des éléments d’imposit
 limits = ["Bases en euros, taux en pourcentage. Les taux ne donnent pas le montant payé par un foyer.", "Les bases peuvent différer selon le bénéficiaire. Les cellules non renseignées restent manquantes."]
 
 [[sources]]
+id = "insee-ipch"
+short_name = "Insee"
+name = "Indice des prix à la consommation harmonisé, ensemble, base 2015"
+publisher = "Insee"
+page_url = "https://www.insee.fr/fr/statistiques/serie/001759971"
+licence = "lo2"
+frequency = "Mensuelle"
+kind = "file"
+usage = "Revalorisation légale des valeurs locatives des logements (article 1518 bis du code général des impôts)."
+limits = ["Le coefficient de l’année N est le quotient de l’indice de novembre N-1 par celui de novembre N-2, arrondi au millième.", "Les locaux professionnels suivent d’autres règles de mise à jour."]
+file_url = "https://bdm.insee.fr/series/sdmx/data/SERIES_BDM/001759971?startPeriod=2015-01"
+filename = "ipch.xml"
+
+[[sources]]
 id = "rei-2021"
 short_name = "DGFiP"
 name = "Fiscalité directe locale 2021 : recensement des éléments d’imposition"

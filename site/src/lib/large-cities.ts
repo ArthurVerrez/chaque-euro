@@ -187,6 +187,12 @@ export function ofCity(name: string): string {
   return /^[AEIOUYÉÈÂ]/i.test(name) ? `d’${name}` : `de ${name}`;
 }
 
+export function baseGrowth(revaluation: Record<number, number>, from: number, to: number): number {
+  let growth = 1;
+  for (let year = from + 1; year <= to; year += 1) growth *= revaluation[year] ?? 1;
+  return growth;
+}
+
 export function atCity(name: string): string {
   if (name.startsWith("Le ")) return `au ${name.slice(3)}`;
   if (name.startsWith("Les ")) return `aux ${name.slice(4)}`;

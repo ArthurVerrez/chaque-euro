@@ -4,6 +4,7 @@ import {
   FIRST_YEAR,
   LAST_YEAR,
   atCity,
+  baseGrowth,
   cityLabel,
   cityStats,
   firstYear,
@@ -294,14 +295,6 @@ const RATE_CLASSES = [
   { below: Infinity, color: "#0b2a55", label: "55 % et plus" },
 ];
 
-const CHANGE_CLASSES = [
-  { below: -0.005, color: "#6da7ec", label: "en baisse" },
-  { below: 0.005, color: "#e2e0db", label: "inchangé" },
-  { below: 0.05, color: "#f6c3a5", label: "moins de +5 %" },
-  { below: 0.1, color: "#ef8f63", label: "+5 à 10 %" },
-  { below: Infinity, color: "#b8441a", label: "+10 % et plus" },
-];
-
 const NO_DATA = "#f1f2f4";
 
 function franceMap(
@@ -319,8 +312,9 @@ export function renderTaxSlide(
   summary: Awaited<ReturnType<typeof getPropertyTaxSummary>>,
   cities: LargeCity[],
 ): Promise<Uint8Array<ArrayBuffer>> | null {
-  const { firstYear: start, lastYear: end } = summary;
+  const { firstYear: start, lastYear: end, revaluation } = summary;
   const rate = (value: number) => formatPercent(value / 100, 1);
+  const base = baseGrowth(revaluation, start, end);
   const rates = cities
     .flatMap((city) => {
       const from = city.values.taxe_fonciere?.[start];
@@ -331,109 +325,108 @@ export function renderTaxSlide(
   const highest = rates[0]!;
   const lowest = rates.at(-1)!;
   const typical = median(rates.map((city) => city.to));
-  const changes = rates
-    .flatMap((city) => (city.from ? [{ ...city, change: city.to / city.from - 1 }] : []))
-    .toSorted((a, b) => b.change - a.change);
+  const bills = rates
+    .flatMap((city) => (city.from ? [{ ...city, bill: (city.to / city.from) * base - 1 }] : []))
+    .toSorted((a, b) => b.bill - a.bill);
+  const top = bills[0]!;
   const paris = rates.find((city) => city.name === "Paris");
+  const years = Object.keys(revaluation)
+    .map(Number)
+    .filter((year) => year > start && year <= end);
+  const peak = years.toSorted((a, b) => revaluation[b]! - revaluation[a]!)[0]!;
+  const communeBills = map.areas.flatMap((area) =>
+    area.previous ? [(area.rate / area.previous) * base - 1] : [],
+  );
+  const over = (threshold: number) => communeBills.filter((bill) => bill >= threshold).length;
+  const unchanged = base - 1;
+  const billClasses = [
+    {
+      below: unchanged - 0.005,
+      color: "#6da7ec",
+      label: `taux baissé : moins de ${formatChange(unchanged)}`,
+    },
+    {
+      below: unchanged + 0.005,
+      color: "#e2e0db",
+      label: `taux inchangé : ${formatChange(unchanged)}`,
+    },
+    { below: 0.25, color: "#f6c3a5", label: `+${Math.round(unchanged * 100)} à 25 %` },
+    { below: 0.4, color: "#ef8f63", label: "+25 à 40 %" },
+    { below: Infinity, color: "#b8441a", label: "+40 % et plus" },
+  ];
   const kicker = `FRANCE · TAXE FONCIÈRE ${end}`;
   const page = `${index}/${TAX_SLIDES}`;
   const source = `Source : DGFiP, taux nets commune et intercommunalité ${start}-${end}`;
+  const revaluationSource = `Insee, indice des prix harmonisé de novembre (article 1518 bis du CGI)`;
   const slides = [
     () =>
       frame({
         kicker,
         page,
-        title: `Le taux de taxe foncière de chaque commune en ${end}`,
-        chart: box({ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }, [
-          franceMap(map, (area) => RATE_CLASSES.find((entry) => area.rate < entry.below)!.color),
-          legend(RATE_CLASSES),
-        ]),
+        title: `${top.name} : la taxe foncière d’un même logement a pris ${formatChange(top.bill)} depuis ${start}`,
+        chart: bars(
+          bills.slice(0, ROWS).map((city, at) => ({
+            label: city.name,
+            value: Math.max(city.bill, 0) * 100,
+            display: formatChange(city.bill),
+            highlight: at === 0,
+          })),
+          `Hausse de la taxe pour un même logement, ${start}-${end}`,
+        ),
         figures: [
-          { value: rate(summary.median), label: "taux médian des communes" },
-          { value: rate(highest.to), label: atCity(highest.name) },
-          { value: rate(lowest.to), label: atCity(lowest.name) },
+          { value: formatChange(top.bill), label: atCity(top.name) },
+          { value: formatChange(unchanged), label: "sans aucune hausse du taux" },
+          {
+            value: formatChange(median(bills.map((city) => city.bill))),
+            label: "grande ville médiane",
+          },
         ],
-        source: `${source}, France métropolitaine`,
+        source: `${source} ; ${revaluationSource}. Communes d’au moins 100 000 habitants.`,
       }),
     () =>
       frame({
         kicker,
         page,
-        title: `${formatPercent(summary.raised / summary.communes)} des communes ont relevé leur taux depuis ${start}`,
+        title: `Même là où le taux n’a pas bougé, la taxe a pris ${formatChange(unchanged)} depuis ${start}`,
+        chart: bars(
+          years.map((year) => ({
+            label: String(year),
+            value: (revaluation[year]! - 1) * 100,
+            display: `+${formatPercent(revaluation[year]! - 1, 1)}`,
+            highlight: year === peak,
+          })),
+          "Hausse légale des valeurs locatives des logements, chaque année",
+        ),
+        figures: [
+          { value: formatChange(unchanged), label: `cumulé depuis ${start}` },
+          { value: `+${formatPercent(revaluation[peak]! - 1, 1)}`, label: `en ${peak}` },
+          {
+            value: formatNumber(summary.communes - summary.raised - summary.lowered),
+            label: "communes sans hausse du taux",
+          },
+        ],
+        source: `Source : ${revaluationSource}. La valeur suit l’inflation, sans vote local.`,
+      }),
+    () =>
+      frame({
+        kicker,
+        page,
+        title: `Dans ${formatPercent(over(0.2) / communeBills.length)} des communes, la taxe d’un même logement a pris plus de 20 % depuis ${start}`,
         chart: box({ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }, [
           franceMap(map, (area) =>
             area.previous
-              ? CHANGE_CLASSES.find((entry) => area.rate / area.previous! - 1 < entry.below)!.color
+              ? billClasses.find((entry) => (area.rate / area.previous!) * base - 1 < entry.below)!
+                  .color
               : NO_DATA,
           ),
-          legend(CHANGE_CLASSES),
+          legend(billClasses),
         ]),
         figures: [
-          { value: formatNumber(summary.raisedTenth), label: "communes à +10 % ou plus" },
-          {
-            value: formatNumber(summary.communes - summary.raised - summary.lowered),
-            label: "communes sans changement",
-          },
-          { value: formatNumber(summary.lowered), label: "communes l’ont baissé" },
+          { value: formatChange(median(communeBills)), label: "commune médiane" },
+          { value: formatNumber(over(0.25)), label: "communes à +25 % ou plus" },
+          { value: formatNumber(over(0.4)), label: "communes à +40 % ou plus" },
         ],
-        source: `${source}, évolution du taux, France métropolitaine`,
-      }),
-    () =>
-      frame({
-        kicker,
-        page,
-        title: `Grandes villes : de ${rate(lowest.to)} ${atCity(lowest.name)} à ${rate(highest.to)} ${atCity(highest.name)}`,
-        chart: bars([
-          ...rates.slice(0, 6).map((city, at) => ({
-            label: city.name,
-            value: city.to,
-            display: rate(city.to),
-            highlight: at === 0,
-          })),
-          null,
-          ...rates.slice(-3).map((city, at) => ({
-            label: city.name,
-            value: city.to,
-            display: rate(city.to),
-            highlight: at === 2,
-          })),
-        ]),
-        figures: [
-          { value: rate(highest.to), label: atCity(highest.name) },
-          { value: rate(typical), label: "grande ville médiane" },
-          { value: rate(lowest.to), label: atCity(lowest.name) },
-        ],
-        source: `${source}, communes d’au moins 100 000 habitants`,
-      }),
-    () =>
-      frame({
-        kicker,
-        page,
-        title: `${changes[0]!.name} : ${formatChange(changes[0]!.change)} depuis ${start}, la plus forte hausse des grandes villes`,
-        chart: bars(
-          changes.slice(0, ROWS).map((city, at) => ({
-            label: city.name,
-            value: Math.max(city.change, 0),
-            display: formatChange(city.change),
-            highlight: at === 0,
-          })),
-          `Hausse du taux entre ${start} et ${end}`,
-        ),
-        figures: [
-          {
-            value: `${changes.filter((city) => city.change > 0.0001).length} sur ${changes.length}`,
-            label: "grandes villes l’ont relevé",
-          },
-          {
-            value: String(changes.filter((city) => Math.abs(city.change) <= 0.0001).length),
-            label: "n’y ont pas touché",
-          },
-          {
-            value: String(changes.filter((city) => city.change < -0.0001).length),
-            label: "l’ont baissé",
-          },
-        ],
-        source: `${source}, communes d’au moins 100 000 habitants`,
+        source: `${source} ; ${revaluationSource}. France métropolitaine.`,
       }),
     () =>
       frame({
@@ -457,6 +450,22 @@ export function renderTaxSlide(
         ],
         source:
           "Source : DGFiP. Le montant payé dépend aussi de la valeur locative de chaque logement.",
+      }),
+    () =>
+      frame({
+        kicker,
+        page,
+        title: "Retrouvez le taux de votre commune sur chaqueeuro.fr",
+        chart: box({ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }, [
+          franceMap(map, (area) => RATE_CLASSES.find((entry) => area.rate < entry.below)!.color),
+          legend(RATE_CLASSES),
+        ]),
+        figures: [
+          { value: rate(summary.median), label: `taux médian en ${end}` },
+          { value: rate(highest.to), label: atCity(highest.name) },
+          { value: rate(lowest.to), label: atCity(lowest.name) },
+        ],
+        source: `${source}, France métropolitaine`,
       }),
   ];
   const slide = slides[index - 1];

@@ -64,6 +64,19 @@ class LocalMoneyTest(unittest.TestCase):
                 (None, None, None),
             )
 
+    def test_base_revaluation_follows_november_harmonised_prices(self) -> None:
+        with duckdb.connect() as con:
+            con.execute(
+                "create table ipch_raw as select * from (values ('2021-11', 109.09), "
+                "('2022-10', 115.0), ('2022-11', 116.81), ('2024-11', 123.36), "
+                "('2025-11', 124.33)) t(period, value)"
+            )
+            con.execute((SQL / "52b_base_revaluation.sql").read_text())
+            self.assertEqual(
+                con.execute("select * from property_base_revaluation order by year").fetchall(),
+                [(2023, 1.071), (2026, 1.008)],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -64,6 +64,7 @@ DATA_TABLES = (
     "commune_spending_benchmarks",
     "commune_taxes",
     "commune_tax_rates",
+    "property_base_revaluation",
     "tax_strata",
     "commune_income",
     "commune_turnout",
@@ -213,6 +214,10 @@ DOWNLOADS = {
     "commune_tax_rates": (
         "Taux nets de taxe foncière sur les propriétés bâties, 2021-2025, en pourcentage : "
         "commune, syndicats et groupement à fiscalité propre."
+    ),
+    "property_base_revaluation": (
+        "Coefficient légal de revalorisation des valeurs locatives des logements, par année "
+        "d'imposition, calculé sur l'indice des prix harmonisé de novembre."
     ),
     "tax_strata": "Médianes REI 2025 par strate, taxe, bénéficiaire et zone.",
     "commune_income": (

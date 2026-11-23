@@ -13,6 +13,7 @@ import {
   FIRST_YEAR,
   LAST_YEAR,
   METRIC_ITEMS,
+  baseGrowth,
   changeRankText,
   cityLabel,
   cityStats,
@@ -26,7 +27,7 @@ import {
   valueNote,
 } from "../../../lib/large-cities";
 
-const { cities, provenance, taxProvenance } = await getLargeCities(METRIC_ITEMS);
+const { cities, provenance, taxProvenance, revaluation } = await getLargeCities(METRIC_ITEMS);
 const city = cities.find((entry) => entry.slug === Astro.params.ville);
 const commune = city ? await getCommune(city.insee, LAST_YEAR) : null;
 if (!city || !commune) return new Response(null, { status: 404 });
@@ -42,6 +43,9 @@ const propertyTax = stat("taxe_fonciere");
 const yearsOf = (item: string) => Object.keys(city.values[item] ?? {}).map(Number);
 const years = yearsOf("dette");
 const taxYears = yearsOf("taxe_fonciere");
+const taxFrom = propertyTax ? firstYear(propertyTax.metric) : LAST_YEAR;
+const base = baseGrowth(revaluation, taxFrom, LAST_YEAR);
+const bill = propertyTax?.first ? (propertyTax.last / propertyTax.first) * base - 1 : null;
 const series = (item: string, range = years) =>
   range.map((year) => city.values[item]?.[year] ?? null);
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
@@ -217,6 +221,8 @@ const sections = [
         {statSentence(propertyTax, name)} Le taux additionne la part de la commune, celle de
         l’intercommunalité et celle des syndicats. Le montant payé dépend aussi de la valeur
         locative de chaque logement.
+        {bill !== null &&
+          ` Pour un même logement, la taxe a pris ${formatChange(bill)} entre ${taxFrom} et ${LAST_YEAR} : le taux, plus la revalorisation légale des valeurs locatives (${formatChange(base - 1)}, la même partout).`}
       </p>
       <LineChart
         slot="chart"

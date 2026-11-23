@@ -521,6 +521,11 @@ CREATE TABLE commune_tax_rates (
   PRIMARY KEY (insee, year)
 ) WITHOUT ROWID;
 
+CREATE TABLE property_base_revaluation (
+  year INTEGER PRIMARY KEY,
+  coefficient REAL NOT NULL
+);
+
 CREATE TABLE tax_strata (
   stratum TEXT NOT NULL,
   year INTEGER NOT NULL,

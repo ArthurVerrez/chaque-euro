@@ -70,6 +70,13 @@ def _load_rate_history(con: duckdb.DuckDBPyConnection, records: dict[str, FetchR
         )
 
 
+def _load_ipch(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -> None:
+    text = Path(records["insee-ipch"].path).read_text(encoding="utf-8")
+    observations = re.findall(r'TIME_PERIOD="(\d{4}-\d{2})" OBS_VALUE="([\d.]+)"', text)
+    con.execute("create or replace table ipch_raw (period varchar, value double)")
+    con.executemany("insert into ipch_raw values (?, ?)", observations)
+
+
 def load(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -> None:
     archive = Path(records["rei-2025"].path)
     destination = archive.parent / "rei-2025-utf8.csv"
@@ -81,6 +88,7 @@ def load(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -> Non
         shutil.copyfileobj(io.TextIOWrapper(source, encoding="cp1252"), out)
     con.execute("set variable rei_path = ?", [str(destination)])
     _load_rate_history(con, records)
+    _load_ipch(con, records)
     workbook = _extract(records["ircom-2025"].path, "ircom_communes_complet_revenus_2024.xlsx")
     con.execute("set variable ircom_path = ?", [str(workbook)])
     con.execute(
@@ -149,6 +157,10 @@ def validate(con: duckdb.DuckDBPyConnection) -> None:
         "REI rate history": """
             select count(*) from (select year from commune_tax_rates group by year
                 having count(*) < 30000)
+        """,
+        "IPCH November": """
+            select count(*) from (select year from generate_series(2022, 2025) t(year))
+            where year not in (select year from property_base_revaluation)
         """,
         "REI duplicate rate": """
             select count(*) from (select insee, year from commune_tax_rates
