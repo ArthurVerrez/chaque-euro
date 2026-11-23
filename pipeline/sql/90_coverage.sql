@@ -58,7 +58,7 @@ union all select 'state-balance', count(*), 'Solde budgétaire hors FMI 2009-202
 union all select 'eu-budget', count(*), 'Flux France-UE 2000-2025, NGEU séparé' from eu_flows
 union all select 'france-population', count(*), 'Population France au 1er janvier, milliers convertis en habitants' from france_population
 union all select 'crc-paris', count(*), 'Comparaison 2023, périmètre CRC' from paris_comparison
-union all select 'sdes-rail', count(*), 'Transferts hors retraites 2006-2024' from rail_transfers
+union all select 'sdes-rail', count(*), 'Transferts hors retraites ' || min(year) || ' à ' || max(year) from rail_transfers
 union all select 'art-rail', count(*), 'Revenus par service, 2019 et 2022-2024, euros constants 2024' from rail_revenue
 union all select 'rail-dividend', count(*), 'Fonds de concours SNCF, CP exécutés 2025' from sncf_fund
 union all select 'sies-grants', count(*), 'Boursiers des rentrées 2012 à 2025, formations éligibles MESR' from student_scholarships

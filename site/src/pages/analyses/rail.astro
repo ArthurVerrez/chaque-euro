@@ -3,15 +3,40 @@ import Analysis from "../../layouts/Analysis.astro";
 import Section from "../../components/AnalysisSection.astro";
 import LineChart from "../../components/LineChart.astro";
 import BarList from "../../components/BarList.astro";
-import ShareBar from "../../components/ShareBar.astro";
 import Term from "../../components/Term.astro";
 import { analysis } from "../../lib/analyses";
-import { getRailAnalysis } from "../../lib/data";
-import { formatBillions, formatPercent } from "../../lib/format";
+import { getRailAnalysis, type RailRevenue } from "../../lib/data";
+import { formatBillions, formatEuros, formatPercent } from "../../lib/format";
 const data = await getRailAnalysis();
 const latest = data.transfers.at(-1)!;
 const network = data.network.at(-1)!;
-const ter = data.revenue.find((row) => row.year === latest.year && row.service === "TER")!;
+const firstYear = 2019;
+const lastYear = 2024;
+const years = Array.from({ length: lastYear - firstYear + 1 }, (_, i) => firstYear + i);
+const revenueFor = (service: string, year: number) =>
+  data.revenue.find((row) => row.service === service && row.year === year);
+const commercialShare = (row: RailRevenue | undefined) =>
+  row && row.total > 0 ? row.commercial / row.total : null;
+const shares = ["TER", "Intercités"].map((service) => ({
+  label: service,
+  values: years.map((year) => commercialShare(revenueFor(service, year))),
+}));
+const revenueChange = (service: string) => {
+  const start = revenueFor(service, firstYear);
+  const end = revenueFor(service, lastYear);
+  if (!start || !end) return null;
+  return {
+    commercial: end.commercial - start.commercial,
+    public: end.public - start.public,
+    total: end.total - start.total,
+  };
+};
+const terChange = revenueChange("TER");
+const intercitesChange = revenueChange("Intercités");
+const ter = revenueFor("TER", lastYear);
+const terShare = commercialShare(ter);
+const firstTerShare = commercialShare(revenueFor("TER", firstYear));
+const intercitesShare = commercialShare(revenueFor("Intercités", lastYear));
 const takeover = data.context.filter((row) => row.metric === "debt");
 const reinvestment = data.context.find((row) => row.metric === "reinvestment")!;
 const figures = [
@@ -30,14 +55,14 @@ const figures = [
   {
     icon: "person" as const,
     label: "Part commerciale TER",
-    value: formatPercent(ter.commercial / ter.total, 1),
-    note: `${ter.year}, part des revenus du service`,
+    value: terShare === null ? "n.d." : formatPercent(terShare, 1),
+    note: `${lastYear}, part des revenus du service`,
   },
 ];
 const sections = [
   { id: "transferts", label: "Les transferts", icon: "trend" as const },
   { id: "reseau", label: "Le réseau", icon: "works" as const },
-  { id: "billets", label: "Les billets", icon: "person" as const },
+  { id: "billets", label: "Les billets TER", icon: "person" as const },
   { id: "dette", label: "La dette", icon: "debt" as const },
   { id: "benefices", label: "Les bénéfices", icon: "revenue" as const },
 ];
@@ -110,29 +135,60 @@ const sections = [
   </Section>
   <Section
     id="billets"
-    title="TER : environ un tiers de revenus commerciaux"
+    title="La billetterie porte la hausse des revenus des TER"
     icon="person"
     provenance={data.revenueProvenance}
   >
-    <p>
-      En {ter.year}, les recettes commerciales des TER atteignent {formatBillions(ter.commercial)}{" "}
-      sur {formatBillions(ter.total)} de revenus, soit{" "}
-      {formatPercent(ter.commercial / ter.total, 1)}.
-    </p>
-    <p slot="caveat">
-      Cette part ne signifie pas que les voyageurs couvrent la même fraction de tous les coûts
-      ferroviaires. Elle décrit les revenus du service sur le réseau ferré national. Les trains
-      commerciaux, les Intercités et les services franciliens suivent d’autres équilibres.
-    </p>
-    <ShareBar
-      whole="revenus TER"
-      slot="chart"
-      caption={`Revenus TER ${ter.year}, périmètre ART`}
-      parts={[
-        { label: "Recettes commerciales", value: ter.commercial },
-        { label: "Concours publics", value: ter.public },
-      ]}
-    />
+    {terChange && (
+      <p>
+        Entre {firstYear} et {lastYear}, les billets et abonnements ont rapporté{" "}
+        <strong>{formatEuros(terChange.commercial)} de plus</strong> aux TER, aux prix de {lastYear}
+        . Les concours publics ont diminué de {formatEuros(-terChange.public)}. Au total, les
+        revenus des TER ont augmenté de {formatEuros(terChange.total)}.
+      </p>
+    )}
+    {ter && terShare !== null && (
+      <p>
+        En {lastYear}, les recettes commerciales représentent {formatBillions(ter.commercial)} sur{" "}
+        {formatBillions(ter.total)} de revenus pour les TER, soit {formatPercent(terShare, 1)}
+        {firstTerShare !== null && `, contre ${formatPercent(firstTerShare, 1)} en ${firstYear}`}.
+        {intercitesShare !== null &&
+          ` Pour les Intercités, conventionnés par l’État, cette part atteint ${formatPercent(intercitesShare, 1)} en ${lastYear}.`}
+      </p>
+    )}
+    {terChange && intercitesChange && (
+      <p>
+        En 2020, des lignes Intercités sont devenues des TER en Normandie. En regroupant tous les
+        TER et Intercités pour tenir compte de ce transfert, on trouve encore{" "}
+        {formatEuros(terChange.commercial + intercitesChange.commercial)} de recettes commerciales
+        supplémentaires et {formatEuros(-(terChange.public + intercitesChange.public))} de concours
+        publics en moins entre {firstYear} et {lastYear}.
+      </p>
+    )}
+    <div slot="chart">
+      <LineChart
+        caption="Part des recettes commerciales dans les revenus de chaque service"
+        labels={years.map(String)}
+        series={shares}
+        format={(share) => formatPercent(share, 1)}
+      />
+      <p class="small muted">Les années 2020 et 2021 sont absentes de la figure 8.1 de l’ART.</p>
+    </div>
+    <div slot="caveat">
+      <p>
+        L’Autorité de régulation des transports (ART) additionne les ventes hors taxes de billets et
+        d’abonnements. Un abonnement peut servir à plusieurs voyages. Mesurer la part des coûts
+        couverte par la billetterie demanderait de comparer ces recettes aux dépenses.
+      </p>
+      <p>
+        Le bilan complet retient la partie des trajets sur le réseau ferré national. Il exclut les
+        tronçons des RER A et B exploités par la RATP et les parcours internationaux hors de ce
+        réseau. Pour le Transilien et le RER, l’ART estime la répartition des revenus à partir de
+        l’ensemble des titres et financements d’Île-de-France Mobilités, tous modes confondus. Les
+        deux autres catégories de la figure sont les services librement organisés, domestiques et
+        internationaux.
+      </p>
+    </div>
   </Section>
   <Section
     id="dette"
@@ -192,9 +248,22 @@ const sections = [
   </Section>
   <div slot="method">
     <p>
-      SDES : transferts en euros courants et hors retraites. ART : revenus en euros constants 2024.
-      Les deux sources ont des périmètres différents&#8239;; elles ne se réconcilient pas
-      directement entre elles. La part des billets est calculée au sein d’une même table ART.
+      Le SDES mesure les transferts publics en euros courants, hors retraites. Pour les TER, nous
+      divisons les recettes commerciales hors taxes par le total des revenus du service la même
+      année (recettes commerciales et concours publics). Les variations sont les écarts entre les
+      montants de {lastYear} et de {firstYear}.
+    </p>
+    <p>
+      La figure 8.1 du bilan publié en février 2026 (page 37) et la cellule H5 du classeur donnent
+      les montants en euros constants de {lastYear}, malgré la mention « euros courants » en tête de
+      l’onglet. L’ART utilise l’indice des prix à la consommation harmonisé (annexe 0). Elle évite
+      de compter deux fois les recettes reversées à l’Occitanie depuis 2023, au Grand Est et à la
+      région Sud depuis 2024 (note 1, page 40).
+    </p>
+    <p>
+      Les premiers chiffres de l’ART pour 2025 renseignent l’offre et la fréquentation des TER. Dans
+      sa base d’octobre 2026, les cellules des recettes commerciales et des concours publics des TER
+      restent vides pour 2025.
     </p>
     <p>
       Un coût public complet demanderait de consolider tous les financeurs, les opérateurs et les

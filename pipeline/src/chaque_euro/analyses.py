@@ -14,6 +14,16 @@ def _text(value: str) -> str:
 
 
 def load(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -> None:
+    lille_report = subprocess.run(
+        ["pdftotext", "-layout", "-f", "22", "-l", "69", records["lille-ca-2025"].path, "-"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.split("\f")
+    con.execute(
+        "create or replace table lille_report as select ? as loans_page, ? as receipts_page",
+        [lille_report[0], lille_report[47]],
+    )
     con.execute(
         "create or replace table eu_cells as "
         + " union all ".join(
@@ -89,6 +99,48 @@ def load(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -> Non
 
 def validate(con: duckdb.DuckDBPyConnection) -> None:
     checks = {
+        "Nantes accounts net of internal transfers": """
+            select count(*) from nantes_consolidation
+            where abs(metro + municipalities - transfers - spending) > 0.02
+               or population <= 0 or abs(per_capita - spending / population) > 0.01
+        """,
+        "Marseille total with principal repayments": """
+            select count(*) from marseille_repayments m left join commune_finances f
+                on f.insee = '13055' and f.year = m.year and f.item = 'depenses'
+            where f.amount is null
+               or abs(m.total_including_principal - f.amount - m.repayments) > 0.02
+        """,
+        "Lille financing and change in working capital": """
+            select count(*) from lille_financing f
+            join lille_financing p on p.year = f.year - 1
+            join commune_finances d on d.insee = '59350' and d.year = f.year and d.item = 'depenses'
+            join commune_finances r on r.insee = d.insee and r.year = d.year and r.item = 'recettes'
+            where f.year in (2024, 2025)
+              and abs(f.working_capital - p.working_capital - f.borrowing
+                      + f.repayments + d.amount - r.amount) > 0.02
+        """,
+        "Nantes consolidated spending sections": """
+            select count(*) from (
+                select year from nantes_consolidation
+                where item in ('depenses', 'fonctionnement', 'investissement') group by year
+                having count(distinct item) <> 3 or
+                    abs(sum(case when item = 'depenses' then spending else -spending end)) > 0.02
+            )
+        """,
+        "Lille debt receipts against the 2025 administrative account": """
+            select count(*) from lille_financing where year = 2025 and (
+                bank_loans is null or other_debt is null or deposits is null or eib_draw is null
+                or not (eib_draw > 0 and eib_draw <= bank_loans)
+                or abs(borrowing - bank_loans - other_debt - deposits) > 0.02
+            )
+        """,
+        "Municipal cohorts against published page medians": """
+            select count(*) from commune_spending_benchmarks b
+            left join strata s on s.stratum = b.cohort and s.year = 2025 and s.item = 'depenses'
+            where b.cohort not in ('toutes', 'grandes-hors-paris') and
+                (s.communes is null or s.communes <> b.communes
+                 or abs(s.median_per_capita - b.median) > 0.01)
+        """,
         "deficit against 3.215": """
             select count(*) from deficit_series d join public_finances f using (year)
             where (f.sector = 'S13' and abs(d.apu_balance - (f.revenue - f.spending)
@@ -131,12 +183,15 @@ def validate(con: duckdb.DuckDBPyConnection) -> None:
         if result is None or result[0] != 0:
             raise ValueError(f"Analysis reconciliation failed: {label}: {result}")
     for table, expected in {
+        "lille_financing": 8,
+        "marseille_repayments": 8,
+        "nantes_consolidation": 32,
         "deficit_series": 77,
         "eu_flows": 26,
         "eu_headings": 45,
         "paris_comparison": 3,
-        "rail_transfers": 19,
-        "rail_network": 24,
+        "rail_transfers": 20,
+        "rail_network": 25,
         "rail_revenue": 20,
         "student_scholarships": 14,
         "student_budget": 6,

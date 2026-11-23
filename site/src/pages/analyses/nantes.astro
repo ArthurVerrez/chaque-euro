@@ -1,0 +1,229 @@
+---
+import Analysis from "../../layouts/Analysis.astro";
+import Section from "../../components/AnalysisSection.astro";
+import PublicTable from "../../components/PublicTable.astro";
+import LineChart from "../../components/LineChart.astro";
+import Term from "../../components/Term.astro";
+import { analysis } from "../../lib/analyses";
+import { getNantesAnalysis } from "../../lib/data";
+import { formatEuro, formatMillions, formatNumber, formatPercent } from "../../lib/format";
+
+const data = await getNantesAnalysis();
+const totals = data.amounts.filter((row) => row.item === "depenses");
+const operating = data.amounts.filter((row) => row.item === "fonctionnement");
+const investment = data.amounts.filter((row) => row.item === "investissement");
+const current = totals.find((row) => row.year === 2025);
+const prior = totals.find((row) => row.year === 2024);
+const currentInvestment = investment.find((row) => row.year === 2025);
+const priorInvestment = investment.find((row) => row.year === 2024);
+const personnel = data.amounts.find((row) => row.item === "personnel" && row.year === 2025);
+const currentOperating = operating.find((row) => row.year === 2025);
+const priorOperating = operating.find((row) => row.year === 2024);
+if (
+  !current ||
+  !prior ||
+  !currentInvestment ||
+  !priorInvestment ||
+  !personnel ||
+  !currentOperating ||
+  !priorOperating
+) {
+  return new Response("Les comptes nantais des deux exercices sont indisponibles.", {
+    status: 503,
+  });
+}
+const rise = current.spending - prior.spending;
+const investmentRise = currentInvestment.spending - priorInvestment.spending;
+const figures = [
+  {
+    icon: "town" as const,
+    label: "Ville de Nantes",
+    value: formatEuro(current.cityPerCapita),
+    note: "par habitant de la ville",
+  },
+  {
+    icon: "layers" as const,
+    label: "Métropole et communes",
+    value: formatEuro(current.perCapita),
+    note: "par habitant des 24 communes",
+  },
+  {
+    icon: "flow" as const,
+    label: "Flux entre collectivités",
+    value: formatMillions(current.transfers),
+    note: "retirés du total en 2025",
+  },
+];
+const sections = [
+  { id: "territoires", label: "Trois périmètres", icon: "map" as const },
+  { id: "consolidation", label: "Les transferts", icon: "flow" as const },
+  { id: "investissement", label: "La hausse de 2025", icon: "works" as const },
+];
+---
+
+<Analysis
+  article={analysis("nantes")}
+  answer={`En 2025, Nantes Métropole et ses 24 communes membres ont dépensé ensemble ${formatEuro(current.perCapita)} par habitant hors remboursement du capital de la dette. Pour obtenir ce chiffre, l’OFGL a retranché ${formatMillions(current.transfers)} de transferts entre leurs budgets.`}
+  figures={figures}
+  provenance={[data.cityProvenance, data.provenance]}
+  sections={sections}
+>
+  <Section
+    id="territoires"
+    title="À quel budget appartient la dépense ?"
+    icon="map"
+    provenance={[data.cityProvenance, data.provenance, data.reports]}
+  >
+    <p>
+      La Ville de Nantes rend compte des travaux dans les cours d’école, notamment rue Noire. La
+      Métropole rend compte de l’achat de nouveaux tramways. Sa population inclut aussi les
+      habitants de Rezé, de Saint-Herblain et des autres communes membres.
+    </p>
+    <p>
+      Pour une question sur une école nantaise, partez du{" "}
+      <a href="/commune/44109?annee=2025">compte de la Ville</a>. Pour les transports collectifs,
+      partez du <a href="/organisation/244400404#comptes">compte de l’intercommunalité</a>. Pour
+      mesurer ce que dépensent ensemble les 24 communes et Nantes Métropole, utilisez les{" "}
+      <Term id="comptes-consolides">comptes consolidés</Term> de l’OFGL.
+    </p>
+    <PublicTable
+      slot="chart"
+      caption="Trois lectures des comptes 2025, hors remboursement du capital de la dette"
+      columns={["Qui dépense ?", "Population de référence", "Dépenses par habitant"]}
+      rows={[
+        [
+          { text: "Ville de Nantes" },
+          { text: formatNumber(current.cityPopulation) },
+          { text: formatEuro(current.cityPerCapita) },
+        ],
+        [
+          { text: "Nantes Métropole seule" },
+          { text: formatNumber(current.population) },
+          { text: formatEuro(current.metro / current.population) },
+        ],
+        [
+          { text: "Métropole et communes réunies" },
+          { text: formatNumber(current.population) },
+          { text: formatEuro(current.perCapita) },
+        ],
+      ]}
+    />
+    <p slot="caveat">
+      La dernière ligne couvre les budgets principaux et annexes des 24 communes et de la Métropole.
+      Les centres communaux d’action sociale, les syndicats et les opérateurs qui ont des comptes
+      propres sont en dehors de ce périmètre.
+    </p>
+  </Section>
+
+  <Section
+    id="consolidation"
+    title="Pourquoi retirer les transferts entre budgets ?"
+    icon="flow"
+    provenance={[data.provenance, data.reports]}
+  >
+    <p>
+      Le compte financier de la Ville mentionne une aide de la Métropole pour végétaliser des cours
+      d’école et de crèche. Si vous additionnez le versement de la Métropole et les travaux payés
+      par la Ville, vous comptez deux fois la même somme. Avant correction, l’addition des comptes
+      donne {formatEuro((current.metro + current.municipalities) / current.population)} par
+      habitant, soit {formatEuro(current.transfers / current.population)} de plus que le montant
+      consolidé.
+    </p>
+    <p>
+      Le principal ajustement concerne les frais de personnel. Sur les{" "}
+      {formatMillions(current.transfers)} retranchés en 2025, {formatMillions(personnel.transfers)}{" "}
+      relèvent de ce poste, soit {formatPercent(personnel.transfers / current.transfers, 1)}.
+    </p>
+    <p>
+      En 2025, les communes membres comptabilisent ensemble {formatMillions(current.municipalities)}
+      . La Ville de Nantes en représente{" "}
+      {formatPercent(current.citySpending / current.municipalities, 1)}. Utiliser uniquement les
+      comptes de la ville-centre laisserait donc de côté une partie des dépenses communales.
+    </p>
+    <PublicTable
+      slot="chart"
+      caption="Le passage des comptes séparés au total consolidé en 2025"
+      columns={["Étape du calcul", "Montant"]}
+      rows={[
+        [
+          { text: "Dépenses des communes membres" },
+          { text: formatMillions(current.municipalities) },
+        ],
+        [
+          { text: "Ajouter les dépenses de Nantes Métropole" },
+          { text: "+ " + formatMillions(current.metro) },
+        ],
+        [
+          { text: "Retrancher les flux entre collectivités" },
+          { text: "− " + formatMillions(current.transfers) },
+        ],
+        [
+          { text: "Dépenses des communes et de la Métropole" },
+          { text: formatMillions(current.spending) },
+        ],
+      ]}
+    />
+    <p slot="caveat">
+      Le fonds de concours illustre le mécanisme. Le montant retranché couvre les flux identifiés
+      par l’OFGL pour cet agrégat. Le calcul est fait avant arrondi.
+    </p>
+  </Section>
+
+  <Section
+    id="investissement"
+    title="L’investissement porte la hausse de 2025"
+    icon="works"
+    provenance={data.provenance}
+  >
+    <p>
+      Entre 2024 et 2025, les dépenses consolidées augmentent de {formatMillions(rise)}. L’
+      <Term id="investissement">investissement</Term> en explique {formatMillions(investmentRise)},
+      soit {formatPercent(investmentRise / rise)} de la hausse. Le{" "}
+      <Term id="fonctionnement">fonctionnement</Term> augmente de{" "}
+      {formatMillions(rise - investmentRise)}.
+    </p>
+    <p>
+      Rapporté à la population, le fonctionnement passe de {formatEuro(priorOperating.perCapita)} à{" "}
+      {formatEuro(currentOperating.perCapita)} par habitant. L’investissement passe de{" "}
+      {formatEuro(priorInvestment.perCapita)} à {formatEuro(currentInvestment.perCapita)}. Dans la
+      série OFGL, avant neutralisation des flux avec ses communes, la Métropole porte{" "}
+      {formatMillions(currentInvestment.metro - priorInvestment.metro)} d’investissement
+      supplémentaire.
+    </p>
+    <LineChart
+      slot="chart"
+      caption="Dépenses annuelles après consolidation, en millions d’euros courants"
+      labels={totals.map((row) => String(row.year))}
+      series={[
+        {
+          label: "Fonctionnement",
+          values: totals.map((t) => operating.find((row) => row.year === t.year)?.spending ?? null),
+        },
+        {
+          label: "Investissement hors remboursement",
+          values: totals.map(
+            (t) => investment.find((row) => row.year === t.year)?.spending ?? null,
+          ),
+        },
+      ]}
+      format={formatMillions}
+    />
+    <p slot="caveat">
+      Les investissements peuvent varier d’un exercice à l’autre avec le calendrier des chantiers et
+      des paiements. La série est exprimée en euros de chaque année.
+    </p>
+  </Section>
+  <div slot="method">
+    <p>
+      Dans la base OFGL des ensembles intercommunaux, sélectionner Nantes Métropole et « Dépenses
+      totales hors remb ». Additionner « montant GFP » et « montant communes », soustraire « montant
+      flux » puis diviser par « ptot ». La population au dénominateur est la population totale Insee
+      retenue par l’OFGL pour l’ensemble et l’exercice.
+    </p>
+    <p>
+      Les montants de fonctionnement et d’investissement utilisent la même convention de
+      consolidation. Les deux comptes financiers uniques illustrent les compétences exercées.{" "}
+      <a href="/telechargements">Télécharger les séries</a>.
+    </p>
+  </div>
+</Analysis>

@@ -102,6 +102,10 @@ export function formatBillions(value: number): string {
   return `${oneDecimal.format(value / 1e9)}${NBSP}Md€`;
 }
 
+export function formatMillions(value: number): string {
+  return `${oneDecimal.format(value / 1e6)}${NBSP}M€`;
+}
+
 export function formatEuroCents(value: number): string {
   return `${twoDecimals.format(value / 100)}${NBSP}€`;
 }

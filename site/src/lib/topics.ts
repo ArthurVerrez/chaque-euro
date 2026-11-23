@@ -1,3 +1,4 @@
+import { analysis } from "./analyses.ts";
 import type { IconName } from "./icons";
 
 interface Topic {
@@ -98,6 +99,19 @@ export const TOPICS: Topic[] = [
     icon: "town",
     synonyms: ["Paris", "budget Paris", "dépenses Paris"],
   },
+  ...Object.entries({
+    marseille: ["dépenses Marseille", "budget Marseille", "écoles Marseille"],
+    lille: ["dette Lille", "emprunts Lille", "budget Lille"],
+    nantes: ["budget Nantes Métropole", "dépenses Nantes Métropole"],
+    "comparer-les-communes": [
+      "dépenses par habitant",
+      "médiane des communes",
+      "comparer les villes",
+    ],
+  }).map(([slug, synonyms]) => {
+    const { title, icon } = analysis(slug);
+    return { title, href: `/analyses/${slug}`, icon, synonyms };
+  }),
   {
     title: "Associations",
     href: "/organisations#associations",

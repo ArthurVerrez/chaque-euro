@@ -1,0 +1,281 @@
+---
+import Analysis from "../../layouts/Analysis.astro";
+import Section from "../../components/AnalysisSection.astro";
+import BarList from "../../components/BarList.astro";
+import PublicTable from "../../components/PublicTable.astro";
+import Term from "../../components/Term.astro";
+import { analysis } from "../../lib/analyses";
+import { getSpendingComparison } from "../../lib/data";
+import { formatEuro, formatEuroCents, formatNumber } from "../../lib/format";
+
+const data = await getSpendingComparison();
+const large = data.benchmarks.find((row) => row.cohort === "10");
+const withoutParis = data.benchmarks.find((row) => row.cohort === "grandes-hors-paris");
+const all = data.benchmarks.find((row) => row.cohort === "toutes");
+const lyon = data.examples.find((row) => row.insee === "69123");
+const blace = data.examples.find((row) => row.insee === "69023" && row.item === "depenses");
+const blaceOperating = data.examples.find(
+  (row) => row.insee === "69023" && row.item === "fonctionnement",
+);
+const blaceInvestment = data.examples.find(
+  (row) => row.insee === "69023" && row.item === "investissement",
+);
+if (!large || !withoutParis || !all || !lyon || !blace || !blaceOperating || !blaceInvestment) {
+  return new Response("Les données de comparaison des communes sont indisponibles.", {
+    status: 503,
+  });
+}
+const figures = [
+  {
+    icon: "compare" as const,
+    label: "Ville médiane",
+    value: formatEuro(large.median),
+    note: "un rang pour chaque ville",
+    term: "mediane" as const,
+  },
+  {
+    icon: "town" as const,
+    label: "Moyenne des villes",
+    value: formatEuro(large.mean),
+    note: "un poids égal par ville",
+  },
+  {
+    icon: "people" as const,
+    label: "Moyenne pondérée",
+    value: formatEuro(large.weighted),
+    note: "poids de la population de chaque ville",
+  },
+];
+const sections = [
+  { id: "voisines", label: "Choisir ses pairs", icon: "town" as const },
+  { id: "blace", label: "Le cas de Blacé", icon: "works" as const },
+  { id: "moyennes", label: "Trois calculs", icon: "compare" as const },
+  { id: "paris", label: "Le poids de Paris", icon: "scale" as const },
+  { id: "reproduire", label: "Refaire le calcul", icon: "code" as const },
+];
+const query = `SELECT count(*) AS communes,
+       round(median(f.amount / y.population), 2) AS mediane,
+       round(avg(f.amount / y.population), 2) AS moyenne,
+       round(sum(f.amount) / sum(y.population), 2) AS moyenne_ponderee
+FROM 'commune_finances.parquet' AS f
+JOIN 'commune_years.parquet' AS y USING (insee, year)
+WHERE f.year = 2025 AND f.item = 'depenses'
+  AND y.stratum = '10' AND y.population > 0 AND f.amount IS NOT NULL;`;
+const eurosPrecis = (value: number) => formatEuroCents(Math.round(value * 100));
+---
+
+<Analysis
+  article={analysis("comparer-les-communes")}
+  answer={`Dans les ${large.communes} communes d’au moins 100 000 habitants en 2025, la ville médiane dépense ${formatEuro(large.median)} par habitant. Si l’on divise les dépenses cumulées par la somme des populations officielles, on obtient ${formatEuro(large.weighted)}.`}
+  figures={figures}
+  provenance={[data.provenance]}
+  sections={sections}
+>
+  <Section
+    id="voisines"
+    title="La comparaison change avec le groupe choisi"
+    icon="town"
+    provenance={[data.exampleProvenance, data.provenance]}
+  >
+    <p>
+      Lyon dépense {formatEuro(lyon.perCapita)} par habitant. C’est davantage que la{" "}
+      <Term id="mediane">médiane</Term> des {formatNumber(all.communes)} communes pour lesquelles on
+      peut calculer ce ratio ({formatEuro(all.median)}), mais un peu moins que la médiane de sa{" "}
+      <Term id="strate">tranche de population</Term> ({formatEuro(large.median)}).
+    </p>
+    <p>
+      Blacé, dans le Rhône, compte {formatNumber(blace.population)} habitants. Son point de
+      comparaison sur le site est la médiane des communes de {blace.stratum}, soit{" "}
+      {formatEuro(blace.median)} par habitant. Les deux comparaisons reposent sur les dépenses
+      exécutées par la commune, hors remboursement du capital de la dette.
+    </p>
+    <PublicTable
+      slot="chart"
+      caption="Deux communes et leurs pairs en 2025, en euros par habitant"
+      columns={["Commune", "Dépenses par habitant", "Médiane des pairs", "Communes dans le groupe"]}
+      rows={data.examples
+        .filter((row) => row.item === "depenses")
+        .map((row) => [
+          { text: row.name, href: `/commune/${row.insee}?annee=2025` },
+          { text: formatEuro(row.perCapita) },
+          { text: formatEuro(row.median) },
+          { text: formatNumber(row.communes) },
+        ])}
+    />
+    <p slot="caveat">
+      Chaque commune porte le même poids dans la médiane, même lorsque sa population est très
+      faible. L’édition 2025 disponible le 23 novembre ne contient pas encore tous les comptes
+      communaux. Une commune sans population positive ou sans montant exploitable est exclue du
+      calcul.
+    </p>
+  </Section>
+  <Section
+    id="blace"
+    title="À Blacé, une dépense inférieure à la médiane et un investissement supérieur"
+    icon="works"
+    provenance={[data.exampleProvenance, data.blaceReport]}
+  >
+    <p>
+      En 2025, Blacé dépense {eurosPrecis(blace.perCapita)} par habitant, en dessous de la médiane
+      des {formatNumber(blace.communes)} communes de sa tranche. Son investissement hors
+      remboursement de la dette atteint pourtant {eurosPrecis(blaceInvestment.perCapita)} par
+      habitant, contre {eurosPrecis(blaceInvestment.median)} dans cette même tranche.
+    </p>
+    <p>
+      Le conseil municipal donne un exemple de ce que finance cet investissement. Dans son bilan de
+      2025, il détaille les travaux sur la salle des fêtes et de sport, le projet Phénix. Les
+      charges de fonctionnement de la commune restent sous la médiane de sa tranche.
+    </p>
+    <PublicTable
+      slot="chart"
+      caption="Dépenses de Blacé et médianes de sa tranche en 2025, par habitant"
+      columns={["Poste", "Blacé", "Médiane de la tranche"]}
+      rows={(
+        [
+          ["Fonctionnement", blaceOperating],
+          ["Investissement hors remboursement", blaceInvestment],
+          ["Total", blace],
+        ] as const
+      ).map(([label, row]) => [
+        { text: label },
+        { text: eurosPrecis(row.perCapita) },
+        { text: eurosPrecis(row.median) },
+      ])}
+    />
+    <p slot="caveat">
+      Chaque médiane est calculée séparément. Les deux médianes par poste ne s’additionnent pas pour
+      former la médiane du total.
+    </p>
+  </Section>
+  <Section
+    id="moyennes"
+    title="Trois calculs sur les mêmes grandes villes"
+    icon="compare"
+    provenance={data.provenance}
+  >
+    <p>
+      Classez les {large.communes} villes par dépense par habitant. Au centre se trouvent{" "}
+      {large.lowerCity} ({eurosPrecis(large.lowerValue)}) et {large.upperCity} (
+      {eurosPrecis(large.upperValue)}). La moyenne de ces deux valeurs donne la médiane de{" "}
+      {eurosPrecis(large.median)}.
+    </p>
+    <p>
+      La moyenne simple donne le même poids à chacune des {large.communes} villes. Le ratio pondéré
+      divise la somme des dépenses par la somme des populations. Une ville deux fois plus peuplée
+      pèse alors deux fois plus.
+    </p>
+    <BarList
+      slot="chart"
+      caption="Dépenses communales 2025 selon l’unité de comparaison"
+      items={[
+        {
+          label: "Médiane des dépenses par habitant",
+          value: large.median,
+          display: formatEuro(large.median),
+        },
+        {
+          label: "Moyenne des dépenses par habitant",
+          value: large.mean,
+          display: formatEuro(large.mean),
+        },
+        {
+          label: "Somme des dépenses divisée par la population totale",
+          value: large.weighted,
+          display: formatEuro(large.weighted),
+        },
+      ]}
+    />
+  </Section>
+  <Section
+    id="paris"
+    title="Retirer Paris change surtout le résultat pondéré"
+    icon="scale"
+    provenance={data.provenance}
+  >
+    <p>
+      En reprenant le calcul sans Paris, le ratio pondéré passe de {formatEuro(large.weighted)} à{" "}
+      {formatEuro(withoutParis.weighted)}. La médiane bouge de moins d’un euro avant arrondi. Paris
+      cumule une population importante et des compétences communales et départementales.
+    </p>
+    <p>
+      La même dépense peut aussi relever de la commune ou de son intercommunalité selon les services
+      transférés. <a href="/analyses/paris">L’analyse des comptes de Paris</a> et{" "}
+      <a href="/analyses/nantes">l’exemple de Nantes Métropole</a> montrent comment rapprocher les
+      périmètres.
+    </p>
+    <PublicTable
+      slot="chart"
+      caption="Même exercice et mêmes définitions, avec ou sans Paris"
+      columns={["Groupe", "Médiane", "Dépenses rapportées à la population totale"]}
+      rows={[
+        [
+          { text: `Les ${large.communes} grandes villes` },
+          { text: eurosPrecis(large.median) },
+          { text: formatEuro(large.weighted) },
+        ],
+        [
+          { text: `Les ${withoutParis.communes} villes hors Paris` },
+          { text: eurosPrecis(withoutParis.median) },
+          { text: formatEuro(withoutParis.weighted) },
+        ],
+      ]}
+    />
+    <p slot="caveat">
+      L’exercice mesure la sensibilité du résultat au choix des communes. Le montant par habitant ne
+      mesure à lui seul ni le volume ni la qualité des services rendus.
+    </p>
+  </Section>
+  <Section
+    id="reproduire"
+    title="Refaire le calcul avec les données téléchargeables"
+    icon="code"
+    provenance={data.provenance}
+  >
+    <p>
+      Téléchargez les fichiers Parquet « Comptes des communes » et « Population des communes par
+      année » depuis les <a href="/telechargements">téléchargements</a>. Mettez-les dans le même
+      dossier, ouvrez DuckDB dans ce dossier et exécutez la requête ci-dessous. La tranche « 10 »
+      regroupe les communes d’au moins 100 000 habitants.
+    </p>
+    <div slot="chart" class="query">
+      <pre aria-label="Requête DuckDB à copier"><code>{query}</code></pre>
+      <p>
+        Résultat pour 2025 : {large.communes} communes, {eurosPrecis(large.median)} de médiane,{" "}
+        {eurosPrecis(large.mean)} de moyenne et {eurosPrecis(large.weighted)} pour le ratio pondéré.
+      </p>
+    </div>
+    <p>
+      Avec un <a href="/ia">assistant connecté au MCP</a>, demandez « Pour Lyon en 2025, donne les
+      dépenses par habitant, la médiane de sa tranche et la source ». L’outil{" "}
+      <code>get_commune</code> accepte les paramètres <code>insee = "69123"</code> et{" "}
+      <code>year = 2025</code>. Dans les comptes retournés, la ligne <code>depenses</code> contient
+      le ratio et sa médiane.
+    </p>
+  </Section>
+  <div slot="method">
+    <p>
+      Les comptes de l’OFGL réunissent le budget principal et les budgets annexes de chaque commune
+      après neutralisation des opérations internes. Le calcul utilise les montants et populations de
+      l’exercice, puis arrondit les résultats pour l’affichage. Le calcul regroupe les lignes par
+      code communal avant de calculer le ratio. En 2024, les comptes de Saint-Denis en
+      Seine-Saint-Denis et de Pierrefitte-sur-Seine se rattachent au même code de la géographie
+      2025. En 2025, Saint-Denis en Seine-Saint-Denis et Saint-Denis à La Réunion gardent chacun
+      leur propre code. L’OFGL utilise la population totale Insee au 1er janvier de l’exercice. Elle
+      comprend les personnes comptées à part, dont certaines peuvent figurer dans les totaux de deux
+      communes.
+    </p>
+  </div>
+</Analysis>
+<style>
+  .query pre {
+    padding: 1rem;
+    overflow-x: auto;
+    background: var(--surface-alt);
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    white-space: pre;
+  }
+  .query p {
+    margin-bottom: 0;
+  }
+</style>

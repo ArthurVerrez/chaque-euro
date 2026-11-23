@@ -205,6 +205,23 @@ CREATE TABLE commune_finances (
   PRIMARY KEY (insee, year, item)
 ) WITHOUT ROWID;
 
+CREATE TABLE lille_financing (
+    year INTEGER PRIMARY KEY, borrowing REAL NOT NULL, repayments REAL NOT NULL,
+    working_capital REAL NOT NULL, bank_loans REAL, other_debt REAL, deposits REAL, eib_draw REAL
+);
+CREATE TABLE marseille_repayments (
+    year INTEGER PRIMARY KEY, repayments REAL NOT NULL, total_including_principal REAL NOT NULL
+);
+CREATE TABLE nantes_consolidation (
+    year INTEGER NOT NULL, item TEXT NOT NULL, population INTEGER NOT NULL,
+    metro REAL NOT NULL, municipalities REAL NOT NULL, transfers REAL NOT NULL,
+    spending REAL NOT NULL, per_capita REAL NOT NULL,
+    PRIMARY KEY (year, item)
+);
+CREATE TABLE commune_spending_benchmarks (
+    cohort TEXT PRIMARY KEY, communes INTEGER NOT NULL, median REAL NOT NULL,
+    mean REAL NOT NULL, weighted REAL NOT NULL, lower_insee TEXT NOT NULL, upper_insee TEXT NOT NULL
+);
 CREATE TABLE strata (
   stratum TEXT NOT NULL,
   label TEXT NOT NULL,

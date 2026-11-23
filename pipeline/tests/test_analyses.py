@@ -6,6 +6,31 @@ import duckdb
 SQL = Path(__file__).parents[1] / "sql"
 
 
+class CommuneComparisonTest(unittest.TestCase):
+    def test_same_eligible_towns_for_median_mean_and_weighted_ratio(self) -> None:
+        with duckdb.connect() as con:
+            con.execute("""
+                create table commune_years as select * from (values
+                    ('10001', 2025, '10', 100), ('10002', 2025, '10', 200),
+                    ('75056', 2025, '10', 700), ('10003', 2025, '10', 0)
+                ) t(insee, year, stratum, population);
+                create table commune_finances as select * from (values
+                    ('10001', 2025, 'depenses', 1000, 10),
+                    ('10002', 2025, 'depenses', 4000, 20),
+                    ('75056', 2025, 'depenses', 28000, 40),
+                    ('10003', 2025, 'depenses', 500, null)
+                ) t(insee, year, item, amount, per_capita);
+            """)
+            con.execute((SQL / "54c_comparaison_communes.sql").read_text())
+            with_paris, without_paris = con.execute("""
+                select communes, median, mean, weighted, lower_insee, upper_insee
+                from commune_spending_benchmarks where cohort in ('10', 'grandes-hors-paris')
+                order by cohort
+            """).fetchall()
+            self.assertEqual(with_paris, (3, 20, 70 / 3, 33, "10002", "10002"))
+            self.assertEqual(without_paris, (2, 15, 15, 5000 / 300, "10001", "10002"))
+
+
 class EuropeTest(unittest.TestCase):
     def test_layout_changes_and_adjustments_preserve_accounting_perimeter(self) -> None:
         with duckdb.connect() as con:

@@ -1194,6 +1194,52 @@ function communeAccounts(year: number, rows: FinanceRow[]): CommuneAccounts {
   };
 }
 
+function communeFinances(insee: string) {
+  return db()
+    .prepare(
+      `select f.item, i.label, i.section, f.year, y.population, f.amount, f.per_capita,
+           s.median_per_capita as median, s.label as stratum_label, s.communes as stratum_communes
+         from commune_finances f
+         join finance_items i using (item)
+         join commune_years y on y.insee = f.insee and y.year = f.year
+         left join strata s on s.stratum = y.stratum and s.year = f.year and s.item = f.item
+         where f.insee = ?1
+         order by f.year, i.sort`,
+    )
+    .bind(insee);
+}
+
+function communeHistory(financeRows: FinanceRow[]) {
+  return [...new Set(financeRows.map((line) => line.year))].map((entry) =>
+    communeAccounts(
+      entry,
+      financeRows.filter((line) => line.year === entry),
+    ),
+  );
+}
+
+async function analysisCommune(insee: string) {
+  const [finances, sources] = await db().batch([
+    communeFinances(insee),
+    db().prepare(SOURCES_QUERY),
+  ]);
+  const history = communeHistory((finances?.results ?? []) as unknown as FinanceRow[]);
+  if (!history.length) return null;
+  const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
+  return {
+    insee,
+    history,
+    provenance: index.provenance(
+      [
+        index.cite("ofgl-communes", { insee, year: 2024 }),
+        index.cite("ofgl-communes", { insee, year: 2025 }),
+      ],
+      METHOD.commune,
+      SQL.communes,
+    ),
+  };
+}
+
 export async function getCommune(insee: string, year?: number): Promise<Commune | null> {
   const row = await db()
     .prepare("select * from communes where insee = ?1")
@@ -1203,18 +1249,7 @@ export async function getCommune(insee: string, year?: number): Promise<Commune 
 
   const [finances, orgs, years, counterparts, contracts, sources, location, mayors, scale, epci] =
     await db().batch<Record<string, unknown>>([
-      db()
-        .prepare(
-          `select f.item, i.label, i.section, f.year, y.population, f.amount, f.per_capita,
-           s.median_per_capita as median, s.label as stratum_label, s.communes as stratum_communes
-         from commune_finances f
-         join finance_items i using (item)
-         join commune_years y on y.insee = f.insee and y.year = f.year
-         left join strata s on s.stratum = y.stratum and s.year = f.year and s.item = f.item
-         where f.insee = ?1
-         order by f.year, i.sort`,
-        )
-        .bind(insee),
+      communeFinances(insee),
       db().prepare("select * from orgs where siren = ?1").bind(row.siren),
       db()
         .prepare(
@@ -1256,12 +1291,7 @@ export async function getCommune(insee: string, year?: number): Promise<Commune 
     ]);
   const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
   const financeRows = (finances?.results ?? []) as unknown as FinanceRow[];
-  const history = [...new Set(financeRows.map((line) => line.year))].map((entry) =>
-    communeAccounts(
-      entry,
-      financeRows.filter((line) => line.year === entry),
-    ),
-  );
+  const history = communeHistory(financeRows);
   const accounts = history.find((entry) => entry.year === year) ?? history.at(-1);
   if (!accounts) return null;
   const org = orgs?.results[0] as unknown as OrgRow | undefined;
@@ -1771,6 +1801,210 @@ export async function getParisAnalysis() {
   };
 }
 
+export async function getMarseilleAnalysis() {
+  const [commune, debt, schools2024, schools2025, cityReports, stateReport] = await Promise.all([
+    analysisCommune("13055"),
+    getMarseilleRepayments(),
+    getCommuneFunctions("13055", 2024),
+    getCommuneFunctions("13055", 2025),
+    documentProvenance(
+      ["marseille-ca-2024", "marseille-cfu-2025"],
+      "Budget principal exécuté. Rapport du compte administratif 2024, p. 37 à 39. Rapport du compte financier unique 2025, p. 29 (épargne), 51 à 54 (cantines et personnel), 65 à 69 (investissements) et 142 (bâtiments scolaires). Les pages sont celles imprimées dans les rapports.",
+      "pipeline/sql/50_communes.sql",
+    ),
+    documentProvenance(
+      ["marseille-ecoles-senat-2025"],
+      "Sénat, rapport n° 736, tome II, annexe 26, partie III.B, p. 29. Tableau de la subvention au volet écoles du plan Marseille en grand, établi d’après la DGCL. Comparer les lignes 2024 et 2025 de la colonne « Crédits consommés », sous-colonne CP (crédits de paiement).",
+      "site/src/pages/analyses/marseille.astro",
+    ),
+  ]);
+  return { commune, debt, schools2024, schools2025, cityReports, stateReport };
+}
+
+async function getMarseilleRepayments() {
+  const [amounts, sources] = await db().batch([
+    db().prepare(
+      "select year, repayments, total_including_principal as totalIncludingPrincipal from marseille_repayments order by year",
+    ),
+    db().prepare(SOURCES_QUERY),
+  ]);
+  const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
+  return {
+    history: (amounts?.results ?? []) as unknown as {
+      year: number;
+      repayments: number;
+      totalIncludingPrincipal: number;
+    }[],
+    provenance: index.provenance(
+      [
+        index.cite("ofgl-remboursement-marseille", { year: 2024 }),
+        index.cite("ofgl-remboursement-marseille", { year: 2025 }),
+      ],
+      "Les dépenses totales de l’OFGL comprennent les remboursements du capital hors gestion active de la dette. En retranchant ces remboursements, on retrouve les dépenses publiées sur la fiche de la commune.",
+      "pipeline/sql/54d_remboursements_marseille.sql",
+    ),
+  };
+}
+
+export async function getLilleAnalysis() {
+  const [commune, financing, bondSource] = await Promise.all([
+    analysisCommune("59350"),
+    getLilleFinancing(),
+    documentProvenance(
+      ["lille-balance-2022", "lille-crc-2018"],
+      "Balance 2022 du budget principal de Lille, identifiant 21590350100017, compte 1632. Rapprochement avec le rapport de la chambre régionale des comptes, page 30 (page 32 du PDF), sur l’obligation émise en 2012.",
+      "pipeline/sql/54a_financement_lille.sql",
+    ),
+  ]);
+  return { commune, financing, bondSource };
+}
+
+async function getLilleFinancing() {
+  const [history, report, sources] = await db().batch([
+    db().prepare(
+      "select year, borrowing, repayments, working_capital as workingCapital from lille_financing order by year",
+    ),
+    db().prepare(
+      "select bank_loans as bankLoans, other_debt as otherDebt, deposits, eib_draw as eibDraw from lille_financing where year = 2025",
+    ),
+    db().prepare(SOURCES_QUERY),
+  ]);
+  const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
+  const city = report?.results[0] as unknown as
+    | {
+        bankLoans: number;
+        otherDebt: number;
+        deposits: number;
+        eibDraw: number;
+      }
+    | undefined;
+  return {
+    history: (history?.results ?? []) as unknown as {
+      year: number;
+      borrowing: number;
+      repayments: number;
+      workingCapital: number;
+    }[],
+    city: city ?? null,
+    provenance: index.provenance(
+      [index.cite("ofgl-financement-lille", { year: 2025 }), index.cite("lille-ca-2025")],
+      "Emprunts et remboursements hors opérations de gestion active de la dette. Fonds de roulement au 31 décembre. Le compte administratif 2025 distingue les articles 1641, 16878 et 165 et le premier tirage de la Banque européenne d’investissement.",
+      "pipeline/sql/54a_financement_lille.sql",
+    ),
+  };
+}
+
+interface NantesSpending {
+  year: number;
+  item: string;
+  population: number;
+  metro: number;
+  municipalities: number;
+  transfers: number;
+  spending: number;
+  perCapita: number;
+  citySpending: number;
+  cityPopulation: number;
+  cityPerCapita: number;
+}
+
+export async function getNantesAnalysis() {
+  const [amounts, sources] = await db().batch([
+    db().prepare(`select n.year, n.item, n.population, n.metro, n.municipalities,
+      n.transfers, n.spending, n.per_capita as perCapita,
+      f.amount as citySpending, y.population as cityPopulation, f.per_capita as cityPerCapita
+      from nantes_consolidation n
+      join commune_finances f on f.insee = '44109' and f.year = n.year and f.item = n.item
+      join commune_years y on y.insee = f.insee and y.year = f.year
+      order by n.year, n.item`),
+    db().prepare(SOURCES_QUERY),
+  ]);
+  const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
+  const sql = "pipeline/sql/54b_ensemble_nantes.sql";
+  return {
+    amounts: (amounts?.results ?? []) as unknown as NantesSpending[],
+    cityProvenance: index.provenance(
+      [index.cite("ofgl-communes", { insee: "44109", year: 2025 })],
+      "La Ville de Nantes rapporte ses dépenses hors remboursement du capital à sa population totale retenue par l’OFGL. Les montants sont en euros courants.",
+      "pipeline/sql/50_communes.sql",
+    ),
+    provenance: index.provenance(
+      [index.cite("ofgl-ensemble-nantes", { year: 2025 })],
+      "L’OFGL additionne les comptes de la métropole et de toutes les communes membres, puis retranche les flux identifiés pour chaque agrégat. Le total des dépenses hors remboursement du capital est rapporté à la population de l’ensemble.",
+      sql,
+    ),
+    reports: index.provenance(
+      [index.cite("nantes-ville-cfu-2025"), index.cite("nantes-metropole-cfu-2025")],
+      "Les deux comptes financiers uniques décrivent les réalisations 2025 de leurs collectivités respectives. Le rapprochement chiffré du territoire utilise les agrégats harmonisés de l’OFGL.",
+      sql,
+    ),
+  };
+}
+
+export async function getSpendingComparison() {
+  const [benchmarks, examples, sources] = await db().batch([
+    db().prepare(`select b.cohort, b.communes, b.median, b.mean, b.weighted,
+      lc.name as lowerCity, uc.name as upperCity, lf.per_capita as lowerValue, uf.per_capita as upperValue
+      from commune_spending_benchmarks b
+      join communes lc on lc.insee = b.lower_insee join communes uc on uc.insee = b.upper_insee
+      join commune_finances lf on lf.insee = lc.insee and lf.year = 2025 and lf.item = 'depenses'
+      join commune_finances uf on uf.insee = uc.insee and uf.year = 2025 and uf.item = 'depenses'
+      where b.cohort in ('toutes','10','grandes-hors-paris') order by b.cohort`),
+    db().prepare(`select c.name, f.insee, f.item, f.amount, y.population, f.per_capita as perCapita,
+      s.label as stratum, s.communes, s.median_per_capita as median
+      from commune_finances f join commune_years y using (insee,year)
+      join communes c on c.insee = f.insee
+      join strata s on s.year = f.year and s.item = f.item and s.stratum = y.stratum
+      where f.year = 2025 and ((f.item = 'depenses' and f.insee in ('69123','69023'))
+        or (f.insee = '69023' and f.item in ('fonctionnement','investissement')))
+      order by y.population desc, f.item`),
+    db().prepare(SOURCES_QUERY),
+  ]);
+  const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
+  return {
+    benchmarks: (benchmarks?.results ?? []) as unknown as {
+      cohort: string;
+      communes: number;
+      median: number;
+      mean: number;
+      weighted: number;
+      lowerCity: string;
+      upperCity: string;
+      lowerValue: number;
+      upperValue: number;
+    }[],
+    examples: (examples?.results ?? []) as unknown as {
+      insee: string;
+      name: string;
+      item: string;
+      amount: number;
+      population: number;
+      perCapita: number;
+      stratum: string;
+      communes: number;
+      median: number;
+    }[],
+    provenance: index.provenance(
+      [index.cite("ofgl-communes"), index.cite("insee-population-totale")],
+      "Comptes communaux de 2025. Une observation par commune avec population positive et dépenses renseignées. Les trois calculs utilisent exactement les mêmes communes. La simulation sans Paris est calculée séparément.",
+      "pipeline/sql/54c_comparaison_communes.sql",
+    ),
+    blaceReport: index.provenance(
+      [index.cite("blace-pv-fevrier-2026", { page: 33 })],
+      "Conseil municipal du 26 février 2026. L’annexe sur les finances, page 33, distingue les réalisations du projet Phénix et les crédits budgétés.",
+      SQL.communes,
+    ),
+    exampleProvenance: index.provenance(
+      [
+        index.cite("ofgl-communes", { insee: "69123", year: 2025 }),
+        index.cite("ofgl-communes", { insee: "69023", year: 2025 }),
+      ],
+      "Dépenses de fonctionnement et d’investissement des communes, hors capital de la dette. Le ratio de chaque commune est comparé à la médiane des ratios de sa tranche de population pour le même exercice.",
+      "pipeline/sql/50_communes.sql",
+    ),
+  };
+}
+
 export interface RailTransfer {
   year: number;
   operating: number;
@@ -1796,7 +2030,11 @@ export async function getRailAnalysis() {
       db().prepare(SOURCES_QUERY),
     ],
   );
-  const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
+  const sourceRows = (sources?.results ?? []) as unknown as SourceRow[];
+  const index = new SourceIndex(sourceRows);
+  const railContextSources = sourceRows.filter(
+    ({ id }) => id === "normandie-nomad" || id === "art-rail-2025-premiers",
+  );
   return {
     network: (network?.results ?? []) as unknown as {
       year: number;
@@ -1810,11 +2048,11 @@ export async function getRailAnalysis() {
     context: (context?.results ?? []) as unknown as AnalysisContext[],
     transferProvenance: index.provenance(
       [index.cite("sdes-rail")],
-      "SDES, tableaux A5.2-a (subventions d’investissement à SNCF Réseau) et A5.1-b : transferts publics vers SNCF Voyageurs, hors retraites, millions HT convertis en euros courants. Exploitation inclut contributions et subventions de fonctionnement, ainsi que SAAD et plan Fret lorsqu’ils existent dans la série historique. Investissement et exploitation rapprochés du total à 2 M€ près, compte tenu des arrondis. Le périmètre de l’entreprise évolue en 2015 et 2020. Ce total n’est pas le coût public complet du rail.",
+      "SDES, subventions d’investissement à SNCF Réseau et transferts publics vers SNCF Voyageurs hors retraites. Les millions d’euros hors taxes sont convertis en euros courants. Exploitation inclut contributions et subventions de fonctionnement, ainsi que SAAD et plan Fret lorsqu’ils existent dans la série historique. Investissement et exploitation rapprochés du total à 2 M€ près, compte tenu des arrondis. Le périmètre de l’entreprise évolue en 2015 et 2020. Ce total n’est pas le coût public complet du rail.",
       "pipeline/sql/34_rail.sql",
     ),
     revenueProvenance: index.provenance(
-      [index.cite("art-rail")],
+      [index.cite("art-rail"), ...railContextSources.map(({ id }) => index.cite(id))],
       "ART, figure 8.1, revenus des services sur la partie RFN des trajets, euros constants 2024. Pour chaque service, recettes commerciales et concours publics se réconcilient avec les revenus. La part commerciale ne mesure pas la couverture de tous les coûts du système ferroviaire.",
       "pipeline/sql/34_rail.sql",
     ),

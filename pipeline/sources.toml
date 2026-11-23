@@ -392,18 +392,18 @@ filename = "paris.pdf"
 
 [[sources]]
 id = "sdes-rail"
-data_date = "2024-12-31"
+data_date = "2025-12-31"
 short_name = "SDES"
-name = "Bilan des transports 2024, transport et activité économique"
+name = "Bilan des transports 2025, transport et activité économique"
 publisher = "SDES"
-page_url = "https://www.statistiques.developpement-durable.gouv.fr/bilan-annuel-des-transports-en-2024?list-chiffres=true"
+page_url = "https://www.statistiques.developpement-durable.gouv.fr/bilan-annuel-des-transports-en-2025?list-chiffres=true"
 licence = "lo2"
 frequency = "Annuelle"
 kind = "file"
-usage = "Articles de la rubrique Analyses."
-limits = ["Périmètre et millésime précisés sous chaque graphique."]
-file_url = "https://www.statistiques.developpement-durable.gouv.fr/media/8861/download?inline="
-filename = "rail.xlsx"
+usage = "Transferts vers SNCF Voyageurs et subventions d’investissement à SNCF Réseau."
+limits = ["Montants en euros courants. Périmètre des entreprises modifié en 2015 et en 2020."]
+file_url = "https://www.statistiques.developpement-durable.gouv.fr/media/9873/download?inline="
+filename = "rail-2025.xlsx"
 
 [[sources]]
 id = "art-rail"
@@ -1188,6 +1188,208 @@ frequency = "Annuelle"
 kind = "file"
 usage = "Comptes consolidés des groupements à fiscalité propre 2018-2025"
 limits = ["Euros courants. Budget principal et annexes, flux internes neutralisés.", "Les niveaux ne sont jamais additionnés : transferts entre collectivités et périmètres particuliers se recoupent.", "Quatre EPCI sans comptes 2025. Géographie OFGL 2025."]
+
+[[sources]]
+id = "insee-population-totale"
+short_name = "Insee"
+name = "Population totale, définition"
+publisher = "Insee"
+page_url = "https://www.insee.fr/fr/metadonnees/definition/c1270"
+licence = "lo2"
+frequency = "Référence méthodologique"
+kind = "reference"
+usage = "Interprétation des ratios de dépenses par habitant des collectivités."
+limits = ["La population totale réunit la population municipale et la population comptée à part. Une personne peut figurer dans les totaux de deux communes."]
+
+[[sources]]
+id = "blace-pv-fevrier-2026"
+short_name = "Commune de Blacé"
+name = "Procès-verbal du conseil municipal de Blacé du 26 février 2026"
+publisher = "Commune de Blacé"
+page_url = "https://www.mairie-blace.fr/fr/rp/116690/850891/pv-de-la-seance-du-26-fevrier-2026"
+record_url = "https://api.neopse.com/rest/site/files/download/2149450#page={page}"
+licence = "crpa"
+frequency = "Ponctuelle"
+kind = "reference"
+data_date = "2026-02-26"
+usage = "Travaux de la salle des fêtes et de sport et réalisations de l’exercice 2025, page 33."
+limits = ["Le projet communal illustre la nature de l’investissement. Le procès-verbal distingue réalisations et crédits budgétés."]
+
+[[sources]]
+id = "ofgl-ensemble-nantes"
+short_name = "OFGL"
+name = "Dépenses consolidées de Nantes Métropole et de ses communes membres"
+publisher = "Observatoire des finances et de la gestion publique locales"
+page_url = "https://data.ofgl.fr/explore/dataset/ofgl-base-ei/"
+file_url = "https://data.ofgl.fr/api/explore/v2.1/catalog/datasets/ofgl-base-ei/exports/json?where=siren%3D%27244400404%27+and+exer%3E%3Ddate%272018%27+and+exer%3C%3Ddate%272025%27+and+agregat+in+%28%22D%C3%A9penses+totales+hors+remb%22%2C%22D%C3%A9penses+de+fonctionnement%22%2C%22D%C3%A9penses+d%27investissement+hors+remb%22%2C%22Frais+de+personnel%22%29&select=exer%2Csiren%2Cagregat%2Cmontant_gfp%2Cmontant_communes%2Cmontant_flux%2Cmontant%2Cptot%2Ceuros_par_habitant&order_by=exer%2Cagregat"
+filename = "nantes-depenses.json"
+record_url = "https://data.ofgl.fr/explore/dataset/ofgl-base-ei/table/?refine.siren=244400404&refine.exer={year}"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Dépenses consolidées de Nantes Métropole et de ses communes membres"
+limits = ["Comptes exécutés. Budgets principaux et annexes, flux entre la Métropole et ses communes membres neutralisés par l’OFGL.", "Euros courants. Dépenses hors remboursement du capital. Le périmètre exclut notamment le département et la région."]
+
+[[sources]]
+id = "ofgl-financement-lille"
+short_name = "OFGL"
+name = "Emprunts, remboursements et fonds de roulement de Lille"
+publisher = "Observatoire des finances et de la gestion publique locales"
+page_url = "https://data.ofgl.fr/explore/dataset/ofgl-base-communes-consolidee/"
+file_url = "https://data.ofgl.fr/api/explore/v2.1/catalog/datasets/ofgl-base-communes-consolidee/exports/json?where=com_code%3D%2759350%27+and+exer%3E%3Ddate%272018%27+and+exer%3C%3Ddate%272025%27+and+agregat+in+%28%22Emprunts+hors+GAD%22%2C%22Remboursements+d%27emprunts+hors+GAD%22%2C%22Fonds+de+roulement%22%29&select=exer%2Ccom_code%2Cagregat%2Cmontant&order_by=exer%2Cagregat"
+filename = "lille.json"
+record_url = "https://data.ofgl.fr/explore/dataset/ofgl-base-communes-consolidee/table/?refine.com_code=59350&refine.exer={year}"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Emprunts, remboursements et fonds de roulement de Lille"
+limits = ["Comptes consolidés de la commune. Les opérations de gestion active de la dette sont exclues des emprunts et de leurs remboursements."]
+
+[[sources]]
+id = "marseille-ca-2024"
+short_name = "Ville de Marseille"
+name = "Compte administratif 2024 de Marseille, rapport de présentation"
+publisher = "Ville de Marseille"
+page_url = "https://www.marseille.fr/sites/default/files/contenu/mairie/Budget/pdf/rapport-de-presentation-compte-administratif-2024.pdf"
+licence = "crpa"
+frequency = "Édition de référence"
+kind = "reference"
+usage = "Exécution des crédits de la Ville de Marseille."
+limits = ["Le périmètre budgétaire est précisé dans chaque tableau du rapport."]
+data_date = "2024-12-31"
+
+[[sources]]
+id = "marseille-cfu-2025"
+short_name = "Ville de Marseille"
+name = "Compte financier unique 2025 de Marseille, rapport de présentation"
+publisher = "Ville de Marseille"
+page_url = "https://www.marseille.fr/sites/default/files/contenu/mairie/Budget/pdf/rapport-de-presentation-cfu-2025.pdf"
+licence = "crpa"
+frequency = "Édition de référence"
+kind = "reference"
+usage = "Exécution des crédits de la Ville de Marseille."
+limits = ["Le périmètre budgétaire est précisé dans chaque tableau du rapport."]
+data_date = "2025-12-31"
+
+[[sources]]
+id = "lille-ca-2025"
+short_name = "Ville de Lille"
+name = "Compte administratif 2025 de Lille et annexes, délibération 26/323"
+publisher = "Ville de Lille"
+page_url = "https://deliberations.mairie-lille.fr/webdelib/servlet/WebDelibFicheDelibServlet?DOC_ID=225841"
+file_url = "https://deliberations.mairie-lille.fr/webdelib/files/unzip/seance_225719/49_d1782291312029.pdf"
+filename = "compte-administratif.pdf"
+licence = "crpa"
+frequency = "Édition de référence"
+kind = "file"
+usage = "Financement des investissements et dette au 31 décembre 2025."
+limits = ["Le périmètre et la nature des opérations doivent être rapprochés de ceux des comptes consolidés de l’OFGL."]
+data_date = "2025-12-31"
+
+[[sources]]
+id = "marseille-ecoles-senat-2025"
+short_name = "Sénat"
+name = "Règlement du budget 2025, dotation de l’État pour la rénovation des écoles de Marseille"
+publisher = "Commission des finances du Sénat"
+page_url = "https://www.senat.fr/rap/l25-736-226/l25-736-2266.html"
+licence = "crpa"
+frequency = "Édition de référence"
+kind = "reference"
+usage = "Crédits de paiement du plan pour les écoles de Marseille."
+limits = ["Les paiements de l’État retracés ici ont un autre périmètre que les comptes de la commune."]
+data_date = "2025-12-31"
+
+[[sources]]
+id = "nantes-ville-cfu-2025"
+short_name = "Ville de Nantes"
+name = "Compte financier unique 2025 de la Ville de Nantes, présentation"
+publisher = "Ville de Nantes"
+page_url = "https://metropole.nantes.fr/ma-ville-ma-metropole/nantes-et-ses-11-quartiers/la-ville-de-nantes-comment-ca-marche/les-finances-de-la-ville-de-nantes/budget-2025-de-la-ville-de-nantes"
+licence = "crpa"
+frequency = "Édition de référence"
+kind = "reference"
+usage = "Réalisations de la commune en 2025."
+limits = ["La présentation du compte financier unique suit les conventions retenues par la Ville."]
+data_date = "2025-12-31"
+
+[[sources]]
+id = "nantes-metropole-cfu-2025"
+short_name = "Nantes Métropole"
+name = "Compte financier unique 2025 de Nantes Métropole, présentation"
+publisher = "Nantes Métropole"
+page_url = "https://metropole.nantes.fr/ma-ville-ma-metropole/ma-metropole-et-ses-24-communes/fonctionnement/les-finances-de-nantes-metropole/budget-2025-de-nantes-metropole"
+licence = "crpa"
+frequency = "Édition de référence"
+kind = "reference"
+usage = "Réalisations de la Métropole en 2025."
+limits = ["Le compte de la Métropole décrit ses propres budgets. Les comptes communaux sont publiés séparément."]
+data_date = "2025-12-31"
+
+[[sources]]
+id = "lille-balance-2022"
+short_name = "DGFiP"
+name = "Balance 2022 du budget principal de Lille, compte 1632"
+publisher = "Direction générale des finances publiques"
+page_url = "https://data.economie.gouv.fr/explore/dataset/balances-comptables-des-communes-en-2022/table/?refine.ident=21590350100017&refine.compte=1632"
+licence = "crpa"
+frequency = "Édition de référence"
+kind = "reference"
+usage = "Opérations non budgétaires du compte 1632."
+limits = ["Budget principal de la Ville de Lille, exercice 2022."]
+data_date = "2022-12-31"
+
+[[sources]]
+id = "lille-crc-2018"
+short_name = "CRC"
+name = "Observations définitives sur la gestion de la commune de Lille"
+publisher = "Chambre régionale des comptes Hauts-de-France"
+page_url = "https://www.ccomptes.fr/sites/default/files/2018-06/HFR201833.pdf"
+licence = "crpa"
+frequency = "Édition de référence"
+kind = "reference"
+usage = "Description de l’emprunt obligataire municipal et de son mode de remboursement."
+limits = ["Le rapport décrit les caractéristiques de l’émission connue à sa date de publication."]
+
+[[sources]]
+id = "normandie-nomad"
+short_name = "Région Normandie"
+name = "Le réseau NOMAD et ses trains"
+publisher = "Région Normandie"
+page_url = "https://www.normandie.fr/nomad-cest-quoi"
+licence = "crpa"
+frequency = "Édition de référence"
+kind = "reference"
+usage = "Transfert des lignes Intercités à la Région Normandie en 2020."
+limits = ["La régionalisation modifie le périmètre des services comparés avant et après 2020."]
+data_date = "2020-01-01"
+
+[[sources]]
+id = "art-rail-2025-premiers"
+short_name = "ART"
+name = "Marché ferroviaire en France, premiers chiffres 2025"
+publisher = "Autorité de régulation des transports"
+page_url = "https://www.autorite-transports.fr/wp-content/uploads/2026/07/art-bilan-ferroviaire-france-premiers-chiffres-2025.pdf"
+licence = "crpa"
+frequency = "Édition de référence"
+kind = "reference"
+usage = "Données disponibles sur le trafic et l’offre 2025."
+limits = ["La publication des premiers chiffres 2025 ne fournit pas la ventilation nationale des revenus des TER entre recettes commerciales et concours publics."]
+data_date = "2025-12-31"
+
+[[sources]]
+id = "ofgl-remboursement-marseille"
+short_name = "OFGL"
+name = "Dépenses totales et remboursements du capital de Marseille"
+publisher = "Observatoire des finances et de la gestion publique locales"
+page_url = "https://data.ofgl.fr/explore/dataset/ofgl-base-communes-consolidee/"
+file_url = "https://data.ofgl.fr/api/explore/v2.1/catalog/datasets/ofgl-base-communes-consolidee/exports/json?where=com_code%3D%2713055%27+and+exer%3E%3Ddate%272018%27+and+exer%3C%3Ddate%272025%27+and+agregat+in+%28%22D%C3%A9penses+totales%22%2C%22Remboursements+d%27emprunts+hors+GAD%22%29&select=exer%2Ccom_code%2Cagregat%2Cmontant&order_by=exer%2Cagregat"
+filename = "marseille.json"
+record_url = "https://data.ofgl.fr/explore/dataset/ofgl-base-communes-consolidee/table/?refine.com_code=13055&refine.exer={year}"
+licence = "lo2"
+frequency = "Annuelle"
+kind = "file"
+usage = "Dépenses de Marseille avant et après remboursement du capital de la dette."
+limits = ["Budgets de la commune consolidés. Les opérations de gestion active de la dette sont exclues des remboursements."]
 
 [[sources]]
 id = "rei-2025"

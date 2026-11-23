@@ -30,10 +30,13 @@ import {
   getHome,
   getLegislativeFile,
   getLegislativeFiles,
+  getLilleAnalysis,
   getLobbying,
   getLocalAccounts,
   getLocalExecutive,
+  getMarseilleAnalysis,
   getManifest,
+  getNantesAnalysis,
   getOfficialJournal,
   getOrganisation,
   getOrganisationGroup,
@@ -53,6 +56,7 @@ import {
   getRailAnalysis,
   getSocialAccounts,
   getSocialProtection,
+  getSpendingComparison,
   getStateBudget,
   getStateExecution,
   getStudentAnalysis,
@@ -104,6 +108,10 @@ const PROCUREMENT_SECTIONS = [
 const LOBBYING_SECTIONS = ["defaults", "european"] as const;
 
 const ANALYSIS_DATA = {
+  "comparer-les-communes": getSpendingComparison,
+  lille: getLilleAnalysis,
+  marseille: getMarseilleAnalysis,
+  nantes: getNantesAnalysis,
   "deficit-par-president": getDeficitAnalysis,
   europe: getEuropeAnalysis,
   paris: getParisAnalysis,
@@ -407,7 +415,7 @@ export function createMcpServer(): McpServer {
     {
       title: "Analyses",
       description:
-        "Thematic analyses. Without `slug`, lists them. With a slug, returns that analysis's data series and sources: public deficit and debt by presidency, France and the EU budget, Paris spending, rail funding, student support.",
+        "Thematic analyses. Lists the available analyses and their slugs. Pass a slug to get the data series and original sources for that analysis.",
       inputSchema: {
         slug: z.enum(Object.keys(ANALYSIS_DATA) as (keyof typeof ANALYSIS_DATA)[]).optional(),
       },

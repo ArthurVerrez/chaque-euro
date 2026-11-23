@@ -58,6 +58,10 @@ DATA_TABLES = (
     "family_benefits",
     "unemployment_accounts",
     "local_accounts",
+    "lille_financing",
+    "marseille_repayments",
+    "nantes_consolidation",
+    "commune_spending_benchmarks",
     "commune_taxes",
     "tax_strata",
     "commune_income",
@@ -188,6 +192,22 @@ DOWNLOADS = {
     "family_benefits": "Prestations gérées par les caisses de la branche famille, tous régimes.",
     "unemployment_accounts": "Recettes et dépenses de l'assurance chômage, Unédic, euros.",
     "local_accounts": "Comptes OFGL 2018-2025, niveaux séparés, euros et euros par habitant.",
+    "lille_financing": (
+        "Lille, emprunts et remboursements hors gestion active de la dette "
+        "et fonds de roulement, 2018-2025 en euros."
+    ),
+    "marseille_repayments": (
+        "Marseille, dépenses totales et remboursements du capital hors "
+        "gestion active de la dette, 2018-2025 en euros."
+    ),
+    "nantes_consolidation": (
+        "Nantes Métropole et communes membres, dépenses consolidées hors "
+        "remboursement de la dette, 2018-2025 en euros."
+    ),
+    "commune_spending_benchmarks": (
+        "Dépenses communales 2025 par habitant, médianes, moyennes et ratios "
+        "pondérés par la population."
+    ),
     "commune_taxes": "REI 2025, bases en euros et taux en pourcentage, par bénéficiaire et zone.",
     "tax_strata": "Médianes REI 2025 par strate, taxe, bénéficiaire et zone.",
     "commune_income": (
@@ -341,6 +361,9 @@ PATH_VARIABLES = {
     "ofgl-departements": "ofgl_departements_path",
     "ofgl-regions": "ofgl_regions_path",
     "ofgl-epci": "ofgl_epci_path",
+    "ofgl-financement-lille": "lille_financing_path",
+    "ofgl-remboursement-marseille": "marseille_repayments_path",
+    "ofgl-ensemble-nantes": "nantes_consolidation_path",
     "insee-deficit": "insee_deficit_path",
     "insee-debt": "insee_debt_path",
     "state-balance": "state_balance_path",

@@ -1,0 +1,324 @@
+---
+import Analysis from "../../layouts/Analysis.astro";
+import Section from "../../components/AnalysisSection.astro";
+import Icon from "../../components/Icon.astro";
+import type { Figure } from "../../components/KeyFigures.astro";
+import LineChart from "../../components/LineChart.astro";
+import Term from "../../components/Term.astro";
+import { analysis } from "../../lib/analyses";
+import { getLilleAnalysis } from "../../lib/data";
+import { formatEuro, formatMillions } from "../../lib/format";
+
+const { commune, financing, bondSource } = await getLilleAnalysis();
+const sources = commune ? [commune.provenance, financing.provenance] : [financing.provenance];
+const city =
+  financing.city && Object.values(financing.city).every(Number.isFinite) ? financing.city : null;
+const years = Array.from({ length: 8 }, (_, index) => 2018 + index);
+const labels = years.map(String);
+const amount = (year: number, item: string) =>
+  commune?.history.find((row) => row.year === year)?.lines.find((line) => line.item === item)
+    ?.amount ?? null;
+const funding = (year: number) => financing.history.find((row) => row.year === year);
+const decimal = new Intl.NumberFormat("fr-FR", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+
+function yearTotals(year: number) {
+  const flow = funding(year);
+  const debt = amount(year, "dette");
+  const equipment = amount(year, "equipement");
+  const savings = amount(year, "epargne_brute");
+  const operating = amount(year, "fonctionnement");
+  const investment = amount(year, "investissement");
+  const revenue = amount(year, "recettes");
+  if (
+    !flow ||
+    debt === null ||
+    equipment === null ||
+    savings === null ||
+    operating === null ||
+    investment === null ||
+    revenue === null
+  )
+    return null;
+
+  const investmentRevenue = revenue - (operating + savings);
+  const need = investment - investmentRevenue - savings;
+  const netBorrowing = flow.borrowing - flow.repayments;
+  return {
+    ...flow,
+    debt,
+    equipment,
+    savings,
+    investment,
+    investmentRevenue,
+    need,
+    netBorrowing,
+    netSavings: savings - flow.repayments,
+    capitalChange: netBorrowing - need,
+    debtToSavings: savings > 0 ? debt / savings : null,
+  };
+}
+const previous = yearTotals(2024);
+const current = yearTotals(2025);
+const debt2018 = amount(2018, "dette");
+const debt2021 = amount(2021, "dette");
+const debt2022 = amount(2022, "dette");
+const funding2022 = funding(2022);
+const figures: Figure[] =
+  previous && current
+    ? [
+        {
+          icon: "debt",
+          term: "dette",
+          label: "Dette fin 2025",
+          value: formatMillions(current.debt),
+          note: `${formatMillions(previous.debt)} fin 2024`,
+        },
+        {
+          icon: "works",
+          label: "Travaux et équipements en 2025",
+          value: formatMillions(current.equipment),
+          note: `${formatMillions(previous.equipment)} en 2024`,
+        },
+        {
+          icon: "savings",
+          label: "Épargne après remboursement en 2025",
+          value: formatMillions(current.netSavings),
+          note: `${formatMillions(previous.netSavings)} en 2024`,
+        },
+      ]
+    : [];
+const sections = [
+  { id: "financement", label: "Le financement", icon: "compare" },
+  { id: "emprunts", label: "Les emprunts", icon: "debt" },
+  { id: "trajectoire", label: "Depuis 2018", icon: "trend" },
+] as const;
+const fundingRows = [
+  ["investment", "Dépenses d’investissement hors remboursements"],
+  ["investmentRevenue", "Recettes d’investissement hors emprunts"],
+  ["savings", "Épargne brute"],
+  ["need", "Reste à financer avant emprunts"],
+  ["netBorrowing", "Emprunts et dettes assimilées, remboursements déduits"],
+  ["capitalChange", "Variation du fonds de roulement"],
+] as const;
+---
+
+<Analysis
+  article={analysis("lille")}
+  answer={
+    previous && current
+      ? `En 2025, avant les emprunts et leurs remboursements, il manque ${formatMillions(current.need)} à Lille pour financer ses dépenses, contre ${formatMillions(previous.need)} en 2024. La dette augmente pourtant de ${formatMillions(current.debt - previous.debt)}. Les ${formatMillions(current.capitalChange)} de différence viennent renforcer le fonds de roulement de la commune.`
+      : "Les données nécessaires pour comparer les comptes 2024 et 2025 de Lille sont incomplètes."
+  }
+  figures={figures}
+  provenance={sources}
+  sections={previous && current ? [...sections] : []}
+>
+  {previous && current && (
+    <>
+      <Section
+        id="financement"
+        title="Les recettes d’investissement progressent plus vite que les dépenses"
+        icon="compare"
+        provenance={sources}
+      >
+        <p>
+          Les <Term id="investissement">dépenses d’investissement</Term> augmentent de{" "}
+          {formatMillions(current.investment - previous.investment)} en 2025. Les recettes
+          d’investissement hors emprunts progressent de{" "}
+          {formatMillions(current.investmentRevenue - previous.investmentRevenue)}. La Ville a reçu
+          davantage de subventions et de compensations de TVA. La Métropole européenne de Lille lui
+          a aussi remboursé des travaux réalisés pour son compte à la piscine de Fives-Hellemmes.
+        </p>
+        <p>
+          En 2024, Lille avait prélevé {formatMillions(-previous.capitalChange)} sur son fonds de
+          roulement pour compléter les emprunts. En 2025, elle le reconstitue. Il passe de{" "}
+          {formatMillions(previous.workingCapital)} à {formatMillions(current.workingCapital)} en
+          fin d’année.
+        </p>
+        <table slot="chart">
+          <caption>
+            Budget principal et budgets annexes de Lille, en millions d’euros courants
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">
+                <Term id="comptes-consolides">Comptes consolidés</Term>
+              </th>
+              <th scope="col">2024</th>
+              <th scope="col">2025</th>
+            </tr>
+          </thead>
+          <tbody>
+            {fundingRows.map(([item, label]) => (
+              <tr>
+                <th scope="row">{label}</th>
+                <td>{decimal.format(previous[item] / 1e6)}</td>
+                <td>{decimal.format(current[item] / 1e6)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p slot="caveat">
+          L’OFGL calcule le besoin avant les opérations de dette. On déduit des dépenses
+          d’investissement les recettes d’investissement hors emprunts et{" "}
+          <Term id="epargne-brute">l’épargne brute</Term>. Les emprunts nets de remboursements,
+          moins ce besoin, donnent la variation du fonds de roulement. La Ville, page 3 de son
+          rapport, calcule le besoin de sa section d’investissement après remboursement du capital.
+          Les subventions, la TVA et l’opération de Fives-Hellemmes sont détaillées pages 16 à 18 du
+          rapport (pages 19 à 21 du PDF).
+        </p>
+      </Section>
+      <Section
+        id="emprunts"
+        title="Du prêt bancaire à la dette inscrite dans les comptes"
+        icon="debt"
+        provenance={financing.provenance}
+      >
+        {city && (
+          <p>
+            Le compte administratif du budget principal recense {formatMillions(city.bankLoans)} de
+            nouveaux prêts en 2025, dont {formatMillions(city.eibDraw)} tirés sur le contrat signé
+            en 2024 avec la Banque européenne d’investissement. Après{" "}
+            {formatMillions(current.repayments)}
+            de capital remboursé, la Ville chiffre son endettement supplémentaire à{" "}
+            {formatMillions(city.bankLoans - current.repayments)}.
+          </p>
+        )}
+        <p>
+          {city ? (
+            <>
+              La Ville a aussi inscrit {formatEuro(city.otherDebt)} à la ligne des autres dettes,
+              sous le nom de la Soreli, et reçu {formatEuro(city.deposits)} de dépôts et
+              cautionnements. Avec ces sommes, l’OFGL
+            </>
+          ) : (
+            <>Le détail du compte administratif 2025 est indisponible. L’OFGL</>
+          )}{" "}
+          recense {formatMillions(current.borrowing)} d’emprunts et de dettes assimilées, soit{" "}
+          {formatMillions(current.netBorrowing)} une fois les remboursements déduits.
+        </p>
+        <LineChart
+          slot="chart"
+          caption="Emprunts et remboursements de la commune, par exercice"
+          labels={labels}
+          series={[
+            {
+              label: "Emprunts et dettes assimilées",
+              values: years.map((year) => funding(year)?.borrowing ?? null),
+            },
+            {
+              label: "Capital remboursé",
+              values: years.map((year) => funding(year)?.repayments ?? null),
+            },
+          ]}
+          format={formatMillions}
+        />
+        <p slot="caveat">
+          Le conseil municipal a voté le compte administratif le 19 juin 2026. Dans le PDF, la page
+          22 détaille les prêts et la page 69 les recettes réalisées aux articles 1641 (prêts en
+          euros), 16878 (autres dettes) et 165 (dépôts et cautionnements). La page 212 identifie la
+          ligne « SORELI -1 ». Les tirages et remboursements temporaires qui se compensent sont
+          écartés. L’OFGL attribue tout l’encours au budget principal en 2024 comme en 2025.
+        </p>
+      </Section>
+      <Section
+        id="trajectoire"
+        title="La dette remonte depuis 2022"
+        icon="trend"
+        provenance={[...sources, bondSource]}
+      >
+        {debt2018 !== null && debt2022 !== null && (
+          <p>
+            L’<Term id="dette">encours de dette</Term> était passé de {formatMillions(debt2018)} fin
+            2018 à {formatMillions(debt2022)} fin 2022. Trois ans plus tard, il dépasse de{" "}
+            {formatMillions(current.debt - debt2018)} son niveau de 2018.
+          </p>
+        )}
+        <p>
+          En 2025, les {formatMillions(current.savings)} d’
+          <Term id="epargne-brute">épargne brute</Term> couvrent les remboursements de capital. Il
+          reste {formatMillions(current.netSavings)} pour investir, contre{" "}
+          {formatMillions(previous.netSavings)} un an plus tôt.
+          {current.debtToSavings !== null && previous.debtToSavings !== null && (
+            <>
+              {" "}
+              La dette représente désormais {decimal.format(current.debtToSavings)} années d’épargne
+              brute, contre {decimal.format(previous.debtToSavings)} en 2024.
+            </>
+          )}
+        </p>
+        <LineChart
+          slot="chart"
+          caption="Dette de la commune au 31 décembre, de 2018 à 2025"
+          labels={labels}
+          series={[
+            { label: "Encours de dette", values: years.map((year) => amount(year, "dette")) },
+          ]}
+          format={formatMillions}
+        />
+        <div slot="caveat">
+          <p>
+            Le ratio rapporte la dette de fin d’année à l’épargne brute de l’exercice. Il suppose
+            qu’elle reste constante et soit entièrement consacrée aux remboursements, sans nouvel
+            emprunt. Les échéances réelles dépendent des contrats.
+          </p>
+          {debt2021 !== null && debt2022 !== null && funding2022 && (
+            <p>
+              En 2022, les remboursements dépassent les nouvelles dettes de{" "}
+              {formatMillions(funding2022.repayments - funding2022.borrowing)}, mais l’encours
+              recule de {formatMillions(debt2021 - debt2022)}. L’essentiel de l’écart tient à une
+              obligation remboursable en une fois en 2022. La Ville avait déjà comptabilisé une
+              partie de son remboursement au fil des exercices. La balance de la DGFiP enregistre la
+              clôture du compte 1632 cette année-là.
+            </p>
+          )}
+        </div>
+      </Section>
+    </>
+  )}
+  <div slot="method">
+    <p>
+      L’Observatoire des finances et de la gestion publique locales (OFGL) publie les{" "}
+      <Term id="comptes-consolides">comptes consolidés</Term>. Ils réunissent le budget principal et
+      les <Term id="budget-annexe">budgets annexes</Term> de la commune de Lille (Insee 59350),
+      après élimination des flux internes. Les comptes propres de la{" "}
+      <Term id="intercommunalite">Métropole européenne de Lille</Term> sont distincts. Les exercices
+      2018 à 2025 sont exprimés en euros courants.
+    </p>
+    <p>
+      L’équipement est une partie des investissements. Chaque dépense est comptée sur l’année,
+      tandis que la dette se mesure au 31 décembre. Le fonds de roulement est la part des ressources
+      durables encore disponible après financement des immobilisations. La trésorerie dépend aussi
+      des sommes à encaisser et des factures à régler.
+    </p>
+    <p>
+      Pour retrouver les recettes d’investissement dans la fiche communale, partez des recettes
+      totales hors emprunts, puis retranchez les dépenses de fonctionnement et l’épargne brute. Les
+      calculs précèdent les arrondis.
+      <a href="/commune/59350?annee=2025">
+        <Icon name="town" size={15} /> Tous les comptes de Lille
+      </a>
+    </p>
+  </div>
+</Analysis>
+
+<style>
+  caption {
+    margin-bottom: 1rem;
+    text-align: left;
+    font-weight: 650;
+  }
+  tbody th[scope="row"] {
+    white-space: normal;
+    font-weight: 500;
+  }
+  thead th:not(:first-child),
+  td {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+</style>

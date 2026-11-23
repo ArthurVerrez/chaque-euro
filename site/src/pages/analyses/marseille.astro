@@ -1,0 +1,302 @@
+---
+import Analysis from "../../layouts/Analysis.astro";
+import Section from "../../components/AnalysisSection.astro";
+import LineChart from "../../components/LineChart.astro";
+import PublicTable from "../../components/PublicTable.astro";
+import Term from "../../components/Term.astro";
+import { analysis } from "../../lib/analyses";
+import { getMarseilleAnalysis, type CommuneAccounts } from "../../lib/data";
+import {
+  formatEuro,
+  formatEuroCents,
+  formatMillions,
+  formatNumber,
+  formatPercent,
+} from "../../lib/format";
+
+const { commune, debt, schools2024, schools2025, cityReports, stateReport } =
+  await getMarseilleAnalysis();
+function line(accounts: CommuneAccounts, item: string) {
+  const entry = accounts.lines.find((row) => row.item === item);
+  if (!entry) throw new Error(`Poste OFGL manquant à Marseille en ${accounts.year} : ${item}`);
+  return entry;
+}
+const history = (commune?.history ?? [])
+  .filter(({ year }) => year >= 2018 && year <= 2025)
+  .map((accounts) => {
+    const debtYear = debt.history.find(({ year }) => year === accounts.year);
+    if (!debtYear || !accounts.population)
+      throw new Error(`Comptes incomplets à Marseille en ${accounts.year}`);
+    return {
+      ...accounts,
+      population: accounts.population,
+      repayments: debtYear.repayments,
+      totalIncludingPrincipal: debtYear.totalIncludingPrincipal,
+      perResidentIncludingPrincipal: debtYear.totalIncludingPrincipal / accounts.population,
+      netSavings: line(accounts, "epargne_brute").amount - debtYear.repayments,
+    };
+  });
+const previous = history.find(({ year }) => year === 2024);
+const current = history.find(({ year }) => year === 2025);
+if (!commune || !previous || !current || history.length !== 8) {
+  throw new Error("Série OFGL 2018-2025 de Marseille incomplète");
+}
+const accountsProvenance = [commune.provenance, debt.provenance];
+const change = (item: string) => line(current, item).amount - line(previous, item).amount;
+const perResident = (accounts: CommuneAccounts, item: string) => line(accounts, item).perCapita!;
+const changePerResident = (item: string) =>
+  perResident(current, item) - perResident(previous, item);
+const otherInvestmentChange =
+  change("investissement") - change("equipement") - change("subventions_equipement");
+const signedMillions = (value: number) =>
+  `${value < 0 ? "−" : "+"}${formatMillions(Math.abs(value))}`;
+const labels = history.map(({ year }) => String(year));
+const figures = [
+  {
+    icon: "spending" as const,
+    label: "Dépenses totales",
+    value: signedMillions(change("depenses")),
+    note: "Variation 2024-2025, hors remboursements",
+    term: "depenses-totales" as const,
+  },
+  {
+    icon: "staff" as const,
+    label: "Fonctionnement",
+    value: signedMillions(change("fonctionnement")),
+    note: "Variation 2024-2025",
+    term: "fonctionnement" as const,
+  },
+  {
+    icon: "works" as const,
+    label: "Investissement",
+    value: signedMillions(change("investissement")),
+    note: "Variation 2024-2025, hors remboursements",
+    term: "investissement" as const,
+  },
+];
+const sections = [
+  { id: "fonctionnement", label: "La dépense par habitant", icon: "compare" as const },
+  { id: "investissement", label: "Les investissements", icon: "works" as const },
+  { id: "ecoles", label: "Les écoles", icon: "school" as const },
+  { id: "epargne", label: "L’épargne", icon: "savings" as const },
+];
+const schoolRows = (
+  [
+    ["fonctionnement", "Dépenses courantes"],
+    ["investissement", "Équipements et immobilisations"],
+  ] as const
+).map(([section, label]) => [
+  { text: label },
+  ...[schools2024, schools2025].map((budget) => {
+    const row = budget.lines.find(
+      (entry) => entry.nomenclature === "M57" && entry.item === "2" && entry.section === section,
+    );
+    if (!row)
+      throw new Error(`Fonction enseignement manquante à Marseille en ${budget.year} : ${section}`);
+    return { text: formatMillions(row.amount) };
+  }),
+]);
+---
+
+<Analysis
+  article={analysis("marseille")}
+  answer={`Entre 2024 et 2025, la dépense de Marseille passe de ${formatEuro(perResident(previous, "depenses"))} à ${formatEuro(perResident(current, "depenses"))} par habitant hors remboursement des emprunts. Si vous comptez aussi le capital remboursé aux prêteurs, la dépense baisse de ${formatEuroCents((previous.perResidentIncludingPrincipal - current.perResidentIncludingPrincipal) * 100)} par habitant.`}
+  figures={figures}
+  provenance={accountsProvenance}
+  sections={sections}
+>
+  <Section
+    id="fonctionnement"
+    title="Pourquoi le sens de la variation dépend des remboursements"
+    icon="compare"
+    provenance={[...accountsProvenance, cityReports]}
+  >
+    <p>
+      Le fonctionnement ajoute {formatEuroCents(changePerResident("fonctionnement") * 100)} par
+      habitant et le recul de l’investissement en retranche{" "}
+      {formatEuroCents(-changePerResident("investissement") * 100)}. La Ville rembourse aussi{" "}
+      {formatMillions(previous.repayments - current.repayments)} de capital en moins. Remboursements
+      compris, la dépense augmente de{" "}
+      {formatMillions(current.totalIncludingPrincipal - previous.totalIncludingPrincipal)} en euros
+      courants. La population augmente plus vite. Par habitant, ce total passe de{" "}
+      {formatEuroCents(previous.perResidentIncludingPrincipal * 100)} à{" "}
+      {formatEuroCents(current.perResidentIncludingPrincipal * 100)}.
+    </p>
+    <p>
+      Les salaires et les charges de personnel augmentent de{" "}
+      <strong>{formatMillions(change("personnel"))}</strong>, soit{" "}
+      {formatPercent(change("personnel") / change("fonctionnement"))} de la hausse des{" "}
+      <Term id="fonctionnement">dépenses de fonctionnement</Term>. Les achats et services extérieurs
+      augmentent de {formatMillions(change("achats"))}. Les aides et participations versées
+      diminuent de {formatMillions(-change("intervention"))}.
+    </p>
+    <p>
+      Dans son compte financier unique, la Ville relève la hausse des cotisations de retraite, des
+      rémunérations et des effectifs. Elle signale aussi un changement pour les cantines. Depuis la
+      rentrée 2025, elle paie un marché de restauration et encaisse les participations des familles.
+      Ce changement fait monter les achats comptabilisés. Une fois les recettes déduites, la Ville
+      constate une hausse plus faible du coût total de la restauration scolaire.
+    </p>
+    <LineChart
+      slot="chart"
+      caption="Dépenses de la commune par habitant, avec et sans remboursement du capital"
+      labels={labels}
+      maxLabels={8}
+      series={[
+        {
+          label: "Remboursements compris",
+          values: history.map((year) => year.perResidentIncludingPrincipal),
+        },
+        {
+          label: "Hors remboursements",
+          values: history.map((year) => perResident(year, "depenses")),
+        },
+      ]}
+      format={formatEuro}
+    />
+  </Section>
+  <Section
+    id="investissement"
+    title="Les subventions aux projets de tiers reculent davantage que les travaux de la Ville"
+    icon="works"
+    provenance={[commune.provenance, cityReports]}
+  >
+    <p>
+      Les dépenses d’équipement sur le patrimoine de la commune passent de{" "}
+      <strong>{`${formatMillions(line(previous, "equipement").amount)} à ${formatMillions(line(current, "equipement").amount)}`}</strong>
+      . Malgré ce recul, 2025 reste la deuxième année la plus élevée de la période 2018-2025 en
+      euros courants, après 2024.
+    </p>
+    <p>
+      Les <Term id="subvention">subventions</Term> versées pour des projets réalisés par des tiers
+      diminuent de {formatMillions(-change("subventions_equipement"))}. Elles expliquent{" "}
+      {formatPercent(change("subventions_equipement") / change("investissement"))} du recul de
+      l’investissement. Le reste tient aux équipements propres (
+      {signedMillions(change("equipement"))}) et aux autres opérations (
+      {signedMillions(otherInvestmentChange)}).
+    </p>
+    <p slot="caveat">
+      L’OFGL distingue les dépenses sur le patrimoine de la commune des aides qu’elle verse à
+      d’autres maîtres d’ouvrage. La Ville emploie « équipements nouveaux » pour un total plus large
+      de son budget principal, qui inclut notamment les subventions versées.
+    </p>
+    <LineChart
+      slot="chart"
+      caption="Investissements de la commune, en millions d’euros courants"
+      labels={labels}
+      maxLabels={8}
+      series={[
+        {
+          label: "Total hors remboursements",
+          values: history.map((year) => line(year, "investissement").amount),
+        },
+        {
+          label: "Dont équipements propres",
+          values: history.map((year) => line(year, "equipement").amount),
+        },
+        {
+          label: "Dont subventions versées",
+          values: history.map((year) => line(year, "subventions_equipement").amount),
+        },
+      ]}
+      format={formatMillions}
+    />
+  </Section>
+  <Section
+    id="ecoles"
+    title="Les travaux dans les écoles relèvent de plusieurs budgets"
+    icon="school"
+    provenance={[schools2024.provenance, schools2025.provenance, cityReports, stateReport]}
+  >
+    <p>
+      Au budget principal, la <Term id="fonction-budgetaire">fonction</Term> « Enseignement et
+      formation » enregistre davantage de dépenses courantes et moins d’investissements en 2025. Le
+      plan de conservation des écoles arrive en tête des programmes d’investissement récurrents de
+      la Ville cette année-là. Elle signale notamment des ouvertures de classes à Pont-de-Vivaux
+      Saccoman et à La Fourragère.
+    </p>
+    <PublicTable
+      slot="chart"
+      caption="Enseignement et formation, budget principal de Marseille"
+      columns={["Poste", "2024", "2025"]}
+      rows={schoolRows}
+    />
+    <p>
+      La Société publique des écoles marseillaises porte une partie des constructions et des
+      rénovations lourdes. La Ville lui verse des redevances d’exploitation, d’intérêts et de
+      remboursement du capital. De son côté, l’État a versé davantage en 2025 qu’en 2024 pour le
+      volet écoles du plan Marseille en grand, selon la commission des finances du Sénat. Pour
+      connaître le coût des travaux, il faudrait aussi suivre les dépenses de cette société chantier
+      par chantier.
+    </p>
+    <p slot="caveat">
+      La DGFiP ventile ici le seul budget principal selon le service concerné. Le fonctionnement
+      couvre la classe 6. Les équipements et immobilisations couvrent les comptes 20 à 23, avec les
+      subventions d’équipement et les opérations d’ordre. Le champ dépasse les seules écoles
+      primaires et diffère de celui des équipements propres dans les comptes OFGL.
+    </p>
+  </Section>
+  <Section
+    id="epargne"
+    title="La Ville dégage moins d’épargne pour rembourser ses emprunts et investir"
+    icon="savings"
+    provenance={[...accountsProvenance, cityReports]}
+  >
+    <p>
+      Les recettes de fonctionnement augmentent de{" "}
+      {formatMillions(change("fonctionnement") + change("epargne_brute"))}, tandis que les dépenses
+      de fonctionnement augmentent de {formatMillions(change("fonctionnement"))}. La différence
+      entre recettes et dépenses, l’<Term id="epargne-brute">épargne brute</Term>, tombe de{" "}
+      {formatMillions(line(previous, "epargne_brute").amount)} à{" "}
+      <strong>{formatMillions(line(current, "epargne_brute").amount)}</strong>. C’est son niveau le
+      plus bas depuis 2018.
+    </p>
+    <p>
+      Une fois le capital des emprunts remboursé, l’épargne nette passe de{" "}
+      {signedMillions(previous.netSavings)} à <strong>{signedMillions(current.netSavings)}</strong>.
+      C’est la première fois depuis 2020 que les remboursements dépassent l’épargne brute. Le compte
+      financier unique constate aussi ce passage en négatif sur le seul budget principal.
+    </p>
+    <LineChart
+      slot="chart"
+      caption="Épargne de la commune avant et après remboursement du capital"
+      labels={labels}
+      maxLabels={8}
+      series={[
+        {
+          label: "Épargne brute",
+          values: history.map((year) => line(year, "epargne_brute").amount),
+        },
+        { label: "Épargne nette", values: history.map((year) => year.netSavings) },
+      ]}
+      format={formatMillions}
+    />
+  </Section>
+  <div slot="method">
+    <p>
+      Les <Term id="comptes-consolides">comptes consolidés</Term> de l’Observatoire des finances et
+      de la gestion publique locales (OFGL) réunissent le budget principal de Marseille et ses
+      budgets annexes après élimination de leurs transferts réciproques. Ils excluent la métropole.
+      On additionne le fonctionnement et l’investissement hors remboursement du capital des
+      emprunts. Les intérêts figurent dans le fonctionnement.
+    </p>
+    <p>
+      Chaque montant par habitant utilise la population totale Insee retenue par l’OFGL pour
+      l’exercice, soit {formatNumber(previous.population)} habitants en 2024 et{" "}
+      {formatNumber(current.population)} en 2025. L’écart entre les ratios avant arrondi est de{" "}
+      {formatEuroCents(changePerResident("depenses") * 100)} par habitant, soit{" "}
+      {formatPercent(changePerResident("depenses") / perResident(previous, "depenses"), 2)} de
+      hausse. Les comparaisons portent sur des euros courants, sans correction de l’inflation.
+    </p>
+    <p>
+      Pour retrouver les deux courbes par habitant, sélectionnez Marseille (code Insee 13055) dans
+      la source OFGL. Divisez les montants des lignes « Dépenses totales » et « Dépenses totales
+      hors remb » par la population de chaque exercice. L’OFGL exclut des deux séries les opérations
+      de gestion active de la dette, dont le refinancement d’emprunts.
+    </p>
+    <p>
+      Les documents municipaux retracent les dépenses exécutées. Le conseil municipal a arrêté le
+      compte administratif 2024 le 20 juin 2025 et le compte financier unique 2025 le 26 juin 2026.
+    </p>
+  </div>
+</Analysis>

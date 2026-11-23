@@ -36,6 +36,11 @@ const others = ANALYSES.filter((entry) => entry.slug !== article.slug).slice(0, 
           </span>
           <Icon name="calendar" size={14} />
           <time datetime={article.published}>{formatDate(article.published)}</time>
+          {article.updated && (
+            <span>
+              Mis à jour le <time datetime={article.updated}>{formatDate(article.updated)}</time>
+            </span>
+          )}
         </p>
         <div class="title">
           <span class="badge" aria-hidden="true">
