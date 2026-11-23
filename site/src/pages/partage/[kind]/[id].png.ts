@@ -1,7 +1,15 @@
 import type { APIRoute } from "astro";
 import { ANALYSES } from "../../../lib/analyses";
-import { getCommune, getDepartement, getOrganisation } from "../../../lib/data";
+import { getCommune, getDepartement, getLargeCities, getOrganisation } from "../../../lib/data";
 import { formatEuro } from "../../../lib/format";
+import {
+  LAST_YEAR,
+  METRIC_ITEMS,
+  cityLabel,
+  cityStats,
+  rankText,
+  standoutStats,
+} from "../../../lib/large-cities";
 import { renderShareCard, type ShareCard } from "../../../lib/share-card";
 
 const CARDS: Record<string, (id: string) => Promise<ShareCard | null>> = {
@@ -42,6 +50,19 @@ const CARDS: Record<string, (id: string) => Promise<ShareCard | null>> = {
       title: org.name,
       note: "Marchés publics et versements de l’État, avec leurs sources",
       source: "Sources : DECP, Sirene, budget de l’État",
+    };
+  },
+  async ville(slug) {
+    const { cities } = await getLargeCities(METRIC_ITEMS);
+    const city = cities.find((entry) => entry.slug === slug);
+    const top = city ? standoutStats(cityStats(cities, city), 1)[0] : undefined;
+    if (!city || !top) return null;
+    return {
+      kicker: "Les comptes du mandat 2020-2026",
+      title: cityLabel(city, cities),
+      figure: `${formatEuro(top.last)} ${top.metric.of} par habitant`,
+      note: `En ${LAST_YEAR}, le ${rankText(top.rank, top.count)}`,
+      source: "Source : OFGL, comptes des communes",
     };
   },
   async analyse(slug) {

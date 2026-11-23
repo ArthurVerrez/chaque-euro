@@ -19,9 +19,19 @@ interface Props {
   figures: Figure[];
   provenance: ProvenanceData[];
   sections: { id: string; label: string; icon: IconName }[];
+  parent?: { label: string; href: string };
+  image?: string;
 }
 
-const { article, answer, figures, provenance, sections } = Astro.props;
+const {
+  article,
+  answer,
+  figures,
+  provenance,
+  sections,
+  parent,
+  image = `/partage/analyse/${article.slug}.png`,
+} = Astro.props;
 const cover = analysisCover(article.slug);
 const topic = analysisTopic(article.slug);
 const others = ANALYSES.filter(
@@ -29,11 +39,17 @@ const others = ANALYSES.filter(
 ).slice(0, 2);
 ---
 
-<Base title={article.title} description={answer} image={`/partage/analyse/${article.slug}.png`}>
+<Base title={article.title} description={answer} image={image}>
   <div class="analysis">
     <article aria-labelledby="article-title">
       <header id="en-bref" class="container">
-        <Breadcrumbs items={[{ label: "Analyses", href: "/analyses" }, { label: article.short }]} />
+        <Breadcrumbs
+          items={[
+            { label: "Analyses", href: "/analyses" },
+            ...(parent ? [parent] : []),
+            { label: article.short },
+          ]}
+        />
         <div class:list={["opening", { illustrated: cover }]}>
           <div class="headline">
             <div class="byline">
@@ -162,6 +178,7 @@ const others = ANALYSES.filter(
 
   h1 {
     margin: 0.65rem 0 0;
+    text-wrap: balance;
   }
 
   .cover {

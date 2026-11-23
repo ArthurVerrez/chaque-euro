@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
-import { getSitemapPaths } from "../../lib/data";
+import { getLargeCities, getSitemapPaths } from "../../lib/data";
 import { PUBLIC_SECTORS } from "../../lib/flows";
+import { METRIC_ITEMS } from "../../lib/large-cities";
 import { sitemapResponse } from "../../lib/sitemap";
 
 const PAGES = [
@@ -11,7 +12,13 @@ const PAGES = [
 ];
 
 export const GET: APIRoute = async ({ params }) => {
-  if (params.file === "pages") return sitemapResponse("urlset", PAGES);
+  if (params.file === "pages") {
+    const { cities } = await getLargeCities(METRIC_ITEMS);
+    return sitemapResponse("urlset", [
+      ...PAGES,
+      ...cities.map((city) => `/analyses/grandes-villes/${city.slug}`),
+    ]);
+  }
   const [, name = "", file = ""] = /^([a-z-]+)-(\d+)$/.exec(params.file ?? "") ?? [];
   const paths = await getSitemapPaths(name, Number(file));
   return paths.length ? sitemapResponse("urlset", paths) : new Response(null, { status: 404 });

@@ -1,0 +1,333 @@
+---
+import Analysis from "../../../layouts/Analysis.astro";
+import Section from "../../../components/AnalysisSection.astro";
+import CompareList from "../../../components/CompareList.astro";
+import ContractList from "../../../components/ContractList.astro";
+import Icon from "../../../components/Icon.astro";
+import LineChart from "../../../components/LineChart.astro";
+import RankStrip from "../../../components/RankStrip.astro";
+import { analysis } from "../../../lib/analyses";
+import { getCommune, getLargeCities } from "../../../lib/data";
+import { formatChange, formatEuro } from "../../../lib/format";
+import {
+  FIRST_YEAR,
+  LAST_YEAR,
+  METRIC_ITEMS,
+  changeRankText,
+  cityLabel,
+  cityStats,
+  medianByYear,
+  rankText,
+  standoutStats,
+  statSentence,
+} from "../../../lib/large-cities";
+
+const { cities, provenance } = await getLargeCities(METRIC_ITEMS);
+const city = cities.find((entry) => entry.slug === Astro.params.ville);
+const commune = city ? await getCommune(city.insee, LAST_YEAR) : null;
+if (!city || !commune) return new Response(null, { status: 404 });
+
+const name = cityLabel(city, cities);
+const stats = cityStats(cities, city);
+const standout = standoutStats(stats);
+const stat = (item: string) => stats.find((entry) => entry.metric.item === item);
+const debt = stat("dette");
+const taxes = stat("impots_locaux");
+const spending = stat("depenses");
+const years = Object.keys(city.perCapita.dette ?? {}).map(Number);
+const series = (item: string) => years.map((year) => city.perCapita[item]?.[year] ?? null);
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+const parent = analysis("grandes-villes");
+const article = {
+  ...parent,
+  slug: `grandes-villes/${city.slug}`,
+  short: name,
+  title: `${name} : les comptes du mandat 2020-2026`,
+  summary: `Dette, impôts, dépenses et marchés publics de ${name}, comparés aux ${cities.length} grandes villes.`,
+};
+const figures = [spending, debt, taxes].flatMap((entry) =>
+  entry
+    ? [
+        {
+          icon: entry.metric.icon,
+          label: `${entry.metric.label} par habitant`,
+          value: formatEuro(entry.last),
+          note: capitalize(rankText(entry.rank, entry.count)),
+        },
+      ]
+    : [],
+);
+const sections = [
+  { id: "en-chiffres", label: "Ce qui ressort", icon: "analysis" as const },
+  { id: "classement", label: "Parmi les grandes villes", icon: "compare" as const },
+  { id: "dette", label: "La dette", icon: "debt" as const },
+  { id: "depenses", label: "Les dépenses", icon: "spending" as const },
+  { id: "recettes", label: "Impôts et dotation", icon: "localTax" as const },
+  ...(commune.buyer ? [{ id: "marches", label: "Les marchés", icon: "contract" as const }] : []),
+];
+---
+
+<Analysis
+  article={article}
+  answer={standout
+    .slice(0, 2)
+    .map((entry, at) => statSentence(entry, name, at === 0))
+    .join(" ")}
+  figures={figures}
+  provenance={[provenance]}
+  sections={sections}
+  parent={{ label: "Grandes villes", href: "/analyses/grandes-villes" }}
+  image={`/partage/ville/${city.slug}.png`}
+>
+  <Section
+    id="en-chiffres"
+    title={`Ce qui distingue ${name}`}
+    icon="analysis"
+    provenance={provenance}
+  >
+    <p>
+      Les {cities.length} communes d’au moins 100 000 habitants publient des comptes comparables.
+      Voici les postes où {name} s’écarte le plus des autres, entre la fin de {FIRST_YEAR}, avant
+      les élections municipales de 2020, et {LAST_YEAR}, dernier exercice du mandat.
+    </p>
+    <ul slot="chart" class="facts">
+      {standout.map((entry) => (
+        <li>
+          <p class="fact-label">
+            <Icon name={entry.metric.icon} size={16} />
+            {entry.metric.label}
+          </p>
+          <p class="fact-value num">
+            {formatEuro(entry.last)} <span>par habitant en {LAST_YEAR}</span>
+          </p>
+          <p class="fact-rank">{capitalize(rankText(entry.rank, entry.count))}</p>
+          {entry.change !== null && entry.first !== null && (
+            <p class="fact-change">
+              <strong>{formatChange(entry.change)}</strong> depuis {FIRST_YEAR} (
+              {formatEuro(entry.first)}), {changeRankText(entry.changeRank!, entry.changeCount)}
+            </p>
+          )}
+        </li>
+      ))}
+    </ul>
+  </Section>
+
+  <Section
+    id="classement"
+    title={`${name} parmi les ${cities.length} grandes villes`}
+    icon="compare"
+    provenance={provenance}
+  >
+    <p>
+      Chaque point est une grande ville. Le point bleu situe {name} en {LAST_YEAR}, en euros par
+      habitant.
+    </p>
+    <div slot="chart" class="strips">
+      {stats.map((entry) => (
+        <RankStrip
+          icon={entry.metric.icon}
+          caption={entry.metric.label}
+          highlight={name}
+          points={cities.flatMap((other) => {
+            const value = other.perCapita[entry.metric.item]?.[LAST_YEAR];
+            return value === undefined ? [] : [{ label: cityLabel(other, cities), value }];
+          })}
+          note={`${capitalize(rankText(entry.rank, entry.count))}${entry.change === null ? "" : `. ${formatChange(entry.change)} depuis ${FIRST_YEAR}`}.`}
+          format={formatEuro}
+        />
+      ))}
+    </div>
+  </Section>
+
+  {debt && (
+    <Section
+      id="dette"
+      title={`La dette de ${name} depuis ${years[0]}`}
+      icon="debt"
+      provenance={provenance}
+    >
+      <p>
+        Fin {LAST_YEAR}, la dette de la commune représente {formatEuro(debt.last)} par habitant,
+        contre {formatEuro(debt.median)} pour la grande ville médiane.
+        {debt.first !== null &&
+          debt.change !== null &&
+          ` Fin ${FIRST_YEAR}, elle était de ${formatEuro(debt.first)} (${formatChange(debt.change)}).`}
+      </p>
+      <LineChart
+        slot="chart"
+        caption="Dette au 31 décembre, en euros par habitant"
+        labels={years.map(String)}
+        series={[
+          { label: name, values: series("dette") },
+          {
+            label: "Grande ville médiane",
+            values: medianByYear(cities, "dette", years),
+            muted: true,
+          },
+        ]}
+        format={formatEuro}
+      />
+      <p slot="caveat">
+        La dette de l’intercommunalité n’est pas comprise. Selon les compétences transférées, une
+        partie des emprunts qui financent les équipements de la ville figure dans ses comptes.
+      </p>
+    </Section>
+  )}
+
+  <Section
+    id="depenses"
+    title={`Où vont les dépenses de ${name}`}
+    icon="spending"
+    provenance={commune.provenance}
+  >
+    <p>
+      Chaque poste est rapporté au nombre d’habitants, puis comparé à la médiane des communes d’au
+      moins 100 000 habitants en {commune.accounts.year}.
+    </p>
+    <CompareList
+      slot="chart"
+      caption={`Dépenses de ${name} en ${commune.accounts.year}, par habitant`}
+      lines={commune.accounts.lines.filter((line) => line.section === "depense")}
+    />
+  </Section>
+
+  <Section
+    id="recettes"
+    title="Impôts locaux et dotation de l’État"
+    icon="localTax"
+    provenance={provenance}
+  >
+    <p>
+      {taxes &&
+        `En ${LAST_YEAR}, les impôts locaux perçus par la commune atteignent ${formatEuro(taxes.last)} par habitant, le ${rankText(taxes.rank, taxes.count)}.`}{" "}
+      La dotation globale de fonctionnement est la principale aide de l’État aux communes.
+    </p>
+    <LineChart
+      slot="chart"
+      caption="Impôts locaux et dotation de l’État, en euros par habitant"
+      labels={years.map(String)}
+      series={[
+        { label: "Impôts locaux", values: series("impots_locaux") },
+        { label: "Dotation globale de fonctionnement", values: series("dgf") },
+        {
+          label: "Impôts locaux, grande ville médiane",
+          values: medianByYear(cities, "impots_locaux", years),
+          muted: true,
+        },
+      ]}
+      format={formatEuro}
+    />
+    <p slot="caveat">
+      La suppression de la taxe d’habitation sur les résidences principales, de 2021 à 2023, a été
+      compensée par le transfert de la taxe foncière départementale aux communes. Les montants
+      restent comparables d’une année à l’autre, mais la hausse ne mesure pas à elle seule une
+      hausse des taux.
+    </p>
+  </Section>
+
+  {commune.buyer && (
+    <Section
+      id="marches"
+      title={`Les plus gros marchés publics de ${name}`}
+      icon="contract"
+      provenance={commune.buyer.flow.provenance}
+    >
+      <p>
+        Les marchés notifiés par la commune depuis 2019, classés par montant. Pour un accord-cadre,
+        le montant publié est souvent un plafond de commandes sur plusieurs années.
+      </p>
+      <ContractList
+        slot="chart"
+        contracts={commune.buyer.flow.contracts.slice(0, 6)}
+        role="acheteur"
+        caption={`Marchés de ${commune.buyer.name}`}
+      />
+      <p slot="caveat">
+        <a href={`/organisation/${commune.buyer.siren}`}>Tous les marchés de la commune</a>
+      </p>
+    </Section>
+  )}
+
+  <div slot="method">
+    <p>
+      Les montants viennent des comptes consolidés publiés par l’OFGL : budget principal et budgets
+      annexes, en euros courants, sans correction de l’inflation. Chaque montant est divisé par la
+      population totale de l’Insee pour l’exercice. Le classement compare les {cities.length}
+      communes d’au moins 100 000 habitants en {LAST_YEAR}. Le rang 1 correspond au montant le plus
+      élevé.
+    </p>
+    <p>
+      Les compétences d’une commune dépendent de ce qu’elle a transféré à son intercommunalité.
+      Paris exerce aussi les compétences d’un département, ce qui gonfle ses montants par habitant.
+      Un écart avec les autres villes ne dit rien à lui seul de la qualité des services rendus.
+    </p>
+  </div>
+</Analysis>
+
+<style>
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .facts li {
+    padding: 1rem 1.1rem;
+    border-radius: var(--radius);
+    background: var(--surface-alt);
+  }
+
+  .facts p {
+    margin: 0;
+  }
+
+  .fact-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 650;
+    line-height: 1.3;
+  }
+
+  .facts .fact-value {
+    margin-top: 0.35rem;
+    color: var(--navy-900);
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  .fact-value span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: normal;
+  }
+
+  .facts .fact-rank {
+    margin-top: 0.6rem;
+    color: var(--text);
+    font-size: 0.875rem;
+    font-weight: 650;
+    line-height: 1.35;
+  }
+
+  .facts .fact-change {
+    margin-top: 0.2rem;
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+
+  .strips {
+    display: grid;
+    gap: 1.4rem;
+  }
+</style>

@@ -1,0 +1,175 @@
+---
+import type { IconName } from "../lib/icons";
+import Icon from "./Icon.astro";
+
+export interface ChangeItem {
+  label: string;
+  href: string;
+  from: number;
+  to: number;
+}
+
+interface Props {
+  icon: IconName;
+  caption: string;
+  fromLabel: string;
+  toLabel: string;
+  items: ChangeItem[];
+  format: (value: number) => string;
+}
+
+const { icon, caption, fromLabel, toLabel, items, format } = Astro.props;
+const max = Math.max(...items.flatMap((item) => [item.from, item.to]), 0);
+const position = (value: number) => (max > 0 ? (value / max) * 100 : 0);
+---
+
+<figure class="change-list">
+  <figcaption>
+    <Icon name={icon} size={18} />
+    {caption}
+  </figcaption>
+  <p class="legend" aria-hidden="true">
+    <span>
+      <span class="key from"></span>
+      {fromLabel}
+    </span>
+    <span>
+      <span class="key to"></span>
+      {toLabel}
+    </span>
+  </p>
+  <ol>
+    {items.map((item) => (
+      <li class:list={{ down: item.to < item.from }}>
+        <a href={item.href}>{item.label}</a>
+        <span class="track" aria-hidden="true">
+          <span
+            class="span"
+            style={`--start: ${position(Math.min(item.from, item.to))}%; --end: ${position(Math.max(item.from, item.to))}%`}
+          />
+          <span class="key from" style={`--x: ${position(item.from)}%`} />
+          <span class="key to" style={`--x: ${position(item.to)}%`} />
+        </span>
+        <span class="values num">
+          {format(item.from)} → <strong>{format(item.to)}</strong>
+        </span>
+      </li>
+    ))}
+  </ol>
+</figure>
+
+<style>
+  .change-list {
+    margin: 0;
+  }
+
+  figcaption {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-weight: 650;
+    color: var(--text);
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0.4rem 0 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+  }
+
+  .legend > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  ol {
+    display: grid;
+    gap: 0.15rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: grid;
+    grid-template-columns: minmax(6.5rem, 9rem) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 1.85rem;
+    font-size: 0.875rem;
+  }
+
+  li a {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .track {
+    position: relative;
+    height: 0.8rem;
+  }
+
+  .span {
+    position: absolute;
+    top: 50%;
+    left: var(--start);
+    width: calc(var(--end) - var(--start));
+    height: 3px;
+    background: var(--series-2);
+    transform: translateY(-50%);
+  }
+
+  .down .span {
+    background: var(--series-1);
+  }
+
+  .key {
+    display: inline-block;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 50%;
+  }
+
+  .track .key {
+    position: absolute;
+    top: 50%;
+    left: var(--x);
+    transform: translate(-50%, -50%);
+  }
+
+  .key.from {
+    border: 2px solid var(--series-other);
+    background: var(--surface);
+  }
+
+  .key.to {
+    background: var(--navy-900);
+  }
+
+  .values {
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .values strong {
+    color: var(--text);
+  }
+
+  @media (max-width: 36rem) {
+    li {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.1rem 0.75rem;
+      padding-block: 0.3rem;
+    }
+
+    .track {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+  }
+</style>

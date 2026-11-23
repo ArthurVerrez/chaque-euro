@@ -54,6 +54,10 @@ export function medianGap(value: number | null, median: number | null): number |
   return value === null || !median ? null : value / median - 1;
 }
 
+export function formatChange(change: number): string {
+  return `${change < 0 ? "−" : "+"}${formatPercent(Math.abs(change))}`;
+}
+
 export function formatGap(gap: number | null): string {
   if (gap === null) return "n.d.";
   if (Math.abs(gap) < 0.05) return "proche";

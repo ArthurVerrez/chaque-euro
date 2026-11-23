@@ -1,0 +1,126 @@
+---
+import type { IconName } from "../lib/icons";
+import Icon from "./Icon.astro";
+
+export interface RankPoint {
+  label: string;
+  value: number;
+}
+
+interface Props {
+  icon: IconName;
+  caption: string;
+  points: RankPoint[];
+  highlight: string;
+  note: string;
+  format: (value: number) => string;
+}
+
+const { icon, caption, points, highlight, note, format } = Astro.props;
+const sorted = points.toSorted((a, b) => a.value - b.value);
+const lowest = sorted[0]!;
+const highest = sorted.at(-1)!;
+const position = (value: number) =>
+  highest.value === lowest.value
+    ? 50
+    : ((value - lowest.value) / (highest.value - lowest.value)) * 100;
+const target = points.find((point) => point.label === highlight)!;
+---
+
+<figure class="rank-strip">
+  <figcaption>
+    <Icon name={icon} size={16} />
+    {caption}
+  </figcaption>
+  <div class="track" aria-hidden="true">
+    {sorted.map((point) => (
+      <span
+        class:list={["dot", { current: point === target }]}
+        style={`--x: ${position(point.value)}%`}
+        title={`${point.label} : ${format(point.value)}`}
+      />
+    ))}
+    <span class="marker" style={`--x: ${position(target.value)}%`}>
+      {target.label} · {format(target.value)}
+    </span>
+  </div>
+  <p class="ends">
+    <span>{lowest !== target && `${lowest.label} · ${format(lowest.value)}`}</span>
+    <span>{highest !== target && `${highest.label} · ${format(highest.value)}`}</span>
+  </p>
+  <p class="note">{note}</p>
+</figure>
+
+<style>
+  .rank-strip {
+    margin: 0;
+  }
+
+  figcaption {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9375rem;
+    font-weight: 650;
+    color: var(--text);
+  }
+
+  .track {
+    position: relative;
+    height: 3.6rem;
+    margin: 0.35rem 0.4rem 0;
+    background: linear-gradient(var(--border-strong), var(--border-strong)) 0 2.6rem / 100% 1px
+      no-repeat;
+  }
+
+  .dot,
+  .marker {
+    position: absolute;
+    left: var(--x);
+  }
+
+  .dot {
+    top: 2.6rem;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--series-other);
+    transform: translate(-50%, -50%);
+  }
+
+  .dot.current {
+    z-index: 1;
+    width: 0.95rem;
+    height: 0.95rem;
+    background: var(--bar);
+    box-shadow: 0 0 0 3px var(--surface);
+  }
+
+  .marker {
+    top: 0.2rem;
+    white-space: nowrap;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--navy-900);
+    transform: translateX(calc(-1 * var(--x)));
+  }
+
+  .ends {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0.15rem 0 0;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  .ends span:last-child {
+    text-align: right;
+  }
+
+  .note {
+    margin: 0.3rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+  }
+</style>

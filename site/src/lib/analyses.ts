@@ -14,6 +14,17 @@ export interface Analysis {
 
 export const ANALYSES: Analysis[] = [
   {
+    slug: "grandes-villes",
+    short: "Grandes villes",
+    accent: "var(--series-1)",
+    title: "Les grandes villes pendant le mandat 2020-2026",
+    question: "Comment la dette, les impôts et les dépenses des grandes villes ont-ils évolué ?",
+    summary:
+      "Dette, impôts locaux et dépenses des 42 communes d’au moins 100 000 habitants, de 2019 à 2025, ville par ville.",
+    icon: "town",
+    published: "2026-11-23",
+  },
+  {
     slug: "nantes",
     short: "Nantes et sa métropole",
     accent: "var(--series-1)",
@@ -119,7 +130,7 @@ export const ANALYSIS_TOPICS = [
   {
     slug: "finances-locales",
     label: "Finances locales",
-    articles: ["nantes", "marseille", "lille", "comparer-les-communes", "paris"],
+    articles: ["grandes-villes", "nantes", "marseille", "lille", "comparer-les-communes", "paris"],
   },
   {
     slug: "etat-et-europe",

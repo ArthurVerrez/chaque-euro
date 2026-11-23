@@ -1,0 +1,169 @@
+---
+import Analysis from "../../../layouts/Analysis.astro";
+import Section from "../../../components/AnalysisSection.astro";
+import ChangeList from "../../../components/ChangeList.astro";
+import PublicTable from "../../../components/PublicTable.astro";
+import { analysis } from "../../../lib/analyses";
+import { getLargeCities, type LargeCity } from "../../../lib/data";
+import { formatChange, formatEuro, formatNumber } from "../../../lib/format";
+import { FIRST_YEAR, LAST_YEAR, METRIC_ITEMS, cityLabel, median } from "../../../lib/large-cities";
+
+const { cities, provenance } = await getLargeCities(METRIC_ITEMS);
+const value = (city: LargeCity, item: string, year: number) => city.perCapita[item]?.[year];
+const change = (city: LargeCity, item: string) => {
+  const first = value(city, item, FIRST_YEAR);
+  const last = value(city, item, LAST_YEAR);
+  return first && last !== undefined ? last / first - 1 : null;
+};
+const changes = (item: string) =>
+  cities
+    .flatMap((city) => {
+      const from = value(city, item, FIRST_YEAR);
+      const to = value(city, item, LAST_YEAR);
+      return from === undefined || to === undefined
+        ? []
+        : [
+            {
+              label: cityLabel(city, cities),
+              href: `/analyses/grandes-villes/${city.slug}`,
+              from,
+              to,
+            },
+          ];
+    })
+    .toSorted((a, b) => b.to - a.to);
+const debt = changes("dette");
+const taxes = changes("impots_locaux");
+const risen = debt.filter((item) => item.to > item.from);
+const doubled = debt.filter((item) => item.to >= 2 * item.from);
+const listNames = (items: { label: string }[]) =>
+  items.length > 1
+    ? `${items
+        .slice(0, -1)
+        .map((item) => item.label)
+        .join(", ")} et ${items.at(-1)!.label}`
+    : (items[0]?.label ?? "");
+const figures = [
+  {
+    icon: "debt" as const,
+    label: `Dette par habitant, fin ${LAST_YEAR}`,
+    value: formatEuro(median(debt.map((item) => item.to))),
+    note: "grande ville médiane",
+  },
+  {
+    icon: "trend" as const,
+    label: `Villes plus endettées qu’en ${FIRST_YEAR}`,
+    value: `${risen.length} sur ${debt.length}`,
+    note: "dette par habitant",
+  },
+  {
+    icon: "localTax" as const,
+    label: `Impôts locaux par habitant, ${LAST_YEAR}`,
+    value: formatEuro(median(taxes.map((item) => item.to))),
+    note: "grande ville médiane",
+  },
+];
+const sections = [
+  { id: "dette", label: "La dette", icon: "debt" as const },
+  { id: "impots", label: "Les impôts locaux", icon: "localTax" as const },
+  { id: "villes", label: "Ville par ville", icon: "town" as const },
+];
+---
+
+<Analysis
+  article={analysis("grandes-villes")}
+  answer={`Entre fin ${FIRST_YEAR} et fin ${LAST_YEAR}, la dette par habitant a augmenté dans ${risen.length} des ${debt.length} communes d’au moins 100 000 habitants.${doubled.length ? ` Elle a au moins doublé à ${listNames(doubled)}.` : ""}`}
+  figures={figures}
+  provenance={[provenance]}
+  sections={sections}
+>
+  <Section id="dette" title="La dette de chaque grande ville" icon="debt" provenance={provenance}>
+    <p>
+      Le mandat municipal élu en 2020 a couvert les exercices {FIRST_YEAR + 1} à {LAST_YEAR}. Le
+      graphique compare la dette de chaque commune fin {FIRST_YEAR} et fin {LAST_YEAR}, rapportée au
+      nombre d’habitants. Cliquez sur une ville pour voir le détail de ses comptes.
+    </p>
+    <ChangeList
+      slot="chart"
+      icon="debt"
+      caption="Dette au 31 décembre, en euros par habitant"
+      fromLabel={`Fin ${FIRST_YEAR}`}
+      toLabel={`Fin ${LAST_YEAR}`}
+      items={debt}
+      format={formatEuro}
+    />
+    <p slot="caveat">
+      Paris exerce aussi les compétences d’un département. La dette d’une intercommunalité n’est pas
+      comprise dans celle de ses communes.
+    </p>
+  </Section>
+
+  <Section
+    id="impots"
+    title="Les impôts locaux perçus par chaque ville"
+    icon="localTax"
+    provenance={provenance}
+  >
+    <p>
+      Les impôts locaux regroupent surtout les taxes foncières et la taxe d’habitation qui reste due
+      sur les résidences secondaires. Le graphique les rapporte au nombre d’habitants en{" "}
+      {FIRST_YEAR} et en {LAST_YEAR}.
+    </p>
+    <ChangeList
+      slot="chart"
+      icon="localTax"
+      caption="Impôts locaux, en euros par habitant"
+      fromLabel={String(FIRST_YEAR)}
+      toLabel={String(LAST_YEAR)}
+      items={taxes}
+      format={formatEuro}
+    />
+    <p slot="caveat">
+      La taxe d’habitation sur les résidences principales a été supprimée de 2021 à 2023. Les
+      communes ont reçu en échange la taxe foncière des départements. Une hausse du montant ne
+      mesure donc pas à elle seule une hausse des taux.
+    </p>
+  </Section>
+
+  <Section
+    id="villes"
+    title={`Les ${cities.length} grandes villes`}
+    icon="town"
+    provenance={provenance}
+  >
+    <p>Classées par population. Les montants sont en euros par habitant en {LAST_YEAR}.</p>
+    <PublicTable
+      slot="chart"
+      caption={`Les communes d’au moins 100 000 habitants en ${LAST_YEAR}`}
+      columns={[
+        "Ville",
+        "Habitants",
+        "Dépenses",
+        "Dette",
+        `Dette depuis ${FIRST_YEAR}`,
+        "Impôts locaux",
+      ]}
+      rows={cities.map((city) => {
+        const debtChange = change(city, "dette");
+        return [
+          { text: cityLabel(city, cities), href: `/analyses/grandes-villes/${city.slug}` },
+          { text: formatNumber(city.population) },
+          { text: formatEuro(value(city, "depenses", LAST_YEAR) ?? 0) },
+          { text: formatEuro(value(city, "dette", LAST_YEAR) ?? 0) },
+          { text: debtChange === null ? "n.d." : formatChange(debtChange) },
+          { text: formatEuro(value(city, "impots_locaux", LAST_YEAR) ?? 0) },
+        ];
+      })}
+    />
+  </Section>
+
+  <div slot="method">
+    <p>
+      Les montants viennent des comptes consolidés publiés par l’OFGL pour chaque commune : budget
+      principal et budgets annexes, en euros courants, sans correction de l’inflation. Chaque
+      montant est divisé par la population totale de l’Insee pour l’exercice. Le groupe réunit les
+      communes d’au moins 100 000 habitants en {LAST_YEAR}. Une commune qui a franchi ce seuil
+      pendant le mandat est comparée à ses propres comptes de {FIRST_YEAR}.
+    </p>
+  </div>
+</Analysis>

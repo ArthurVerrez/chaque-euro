@@ -2005,6 +2005,65 @@ export async function getSpendingComparison() {
   };
 }
 
+export interface LargeCity {
+  insee: string;
+  slug: string;
+  name: string;
+  departmentCode: string;
+  population: number;
+  perCapita: Record<string, Record<number, number>>;
+}
+
+export async function getLargeCities(items: readonly string[]) {
+  const [rows, sources] = await db().batch([
+    db()
+      .prepare(
+        `select c.insee, c.name, c.department_code as departmentCode, c.population,
+          f.item, f.year, f.per_capita as perCapita
+        from commune_finances f join communes c using (insee)
+        where f.insee in (select insee from commune_years
+            where stratum = '10' and year = (select max(year) from commune_years))
+          and f.item in (select value from json_each(?1)) and f.per_capita is not null
+        order by c.population desc, f.year`,
+      )
+      .bind(JSON.stringify(items)),
+    db().prepare(SOURCES_QUERY),
+  ]);
+  const cities = new Map<string, LargeCity>();
+  for (const row of (rows?.results ?? []) as unknown as (Omit<LargeCity, "slug" | "perCapita"> & {
+    item: string;
+    year: number;
+    perCapita: number;
+  })[]) {
+    const city = cities.get(row.insee) ?? {
+      insee: row.insee,
+      slug: normalizeSearch(row.name).replaceAll(" ", "-"),
+      name: row.name,
+      departmentCode: row.departmentCode,
+      population: row.population,
+      perCapita: {},
+    };
+    (city.perCapita[row.item] ??= {})[row.year] = row.perCapita;
+    cities.set(row.insee, city);
+  }
+  const list = [...cities.values()];
+  const duplicates = new Set(
+    list.map((city) => city.slug).filter((slug, at, slugs) => slugs.indexOf(slug) !== at),
+  );
+  for (const city of list) {
+    if (duplicates.has(city.slug)) city.slug = `${city.slug}-${city.departmentCode}`;
+  }
+  const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
+  return {
+    cities: list,
+    provenance: index.provenance(
+      [index.cite("ofgl-communes"), index.cite("insee-population-totale")],
+      "Comptes consolidés des communes d’au moins 100 000 habitants au dernier exercice, budget principal et budgets annexes, en euros courants par habitant de l’exercice. La dette est l’encours au 31 décembre.",
+      SQL.communes,
+    ),
+  };
+}
+
 export interface RailTransfer {
   year: number;
   operating: number;
