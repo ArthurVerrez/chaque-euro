@@ -1,6 +1,8 @@
 create or replace table legislative_files as select distinct * from legislative_files_raw;
 create or replace table legislative_file_refs as select distinct * from legislative_file_refs_raw;
-create or replace table legislative_events as select distinct * from legislative_events_raw;
+create or replace table legislative_events as
+select * replace (row_number() over (partition by file_id order by source_order, id) as source_order)
+from (select distinct * from legislative_events_raw);
 create or replace table legislative_documents as select distinct * from legislative_documents_raw;
 create or replace table budget_legislation as
 with candidates as (

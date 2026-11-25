@@ -28,12 +28,12 @@ where buyer_siren is not null
 group by uid;
 
 create or replace table org_years as
-select holder_siren as siren, 'titulaire' as role, year, coalesce(sum(share), 0) as amount, count(*) as count
+select holder_siren as siren, 'titulaire' as role, year, coalesce(sum(share order by uid), 0) as amount, count(*) as count
 from holder_shares
 where holder_public
 group by all
 union all
-select b.buyer_siren, 'acheteur', b.year, coalesce(sum(b.amount), 0), count(*)
+select b.buyer_siren, 'acheteur', b.year, coalesce(sum(b.amount order by b.uid), 0), count(*)
 from buyer_contracts b
 join identities i on i.siren = b.buyer_siren and i.public
 group by all;
@@ -85,7 +85,7 @@ qualify row_number() over (partition by siren, role order by counted desc, amoun
     or row_number() over (partition by siren, role order by notified_on desc, uid) <= 3;
 
 create or replace table source_files as
-select row_number() over (order by source_url) as id, source_url as url
+select (hash(source_url) >> 11)::bigint as id, source_url as url
 from (select distinct source_url from contract_rows where uid in (select uid from org_contract_uids union select uid from procurement_recent_uids))
 where source_url is not null;
 
@@ -100,7 +100,7 @@ with holders as (
     group by uid
 )
 select
-    row_number() over (order by r.uid) as id,
+    (hash(r.uid) >> 11)::bigint as id,
     r.uid,
     any_value(case when i.public then r.buyer_siren end) as buyer_siren,
     left(min(r.subject), 160) as subject,
@@ -116,7 +116,7 @@ select
             || ' et ' || (any_value(h.holders) - 2) || ' autres'
     end as holders_label,
     any_value(r.notified_on)::varchar as notified_on,
-    min(f.id) as source_file_id
+    arg_min(f.id, f.url) as source_file_id
 from contract_rows r
 join holders h using (uid)
 join contract_amounts a using (uid)
@@ -146,9 +146,9 @@ create or replace table orgs as
 with totals as (
     select
         siren,
-        sum(amount) filter (where role = 'titulaire') as won_amount,
+        sum(amount order by year) filter (where role = 'titulaire') as won_amount,
         sum(count) filter (where role = 'titulaire') as won_count,
-        sum(amount) filter (where role = 'acheteur') as awarded_amount,
+        sum(amount order by year) filter (where role = 'acheteur') as awarded_amount,
         sum(count) filter (where role = 'acheteur') as awarded_count
     from org_years
     group by siren

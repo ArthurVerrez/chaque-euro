@@ -56,8 +56,8 @@ select * from labelled;
 create or replace table commune_functions as
 select c.insee, r.year, r.nomenclature, r.section,
     coalesce(r.service_code, 'unallocated') as function_code,
-    sum(r.amount) as amount,
-    sum(r.amount)/nullif(y.population,0) as per_capita
+    sum(r.amount order by r.amount) as amount,
+    sum(r.amount order by r.amount)/nullif(y.population,0) as per_capita
 from commune_function_rows r
 join (select distinct insee,year,siren from ofgl_rows) c on c.siren=r.siren and c.year=r.year
 join commune_years y on y.insee=c.insee and y.year=r.year

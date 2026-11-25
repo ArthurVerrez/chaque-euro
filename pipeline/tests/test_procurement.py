@@ -315,7 +315,7 @@ class ProcurementCompetitionTests(unittest.TestCase):
 
 
 class OrganisationOrderingTests(unittest.TestCase):
-    def test_tied_selections_labels_and_identifiers_ignore_input_order(self) -> None:
+    def test_selections_labels_and_identifiers_ignore_input_order_and_new_contracts(self) -> None:
         with duckdb.connect() as con:
             con.execute("""
                 create table contract_rows as
@@ -350,9 +350,22 @@ class OrganisationOrderingTests(unittest.TestCase):
                 create table approch_input (siren_de_l_entite_acheteuse varchar);
                 create table sanction_matches (siren varchar);
             """)
+            contract_ids = []
             for reverse in (False, True):
                 with self.subTest(reverse=reverse):
                     if reverse:
+                        con.execute("""
+                            insert into contract_rows select * replace (
+                                'a00' as uid, 'new-buyer' as buyer_siren,
+                                'new-holder' as holder_siren
+                            ) from contract_rows where uid = 'c11';
+                            insert into contract_amounts
+                            select * replace ('a00' as uid) from contract_amounts
+                            where uid = 'c11';
+                            insert into identities select i.* replace (s as siren, s as label)
+                            from identities i, (values ('new-buyer'), ('new-holder')) t(s)
+                            where siren = 'holder';
+                        """)
                         con.execute(
                             "create or replace table contract_rows as "
                             "select * from contract_rows order by uid desc, subject desc"
@@ -390,3 +403,7 @@ class OrganisationOrderingTests(unittest.TestCase):
                         ).fetchone(),
                         ("A", "source-a"),
                     )
+                    contract_ids.append(
+                        con.execute("select id from contracts where uid='c00'").fetchone()
+                    )
+            self.assertEqual(contract_ids[0], contract_ids[1])
