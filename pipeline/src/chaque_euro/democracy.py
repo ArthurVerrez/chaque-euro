@@ -3,8 +3,8 @@ import io
 import json
 import re
 import xml.etree.ElementTree as ET
-import zipfile
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator, Sequence
+from datetime import datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import cast
@@ -14,16 +14,17 @@ import duckdb
 from .fetch import FetchRecord
 
 
-def _csv(
-    con: duckdb.DuckDBPyConnection, name: str, content: str, columns: list[str], directory: Path
+def _table(
+    con: duckdb.DuckDBPyConnection,
+    name: str,
+    columns: list[str],
+    rows: Iterable[Sequence[object]],
+    directory: Path,
 ) -> None:
-    rows = csv.reader(io.StringIO(content), delimiter=";")
-    header = next(rows)
-    positions = [header.index(column) for column in columns]
     with NamedTemporaryFile(mode="w+", suffix=".csv", dir=directory, newline="") as handle:
         writer = csv.writer(handle, delimiter=";")
         writer.writerow(columns)
-        writer.writerows(tuple(row[i] for i in positions) for row in rows)
+        writer.writerows(rows)
         handle.flush()
         con.execute(
             f"create table {name} as select * from read_csv(?, delim=';', "
@@ -32,60 +33,116 @@ def _csv(
         )
 
 
+def _csv(
+    con: duckdb.DuckDBPyConnection, name: str, content: str, columns: list[str], directory: Path
+) -> None:
+    rows = csv.reader(io.StringIO(content), delimiter=";")
+    header = next(rows)
+    positions = [header.index(column) for column in columns]
+    _table(con, name, columns, (tuple(row[i] for i in positions) for row in rows), directory)
+
+
+def _agora_date(value: str | None) -> str | None:
+    if not value:
+        return None
+    return datetime.strptime(value[:10].replace("/", "-"), "%d-%m-%Y").date().isoformat()
+
+
+def _agora_budget(label: str | None) -> tuple[str | None, int | None, int | None]:
+    if not label:
+        return None, None, None
+    bounds = [int(re.sub(r"\s", "", n)) for n in re.findall(r"\d[\d\s]*", label)]
+    label = label.replace("> = ", "≥ ").replace(" euros", " €")
+    if label.startswith("<"):
+        return label, 0, bounds[0]
+    return label, bounds[0], bounds[1] if len(bounds) > 1 else None
+
+
+def _agora(con: duckdb.DuckDBPyConnection, path: Path) -> None:
+    organisations: list[tuple[object, ...]] = []
+    exercises: list[tuple[object, ...]] = []
+    activities: list[tuple[object, ...]] = []
+    targets: list[tuple[object, ...]] = []
+    for organisation in json.loads(path.read_text(encoding="utf-8"))["publications"]:
+        identifier = organisation["identifiantNational"]
+        organisations.append(
+            (
+                identifier,
+                organisation["typeIdentifiantNational"],
+                organisation["denomination"],
+                organisation.get("pays"),
+                organisation["categorieOrganisation"]["label"],
+                _agora_date(organisation.get("dateCessation")),
+                _agora_date(organisation["dateCreation"]),
+            )
+        )
+        for exercise in organisation.get("exercices", []):
+            exercise = exercise["publicationCourante"]
+            exercise_id = exercise["exerciceId"]
+            exercises.append(
+                (
+                    exercise_id,
+                    identifier,
+                    _agora_date(exercise["dateDebut"]),
+                    _agora_date(exercise["dateFin"]),
+                    _agora_date(exercise.get("publicationDate")),
+                    exercise["nombreActivite"],
+                    *_agora_budget(exercise.get("montantDepense")),
+                )
+            )
+            for activity in exercise.get("activites", []):
+                activity = activity["publicationCourante"]
+                activity_id = activity["identifiantFiche"]
+                activities.append(
+                    (activity_id, exercise_id, _agora_date(activity["publicationDate"]))
+                )
+                for action in activity.get("actionsRepresentationInteret", []):
+                    for target in action.get("reponsablesPublics", []):
+                        responsible, _, details = target.partition(" - ")
+                        targets.extend(
+                            (activity_id, responsible, detail)
+                            for detail in (
+                                re.split(r", (?=[A-ZÉÈÀ])", details) if details else [None]
+                            )
+                        )
+    for name, columns, rows in [
+        (
+            "agora_organisations",
+            [
+                "identifier",
+                "identifier_type",
+                "name",
+                "country",
+                "category",
+                "ceased_on",
+                "created_on",
+            ],
+            organisations,
+        ),
+        (
+            "agora_exercises",
+            [
+                "id",
+                "identifier",
+                "starts_on",
+                "ends_on",
+                "published_on",
+                "declared_activities",
+                "budget_label",
+                "budget_min",
+                "budget_max",
+            ],
+            exercises,
+        ),
+        ("agora_activities", ["id", "exercise_id", "published_on"], activities),
+        ("agora_targets", ["activity_id", "responsible", "department"], targets),
+    ]:
+        _table(con, name, columns, rows, path.parent)
+
+
 def load(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -> None:
     con.execute("set variable lobbying_as_of = ?::date", [records["hatvp-agora"].retrieved_at[:10]])
-    with zipfile.ZipFile(records["hatvp-agora"].path) as archive:
-        for name, filename, columns in [
-            (
-                "agora_organisations",
-                "1_informations_generales.csv",
-                [
-                    "representants_id",
-                    "denomination",
-                    "identifiant_national",
-                    "type_identifiant_national",
-                    "pays",
-                    "label_categorie_organisation",
-                    "dateCessation",
-                ],
-            ),
-            (
-                "agora_exercises",
-                "15_exercices.csv",
-                [
-                    "exercices_id",
-                    "representants_id",
-                    "date_debut",
-                    "date_fin",
-                    "nombre_activites",
-                    "date_publication",
-                    "montant_depense",
-                    "montant_depense_inf",
-                    "montant_depense_sup",
-                ],
-            ),
-            (
-                "agora_activities",
-                "8_objets_activites.csv",
-                ["activite_id", "exercices_id", "date_publication_activite"],
-            ),
-            (
-                "agora_targets",
-                "13_ministeres_aai_api.csv",
-                [
-                    "action_representation_interet_id",
-                    "responsable_public",
-                    "departement_ministeriel",
-                ],
-            ),
-        ]:
-            _csv(
-                con,
-                name,
-                archive.read(f"Vues_Separees/{filename}").decode("utf-8-sig"),
-                columns,
-                Path(records["hatvp-agora"].path).parent,
-            )
+    _agora(con, Path(records["hatvp-agora"].path))
 
     defaults = json.loads(Path(records["hatvp-defaults"].path).read_text())
     if len(defaults) != 4 or not isinstance(defaults[2], list):

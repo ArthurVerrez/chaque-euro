@@ -6,71 +6,58 @@ with legal_units as (
     select siren, categorieJuridiqueUniteLegale::varchar as category,
         statutDiffusionUniteLegale as diffusion
     from read_parquet(getvariable('sirene_path'))
-    where siren in (select identifiant_national from agora_organisations
-                    where type_identifiant_national = 'SIREN')
+    where siren in (select identifier from agora_organisations where identifier_type = 'SIREN')
 )
-select g.representants_id as id, g.identifiant_national as identifier,
-    case when g.type_identifiant_national = 'SIREN' then g.identifiant_national end as siren,
-    trim(g.denomination) as name, g.pays as country,
-    g.label_categorie_organisation as category, g.dateCessation is null as active
+select g.identifier as id, g.identifier,
+    case when g.identifier_type = 'SIREN' then g.identifier end as siren,
+    trim(g.name) as name, g.country, g.category, g.ceased_on is null as active, g.created_on
 from agora_organisations g
-left join legal_units u on u.siren = g.identifiant_national
-where (g.type_identifiant_national = 'SIREN' and u.category <> '1000' and u.diffusion = 'O')
-   or (g.type_identifiant_national = 'RNA' and g.label_categorie_organisation = 'Association');
-
-create or replace table lobbying_organisation_ids as
-select id as source_id, first_value(id) over (
-    partition by identifier order by active desc, id::integer desc
-) as organisation_id
-from lobbying_public_organisations;
+left join legal_units u on u.siren = g.identifier
+where (g.identifier_type = 'SIREN' and u.category <> '1000' and u.diffusion = 'O')
+   or (g.identifier_type = 'RNA' and g.category = 'Association');
 
 create or replace table lobbying_organisations as
-select * from lobbying_public_organisations
-qualify row_number() over (partition by identifier order by active desc, id::integer desc) = 1;
+select * exclude (created_on) from lobbying_public_organisations
+qualify row_number() over (partition by identifier order by active desc, created_on desc) = 1;
 
 create or replace table lobbying_exercises as
-select e.exercices_id as id, m.organisation_id,
-    e.date_debut::date::varchar as starts_on, e.date_fin::date::varchar as ends_on,
-    e.date_publication::date::varchar as published_on,
+select e.id, o.id as organisation_id, e.starts_on, e.ends_on, e.published_on,
     coalesce(a.activities, 0) as activities,
-    e.nombre_activites::integer as declared_activities,
-    coalesce(a.activities, 0) = e.nombre_activites::integer as activities_reconciled,
-    e.montant_depense as budget_label,
-    case when e.montant_depense is not null then e.montant_depense_inf::double end as budget_min,
-    case when e.montant_depense is not null then nullif(e.montant_depense_sup::double, 'Infinity'::double) end as budget_max
+    e.declared_activities::integer as declared_activities,
+    coalesce(a.activities, 0) = e.declared_activities::integer as activities_reconciled,
+    e.budget_label, e.budget_min::double as budget_min, e.budget_max::double as budget_max
 from agora_exercises e
-join lobbying_organisation_ids m on m.source_id = e.representants_id
-left join (select exercices_id, count(*) as activities from agora_activities group by exercices_id) a
-    on a.exercices_id = e.exercices_id
-where e.date_publication is not null;
+join lobbying_organisations o on o.identifier = e.identifier
+left join (select exercise_id, count(*) as activities from agora_activities group by exercise_id) a
+    on a.exercise_id = e.id
+where e.published_on is not null;
 
 create or replace table lobbying_activities as
-select a.activite_id as id, a.exercices_id as exercise_id,
-    a.date_publication_activite::date::varchar as published_on
+select a.id, a.exercise_id, a.published_on
 from agora_activities a
-join lobbying_exercises e on e.id = a.exercices_id;
+join lobbying_exercises e on e.id = a.exercise_id;
 
 create or replace table lobbying_targets as
 select distinct a.id as activity_id, 'institution' as kind,
     case
-        when t.responsable_public like 'Député, sénateur,%' then 'Parlement'
-        when t.responsable_public = 'Membre du Gouvernement ou membre de cabinet ministériel'
+        when t.responsible like 'Député, sénateur,%' then 'Parlement'
+        when t.responsible = 'Membre du Gouvernement ou membre de cabinet ministériel'
             then 'Gouvernement et cabinets ministériels'
-        when t.responsable_public = 'Collaborateur du Président de la République'
+        when t.responsible = 'Collaborateur du Président de la République'
             then 'Présidence de la République'
-        when t.responsable_public like 'Directeur ou secrétaire général,%'
+        when t.responsible like 'Directeur ou secrétaire général,%'
             then 'Autorités administratives et publiques indépendantes'
-        else t.responsable_public
+        else t.responsible
     end as label
 from agora_targets t
-join lobbying_activities a on a.id = t.action_representation_interet_id
-where t.responsable_public is not null
+join lobbying_activities a on a.id = t.activity_id
+where t.responsible is not null
 union
-select distinct a.id, 'ministry', trim(t.departement_ministeriel::varchar)
+select distinct a.id, 'ministry', trim(t.department)
 from agora_targets t
-join lobbying_activities a on a.id = t.action_representation_interet_id
-where t.departement_ministeriel is not null
-    and t.responsable_public = 'Membre du Gouvernement ou membre de cabinet ministériel';
+join lobbying_activities a on a.id = t.activity_id
+where t.department is not null
+    and t.responsible = 'Membre du Gouvernement ou membre de cabinet ministériel';
 
 create or replace table lobbying_defaults as
 select o.id as organisation_id, d.period, trim(d.missing) as missing

@@ -946,16 +946,16 @@ url = "https://eur-lex.europa.eu/eli/dec/2011/833/oj"
 [[sources]]
 id = "hatvp-agora"
 short_name = "HATVP AGORA"
-name = "Répertoire des représentants d’intérêts, vues séparées CSV"
+name = "Répertoire des représentants d’intérêts, export JSON"
 publisher = "Haute Autorité pour la transparence de la vie publique"
-page_url = "https://www.data.gouv.fr/datasets/repertoire-des-representants-dinterets-fichiers-en-vues-separees"
+page_url = "https://www.data.gouv.fr/datasets/repertoire-des-representants-dinterets"
 licence = "lo"
 frequency = "Quotidienne"
 kind = "file"
 usage = "Organisations, exercices, fourchettes de dépenses et catégories d’institutions ciblées."
 limits = ["Personnes physiques, dirigeants, collaborateurs, clients et champs de texte libre exclus.", "La date de publication n’est pas la date de l’action. Les trimestres décrivent les publications.", "Les activités sont des fiches déclaratives, pas un nombre de rendez-vous.", "Les fourchettes ne sont pas additionnées ni converties en dépenses exactes."]
-file_url = "https://www.hatvp.fr/agora/opendata/csv/Vues_Separees_CSV.zip"
-filename = "agora.zip"
+file_url = "https://www.hatvp.fr/agora/opendata/agora_repertoire_opendata.json"
+filename = "agora.json"
 record_url = "https://www.hatvp.fr/fiche-organisation/?organisation={identifier}"
 
 [[sources]]

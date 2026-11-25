@@ -1,10 +1,11 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
 import duckdb
 
-from chaque_euro.democracy import _eu, _xml11_events
+from chaque_euro.democracy import _agora, _eu, _xml11_events
 
 SQL = Path(__file__).resolve().parents[1] / "sql"
 
@@ -28,27 +29,6 @@ class DemocracyTest(unittest.TestCase):
             con.execute("set variable lobbying_as_of = '2026-11-02'::date")
             con.execute("set variable eu_exported = '2026-11-01'")
             con.execute("""
-                create table agora_organisations as select * from (values
-                    ('1', 'Entreprise A', '111111111', 'SIREN', 'FRANCE', 'Société', NULL),
-                    ('2', 'Personne exclue', '222222222', 'SIREN', 'FRANCE', 'Conseil', NULL),
-                    ('3', 'Nom protégé', '333333333', 'SIREN', 'FRANCE', 'Société', NULL),
-                    ('4', 'Association B', 'W123456789', 'RNA', 'FRANCE', 'Association', NULL))
-                    t(representants_id, denomination, identifiant_national,
-                      type_identifiant_national, pays, label_categorie_organisation, dateCessation);
-                create table agora_exercises as select * from (values
-                    ('e1', '1', '2025-01-01', '2025-12-31', '2026-03-31',
-                     '2', '< 10 000 €', '0', '10000'),
-                    ('e2', '2', '2025-01-01', '2025-12-31', '2026-03-31',
-                     '1', '< 10 000 €', '0', '10000'))
-                    t(exercices_id, representants_id, date_debut, date_fin, date_publication,
-                      nombre_activites, montant_depense, montant_depense_inf, montant_depense_sup);
-                create table agora_activities as select * from (values
-                    ('a1', 'e1', '2026-03-31'), ('a2', 'e2', '2026-03-31'))
-                    t(activite_id, exercices_id, date_publication_activite);
-                create table agora_targets as select * from (values
-                    ('a1', 'Agent public', NULL), ('a1', 'Agent public', NULL))
-                    t(action_representation_interet_id, responsable_public,
-                      departement_ministeriel);
                 create table agora_defaults as select * from (values
                     ('111111111', '2025', 'Activités'), ('222222222', '2025', 'Activités'))
                     t(identifier, period, missing);
@@ -63,6 +43,83 @@ class DemocracyTest(unittest.TestCase):
                       cost_min, cost_max, cost_exact, currency);
                 create table eu_interests_raw (id varchar, area varchar);
             """)
+            government = "Membre du Gouvernement ou membre de cabinet ministériel"
+
+            def organisation(
+                identifier: str, name: str, category: str, **fields: object
+            ) -> dict[str, object]:
+                return {
+                    "identifiantNational": identifier,
+                    "typeIdentifiantNational": "RNA" if identifier[0] == "W" else "SIREN",
+                    "denomination": name,
+                    "pays": "FRANCE",
+                    "categorieOrganisation": {"label": category},
+                    "dateCreation": "01/01/2020 10:00:00",
+                    **fields,
+                }
+
+            def exercise(exercise_id: int, *activities: str) -> dict[str, object]:
+                return {
+                    "publicationCourante": {
+                        "exerciceId": exercise_id,
+                        "dateDebut": "01-01-2025",
+                        "dateFin": "31-12-2025",
+                        "publicationDate": "31/03/2026 à 10:00:00",
+                        "nombreActivite": 2,
+                        "montantDepense": "> = 10 000 euros et < 25 000 euros",
+                        "activites": [
+                            {
+                                "publicationCourante": {
+                                    "identifiantFiche": activity,
+                                    "publicationDate": "31/03/2026 à 10:00:00",
+                                    "actionsRepresentationInteret": [
+                                        {"reponsablesPublics": ["Agent public"]},
+                                        {
+                                            "reponsablesPublics": [
+                                                f"{government} - Premier ministre, Travail, "
+                                                "emploi, formation professionnelle et dialogue "
+                                                "social"
+                                            ]
+                                        },
+                                    ],
+                                }
+                            }
+                            for activity in activities
+                        ],
+                    }
+                }
+
+            agora = Path(directory) / "agora.json"
+            agora.write_text(
+                json.dumps(
+                    {
+                        "publications": [
+                            organisation(
+                                "111111111",
+                                "Ancien nom",
+                                "Société",
+                                dateCreation="01/01/2015 10:00:00",
+                                dateCessation="01/01/2019",
+                            ),
+                            organisation(
+                                "111111111",
+                                "Entreprise A",
+                                "Société",
+                                exercices=[exercise(11, "A1")],
+                            ),
+                            organisation(
+                                "222222222",
+                                "Personne exclue",
+                                "Conseil",
+                                exercices=[exercise(12, "A2")],
+                            ),
+                            organisation("333333333", "Nom protégé", "Société"),
+                            organisation("W123456789", "Association B", "Association"),
+                        ]
+                    }
+                )
+            )
+            _agora(con, agora)
             con.execute((SQL / "42_lobbying.sql").read_text())
             self.assertEqual(
                 con.execute("select name from lobbying_organisations order by id").fetchall(),
@@ -70,12 +127,26 @@ class DemocracyTest(unittest.TestCase):
             )
             self.assertEqual(
                 con.execute(
-                    "select activities, declared_activities, activities_reconciled "
-                    "from lobbying_exercises where id = 'e1'"
+                    "select organisation_id, starts_on, activities, declared_activities, "
+                    "activities_reconciled, budget_label, budget_min, budget_max "
+                    "from lobbying_exercises where id = '11'"
                 ).fetchone(),
-                (1, 2, False),
+                ("111111111", "2025-01-01", 1, 2, False, "≥ 10 000 € et < 25 000 €", 10000, 25000),
             )
-            for table in ["lobbying_activities", "lobbying_targets", "lobbying_defaults"]:
+            self.assertEqual(
+                con.execute("select * from lobbying_targets order by all").fetchall(),
+                [
+                    ("A1", "institution", "Agent public"),
+                    ("A1", "institution", "Gouvernement et cabinets ministériels"),
+                    ("A1", "ministry", "Premier ministre"),
+                    (
+                        "A1",
+                        "ministry",
+                        "Travail, emploi, formation professionnelle et dialogue social",
+                    ),
+                ],
+            )
+            for table in ["lobbying_activities", "lobbying_defaults"]:
                 self.assertEqual(con.execute(f"select count(*) from {table}").fetchone(), (1,))
             self.assertEqual(
                 con.execute("select siren from eu_lobbying").fetchall(), [("111111111",)]
