@@ -153,6 +153,66 @@ class ContractDatingTests(unittest.TestCase):
                 ],
             )
 
+    def test_copies_across_feeds_and_shared_ceilings_count_once(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, duckdb.connect() as con:
+            path = str(Path(directory) / "decp.parquet")
+            con.execute("""
+                create table sample as
+                select uid, uid as id, subject as objet, 'Marché' as nature,
+                    'Ouverte' as procedure, '123' as codeCPV,
+                    notified::date as dateNotification, amount as montant,
+                    null::varchar as montant_anomalie, '12345678900012' as acheteur_id,
+                    holder as titulaire_id, null::varchar as titulaire_activite_libelle,
+                    'source' as sourceFile, feed as sourceDataset, version as modification_id,
+                    true as donneesActuelles, null::double as montant_rationalise,
+                    1 as offresRecues, published::date as datePublicationDonnees
+                from (values
+                    ('202339900', 'pes_marche_legacy', 'Nettoyage', '2023-03-10', 1400000.0,
+                        '11111111100011', 0, '2023-06-08'),
+                    ('2023399', 'pes_marche_2024', 'NETTOYAGE', '2022-01-01', 1500000.0,
+                        '11111111100011', 1, '2026-10-12'),
+                    ('20240036', 'aws_marches-publics.info', 'Réactifs', '2024-05-03',
+                        60837.38, '22222222200022', 0, '2024-06-01'),
+                    ('2024003600', 'scrap_marches-publics.info', 'Réactifs', '2024-05-03',
+                        60837.38, null, 0, '2024-06-02'),
+                    ('S1', 'atexo', 'Système acquisition', '2023-12-20', 485250000.0,
+                        '33333333300033', 0, '2024-07-07'),
+                    ('S2', 'atexo', 'Système acquisition', '2023-12-20', 485250000.0,
+                        '44444444400044', 0, '2024-07-07'),
+                    ('S3', 'atexo', 'Système acquisition', '2024-01-05', 485250000.0,
+                        '33333333300033', 0, '2025-02-01'),
+                    ('L1', 'atexo', 'Lots', '2024-03-01', 50000.0, '55555555500055', 0,
+                        '2024-04-01'),
+                    ('L2', 'atexo', 'Lots', '2024-03-01', 50000.0, '55555555500055', 0,
+                        '2024-04-01'),
+                    ('V1', 'atexo', 'TVA', '2024-03-01', 70000.0, 'FR15535340285', 0,
+                        '2024-04-01'),
+                    ('N1', 'atexo', 'Sans plafond', '2024-03-01', 9999999.0,
+                        '66666666600066', 0, '2024-04-01'))
+                    v(uid, feed, subject, notified, amount, holder, version, published);
+            """)
+            con.execute("copy sample to ? (format parquet)", [path])
+            con.execute("set variable decp_path = ?", [path])
+            con.execute("set variable decp_retrieved_on = date '2026-11-26'")
+            con.execute((SQL / "10_contracts.sql").read_text())
+            self.assertEqual(
+                con.execute("""
+                    select uid, any_value(notified_on)::varchar, list_sort(list(holder_siren)),
+                        any_value(a.amount), any_value(a.counted)
+                    from contract_rows join contract_amounts a using (uid)
+                    group by uid order by uid
+                """).fetchall(),
+                [
+                    ("2023399", "2023-03-10", ["111111111"], 1500000.0, True),
+                    ("20240036", "2024-05-03", ["222222222"], 60837.38, True),
+                    ("L1", "2024-03-01", ["555555555"], 50000.0, True),
+                    ("L2", "2024-03-01", ["555555555"], 50000.0, True),
+                    ("N1", "2024-03-01", ["666666666"], 9999999.0, False),
+                    ("S1", "2023-12-20", ["333333333", "444444444"], 485250000.0, True),
+                    ("V1", "2024-03-01", ["535340285"], 70000.0, True),
+                ],
+            )
+
 
 class BoampBuyerTests(unittest.TestCase):
     def test_identifies_buyer_without_using_contact_or_supplier_ids(self) -> None:
@@ -248,7 +308,7 @@ class ProcurementAmountTests(unittest.TestCase):
             con.execute("""
                 create table sample as
                 select uid, uid as id, declared as montant, estimate as montant_rationalise,
-                    flag as montant_anomalie, 'Objet' as objet, 'Marché' as nature,
+                    flag as montant_anomalie, uid as objet, 'Marché' as nature,
                     'Ouverte' as procedure, '45000000' as codeCPV,
                     date '2024-01-01' as dateNotification, '12345678900012' as acheteur_id,
                     '98765432100012' as titulaire_id, null::varchar as titulaire_activite_libelle,
