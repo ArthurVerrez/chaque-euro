@@ -119,7 +119,7 @@ def validate(con: duckdb.DuckDBPyConnection) -> None:
         "monthly balance": """select year, month from state_monthly
             where abs(revenue + funds - spending - transfers + special + annex - balance) > 1""",
         "monthly components": """select year, month from monthly_totals
-            where abs(spending - spending_parts) > 1 or abs(revenue - revenue_parts) > 1""",
+            where abs(spending - spending_parts) > 1""",
         "titles versus programmes": """select coalesce(t.programme_code, b.programme_code)
             from title_programmes t full join budget b using (programme_code)
             where b.spent is null or abs(coalesce(t.amount, 0) - b.spent) > 1""",

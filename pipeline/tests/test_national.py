@@ -19,7 +19,7 @@ class NationalAccountsTest(unittest.TestCase):
                 300.0 spending, 220.0 revenue, -150.0 balance,
                 50.0 transfers, 5.0 funds, -25.0 special, 0.0 annex;
             create table monthly_totals as select 2026 as year, 8 as month,
-                300.0 spending, 300.0 spending_parts, 220.0 revenue, 220.0 revenue_parts;
+                300.0 spending, 300.0 spending_parts;
             create table title_programmes as select '105' programme_code, 100.0 amount;
             create table budget as select '105' programme_code, 100.0 spent
                 union all select '551', 0.0;
@@ -76,7 +76,12 @@ class NationalAccountsTest(unittest.TestCase):
             "Sous-catégorie;Ligne d'information;31/08/2026\n"
         )
         content = (
-            header + "0;Nul;Solde budgétaire;Solde budgétaire;Solde budgétaire;-159603646599,08\n"
+            header
+            + "0;Nul;Solde budgétaire;Solde budgétaire;Solde budgétaire;-159603646599,08\n"
+            + "1;Sous-total de niveau 1;Recettes;Budget général;"
+            + "Total recettes nettes du budget général;219,1\n"
+            + "2;Sous-total de niveau 2;Recettes;Budget général;Total recettes fiscales;250,5\n"
+            + "2;Sous-total de niveau 2;Recettes;Budget général;Total recettes non fiscales;19,5\n"
         )
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "monthly.csv"
@@ -84,6 +89,6 @@ class NationalAccountsTest(unittest.TestCase):
             _csv(self.con, "monthly_raw", str(path))
         self.con.execute((SQL / "25a_state_monthly.sql").read_text())
         self.assertEqual(
-            self.con.execute("select year,month,balance from state_monthly").fetchone(),
-            (2026, 8, -159603646599.08),
+            self.con.execute("select year,month,balance,revenue from state_monthly").fetchone(),
+            (2026, 8, -159603646599.08, 270.0),
         )

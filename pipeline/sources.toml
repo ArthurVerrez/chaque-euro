@@ -597,7 +597,7 @@ limits = ["La position d’une organisation ne représente pas tous les étudian
 
 [[sources]]
 id = "state-monthly"
-data_date = "2026-08-31"
+data_date = "2026-09-30"
 short_name = "DGFiP"
 name = "Situations mensuelles budgétaires de l’État depuis 2024"
 publisher = "DGFiP"

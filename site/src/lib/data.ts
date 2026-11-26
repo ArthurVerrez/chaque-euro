@@ -2328,7 +2328,7 @@ export async function getStateExecution() {
       rows: (monthly?.results ?? []) as unknown as MonthlyExecution[],
       provenance: provenance(
         ["state-monthly"],
-        "Cumuls depuis janvier en euros. Dépenses et recettes nettes du budget général ; le solde inclut aussi les prélèvements sur recettes, fonds de concours, comptes spéciaux et budgets annexes. Données provisoires en cours d’année.",
+        "Cumuls depuis janvier en euros. Dépenses nettes du budget général, et recettes fiscales et non fiscales nettes comme dans le bulletin mensuel ; le solde inclut aussi les prélèvements sur recettes, fonds de concours, comptes spéciaux et budgets annexes. Données provisoires en cours d’année.",
         "25a_state_monthly",
       ),
     },
@@ -2657,7 +2657,7 @@ export async function getProcurement() {
   const index = new SourceIndex((sources?.results ?? []) as unknown as SourceRow[]);
   const provenance = index.provenance(
     [index.cite("decp"), index.cite("sirene")],
-    "Un marché par identifiant uid. Un même marché publié par plusieurs flux sous des uid différents (même acheteur, titulaires, date de notification et montant) n’est compté qu’une fois. Valeurs retenues par version de modification décroissante, puis date de publication décroissante et identifiants stables. Mois de la notification initiale si disponible, sinon première notification connue. Avenants exclus de la datation quand une version initiale existe. Les montants signalés comme aberrants ou suspects par le consolidateur, absents, non positifs ou d’au moins 999 999 999 € ne sont pas comptés. Carte selon le département de l'acheteur, pas le lieu des travaux. Les classements reprennent les totaux par organisation, titulaires multiples à parts égales.",
+    "Un marché par identifiant uid. Un même marché publié par plusieurs flux sous des uid différents (même acheteur, titulaires, date de notification et montant) n’est compté qu’une fois. Quand un flux PES Marché republie un marché modifié sous un nouvel identifiant (même racine, même objet, mêmes titulaires et date), seule la dernière modification est retenue. Valeurs retenues par version de modification décroissante, puis date de publication décroissante et identifiants stables. Mois de la notification initiale si disponible, sinon première notification connue. Avenants exclus de la datation quand une version initiale existe. Les montants signalés comme aberrants ou suspects par le consolidateur, absents, non positifs ou d’au moins 999 999 999 € ne sont pas comptés. Carte selon le département de l'acheteur, pas le lieu des travaux. Les classements reprennent les totaux par organisation, titulaires multiples à parts égales.",
     "pipeline/sql/41_procurement_overview.sql",
   );
   const companyRows = (companies?.results ?? []) as unknown as {

@@ -7,6 +7,7 @@ with dates as (
 ), raw as (
     select
         uid,
+        id as record_id,
         nullif(trim(regexp_replace(objet, '\s+', ' ', 'g')), '') as subject,
         nature,
         procedure,
@@ -66,6 +67,29 @@ delete from contract_rows where uid in (
     qualify row_number() over (
         partition by buyer_siren, notified_on, declared_amount, holders, copy
         order by published_on desc nulls last, uid
+    ) > 1
+);
+
+delete from contract_rows where uid in (
+    with contracts as (
+        select uid, min(buyer_siren) as buyer_siren, min(record_id) as record_id,
+            min(notified_on) as notified_on, max(modification_id) as modification_id,
+            max(published_on) as published_on,
+            min(regexp_replace(lower(subject), '\W', '', 'g')) as subject_key,
+            list_sort(list(coalesce(holder_siren, holder_id))) as holders
+        from contract_rows
+        where source_dataset like 'pes_marche%' or source_dataset = 'decp_colmo'
+        group by uid
+        having count(coalesce(holder_siren, holder_id)) = count(*)
+    )
+    select uid from contracts
+    where buyer_siren is not null and regexp_full_match(record_id, '[0-9]{7,}')
+    window chain as (
+        partition by buyer_siren, left(record_id, length(record_id) - 2), notified_on,
+            subject_key, holders
+    )
+    qualify max(modification_id) over chain > 0 and row_number() over (
+        chain order by modification_id desc, published_on desc nulls last, record_id desc
     ) > 1
 );
 

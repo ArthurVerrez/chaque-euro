@@ -14,15 +14,13 @@ where value <> '';
 create or replace table monthly_totals as
 select year, month,
     max(amount) filter (where label='Total dépenses nettes du budget général') as spending,
-    sum(amount) filter (where category='Dépenses' and subcategory='Budget général' and level=2) as spending_parts,
-    max(amount) filter (where label='Total recettes nettes du budget général') as revenue,
-    sum(amount) filter (where category='Recettes' and subcategory='Budget général' and level=2) as revenue_parts
+    sum(amount) filter (where category='Dépenses' and subcategory='Budget général' and level=2) as spending_parts
 from monthly_values group by year, month;
 
 create or replace table state_monthly as
 select year, month,
     max(amount) filter (where label='Total dépenses nettes du budget général') as spending,
-    max(amount) filter (where label='Total recettes nettes du budget général') as revenue,
+    sum(amount) filter (where category='Recettes' and subcategory='Budget général' and level=2) as revenue,
     max(amount) filter (where label='Solde budgétaire') as balance,
     max(amount) filter (where label='Total prélèvements sur recettes') as transfers,
     max(amount) filter (where label='Fonds de concours et attribution de produits') as funds,
