@@ -5,16 +5,17 @@ select * from read_json_auto(getvariable('approch_path'), maximum_object_size = 
 create or replace table sanction_input as
 select * from read_csv(getvariable('sanctions_path'), header = true);
 
-create or replace macro procurement_name(value) as
-regexp_replace(upper(strip_accents(trim(value))), '[^A-Z0-9]', '', 'g');
-
 create or replace table sanction_matches as
-select procurement_name(s.denominationUniteLegale) as name_key, min(s.siren) as siren
-from read_parquet(getvariable('sirene_path')) s
+with names as (
+    select distinct name_key(Entreprise) as name_key, Annee as year from sanction_input
+)
+select n.name_key, n.year, min(s.siren) as siren
+from names n
+join read_parquet(getvariable('sirene_path')) s
+    on name_key(s.denominationUniteLegale) = n.name_key
 where s.statutDiffusionUniteLegale = 'O'
     and s.categorieJuridiqueUniteLegale::varchar <> '1000'
-    and procurement_name(s.denominationUniteLegale) in (
-        select procurement_name(Entreprise) from sanction_input
-    )
-group by name_key
-having count(distinct siren) = 1;
+    and coalesce(year(s.dateCreationUniteLegale), n.year) <= n.year
+    and (s.etatAdministratifUniteLegale = 'A' or year(s.dateDebut) >= n.year)
+group by n.name_key, n.year
+having count(distinct s.siren) = 1;

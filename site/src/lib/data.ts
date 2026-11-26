@@ -1718,7 +1718,7 @@ export async function getDeficitAnalysis() {
     events: (events?.results ?? []) as unknown as AnalysisPeriod[],
     provenance: index.provenance(
       [index.cite("insee-deficit"), index.cite("insee-debt"), index.cite("state-balance")],
-      "Soldes en comptabilité nationale : Insee, 1949-2025 pour les APU, 1959-2025 pour l’État. Dette de Maastricht à fin décembre depuis 1978. Solde budgétaire hors FMI depuis 2009, ratio calculé avec le PIB implicite du tableau 3.215. Euros courants. 2025 provisoire. Les soldes sont signés : un chiffre négatif indique un déficit. En 2024, le tableau 3.215 diffère de la série dédiée de 119,1 M€ pour les APU ; cet écart vérifié est conservé et contrôlé. La dette de chaque sous-secteur est sa contribution à la dette publique consolidée.",
+      "Soldes en comptabilité nationale : Insee, 1949-2025 pour les APU, 1978-2025 pour l’État : avant 1978, l’État et les ODAC du fichier Insee ne s’additionnent pas au total des administrations centrales. Dette de Maastricht à fin décembre depuis 1978. Solde budgétaire hors FMI depuis 2009, ratio calculé avec le PIB implicite du tableau 3.215. Euros courants. 2025 provisoire. Les soldes sont signés : un chiffre négatif indique un déficit. En 2024, le tableau 3.215 diffère de la série dédiée de 119,1 M€ pour les APU ; cet écart vérifié est conservé et contrôlé. La dette de chaque sous-secteur est sa contribution à la dette publique consolidée.",
       "pipeline/sql/31_deficit_series.sql",
     ),
     contextProvenance: index.provenance(
@@ -2705,7 +2705,7 @@ export async function getProcurement() {
     },
     sanctionsProvenance: index.provenance(
       [index.cite("competition-sanctions"), index.cite("sirene")],
-      "Montant total compté une fois par décision. Sanctions initiales avant recours, toutes activités confondues. Les lignes individuelles peuvent être solidaires et ne s'additionnent pas. Noms rapprochés exactement après normalisation de la casse, des accents et de la ponctuation, uniquement quand une seule personne morale diffusible de Sirene correspond. Autres noms masqués. Les 12 décisions les plus récentes sont affichées.",
+      "Montant total compté une fois par décision. Sanctions initiales avant recours, toutes activités confondues. Les lignes individuelles peuvent être solidaires et ne s'additionnent pas. Noms rapprochés exactement après normalisation de la casse, des accents et de la ponctuation, uniquement quand une seule personne morale diffusible de Sirene, créée au plus tard l’année de la décision et encore active cette année-là, correspond. Autres noms masqués. Les 12 décisions les plus récentes sont affichées.",
       "pipeline/sql/44_competition_sanctions.sql",
     ),
     asOf: index.get("boamp").retrievedAt,
@@ -3009,7 +3009,7 @@ export async function getPoliticalFinance(code: string | null) {
     losses: losses.results,
     provenance: index.provenance(
       [index.cite("cnccfp-parties")],
-      "Comptes en euros seulement. L’aide publique est versée au parti ou groupement auquel les candidats et les parlementaires se rattachent : elle peut figurer au compte d’un groupement plutôt qu’à celui d’un parti membre. Produits totaux du compte de résultat, contributions, dons agrégés et aides publiques (deux fractions et autres aides). Autres ressources : solde des produits. Comptes non consolidés entre partis. Trois comptes 2023 exclus : deux en XPF, un sans monnaie. Un compte du fichier 2021 indiquant 2022 est aussi exclu. Les écarts supérieurs à un euro entre les composantes et les produits déclarés sont signalés et exclus des alertes de majorité publique.",
+      "Comptes en euros seulement. L’aide publique est versée au parti ou groupement auquel les candidats et les parlementaires se rattachent : elle peut figurer au compte d’un groupement plutôt qu’à celui d’un parti membre. Produits totaux du compte de résultat, contributions, dons agrégés et aides publiques (deux fractions et autres aides). Autres ressources : solde des produits. Comptes non consolidés entre partis. Trois comptes 2023 exclus : deux en XPF, un sans monnaie. Un compte du fichier 2021 indiquant 2022 est aussi exclu. Les écarts supérieurs à cinq euros entre les composantes et les produits déclarés, arrondis à l’euro, sont signalés et exclus des alertes de majorité publique.",
       PARTY_SQL,
     ),
     lossesProvenance: index.provenance(
@@ -3876,7 +3876,7 @@ export async function getElectedIndex(filters: {
       "select distinct group_label as label from public_people where active=1 and group_label is not null order by label",
     ),
     democracyRows<{ code: string; label: string }>(
-      "select distinct territory_code as code,territory_label as label from public_people where active=1 and territory_code is not null order by code",
+      "select territory_code as code,min(territory_label) as label from public_people where active=1 and territory_code is not null group by territory_code order by code",
     ),
     democracyRows<PublicBallot>(
       "select * from public_ballots order by voted_on desc,number desc limit 12",

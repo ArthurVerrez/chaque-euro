@@ -12,6 +12,6 @@ select row_number() over (order by s.id_decision, s.Entreprise, s."Montant indiv
     coalesce(i.label, 'Société ou organisme non rapproché') as name,
     s."Montant individuel" as amount
 from sanction_input s
-left join sanction_matches m on m.name_key = procurement_name(s.Entreprise)
+left join sanction_matches m on m.name_key = name_key(s.Entreprise) and m.year = s.Annee
 left join identities i on i.siren = m.siren
 where s.Annee >= 2009;

@@ -91,6 +91,12 @@ def protected(title: str) -> bool:
 
 def appointment(title: str) -> str:
     value = normalized(title)
+    if re.search(
+        r"ordre national|legion d'honneur|medaille|specialites pharmaceutiques|"
+        r"reconduction de l'autorisation",
+        value,
+    ):
+        return "autre"
     for pattern, label in (
         (r"(?:portant|relatif a la) (?:renouvellement|reconduction)", "renouvellement"),
         (r"(?:portant|relatif a la) (?:cessation|fin de fonctions)", "cessation"),
@@ -465,7 +471,8 @@ def copy_rows(path: str, selected: set[str]) -> dict[str, list[dict[str, str | N
 
 
 def senate_files(path: str, source: Source, today: date) -> dict[str, list[tuple[Any, ...]]]:
-    tables = copy_rows(path, {"loi", "lecture", "lecass", "texte", "typtxt"})
+    tables = copy_rows(path, {"loi", "lecture", "lecass", "texte", "typtxt", "typloi"})
+    law_types = {row["typloicod"]: row["typloiden"] for row in tables["typloi"]}
     events: list[tuple[Any, ...]] = []
     files, refs, budgets, documents = [], [], [], []
     statuses = {
@@ -495,6 +502,9 @@ def senate_files(path: str, source: Source, today: date) -> dict[str, list[tuple
             continue
         identifier = "senat-" + str(law["loicod"])
         title = law.get("loiint") or law.get("loitit") or "Titre non renseigné"
+        if title[0].islower() and law_types.get(law["typloicod"]):
+            title = f"{law_types[law['typloicod']]} {title}"
+        title = title[0].upper() + title[1:]
         if protected(title):
             continue
         url = _url(source, str(law["signet"]))
@@ -572,7 +582,9 @@ def senate_files(path: str, source: Source, today: date) -> dict[str, list[tuple
                 "senat-texte-" + str(row["texcod"]),
                 identifier,
                 None,
-                "Sénat" if chamber["codass"] == "S" else "Assemblée nationale",
+                {"S": "Sénat", "A": "Assemblée nationale"}.get(
+                    chamber["codass"] or "", "Autre institution"
+                ),
                 label or "Texte parlementaire",
                 at,
                 temporal(at, today),

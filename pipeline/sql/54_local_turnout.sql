@@ -1,15 +1,18 @@
 create or replace table commune_turnout as
 with checked as (
-    select *, voters between 0 and registered and abstentions >= 0
-        and voters + abstentions = registered as valid
-    from turnout_raw
+    select coalesce(m.insee, t.insee) as insee, t.* exclude (insee),
+        voters between 0 and registered and abstentions >= 0
+            and voters + abstentions = registered as valid
+    from turnout_raw t
+    left join commune_code_map m on m.old_insee = t.insee
 )
-select source_id, insee, department_code,
-    case when valid then registered end as registered,
-    case when valid then voters end as voters,
-    case when valid then voters * 100.0 / nullif(registered, 0) end as turnout,
-    (not valid)::integer as excluded_communes
-from checked;
+select source_id, insee, any_value(department_code) as department_code,
+    case when bool_and(valid) then sum(registered)::bigint end as registered,
+    case when bool_and(valid) then sum(voters)::bigint end as voters,
+    case when bool_and(valid) then sum(voters) * 100.0 / nullif(sum(registered), 0) end as turnout,
+    count(*) filter (where not valid)::integer as excluded_communes
+from checked
+group by source_id, insee;
 
 create or replace table department_turnout as
 select source_id, department_code,

@@ -51,8 +51,8 @@ with deficits as (
     select year,
         max(value * 1e9) filter (where line = 10 and measure = 'amount') as apu_balance,
         max(value / 100) filter (where line = 10 and measure = 'ratio') as apu_ratio,
-        max(value * 1e9) filter (where line = 6 and measure = 'amount') as state_balance,
-        max(value / 100) filter (where line = 6 and measure = 'ratio') as state_ratio
+        max(value * 1e9) filter (where line = 6 and measure = 'amount' and year::integer >= 1978) as state_balance,
+        max(value / 100) filter (where line = 6 and measure = 'ratio' and year::integer >= 1978) as state_ratio
     from deficit_values group by year
 ), debts as (
     select year,

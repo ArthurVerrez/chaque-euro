@@ -1,6 +1,3 @@
-create or replace macro organisation_name(value) as
-    regexp_replace(lower(strip_accents(trim(value))), '[^a-z0-9]', '', 'g');
-
 create or replace table lobbying_public_organisations as
 with legal_units as (
     select siren, categorieJuridiqueUniteLegale::varchar as category,
@@ -14,7 +11,7 @@ select g.identifier as id, g.identifier,
 from agora_organisations g
 left join legal_units u on u.siren = g.identifier
 where (g.identifier_type = 'SIREN' and u.category <> '1000' and u.diffusion = 'O')
-   or (g.identifier_type = 'RNA' and g.category = 'Association');
+   or g.identifier_type = 'RNA';
 
 create or replace table lobbying_organisations as
 select * exclude (created_on) from lobbying_public_organisations
@@ -68,7 +65,7 @@ create or replace table lobbying_quarters as
 select year(published_on::date) as year, quarter(published_on::date) as quarter,
     count(*) as activities
 from lobbying_activities
-where published_on::date <= getvariable('lobbying_as_of')
+where date_trunc('quarter', published_on::date) < date_trunc('quarter', getvariable('lobbying_as_of'))
 group by all;
 
 create or replace table lobbying_recent as
@@ -94,12 +91,12 @@ where o.won_count > 0 or o.grants_count > 0;
 
 create or replace table eu_lobbying as
 with names as (
-    select organisation_name(name) as normalized, any_value(siren) as siren
+    select name_key(name) as normalized, any_value(siren) as siren
     from lobbying_organisations
     where upper(trim(country)) = 'FRANCE' and siren is not null
     group by all having count(*) = 1
 ), eu_names as (
-    select organisation_name(name) as normalized from eu_register_raw
+    select name_key(name) as normalized from eu_register_raw
     group by all having count(*) = 1
 )
 select e.id, trim(e.name) as name, e.category,
@@ -109,7 +106,7 @@ select e.id, trim(e.name) as name, e.category,
     case when e.currency = '€' then try_cast(nullif(e.cost_exact, '') as double) end as cost_exact,
     getvariable('eu_exported')::varchar as exported_at
 from eu_register_raw e
-left join eu_names en on en.normalized = organisation_name(e.name)
+left join eu_names en on en.normalized = name_key(e.name)
 left join names n on n.normalized = en.normalized
 where regexp_matches(lower(strip_accents(e.legal_form)),
     '(^|[^a-z])(sas|sasu|sa|sarl|eurl|sci|scop|scic|selarl|selas|snc|sca|scs|se|gie|gip|epic|epa|epci|asbl|aisbl|association|associations|fondation|federation|syndicat|societe|mutuelle|union|chambre|etablissement)([^a-z]|$)')

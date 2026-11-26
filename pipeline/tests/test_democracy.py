@@ -120,6 +120,7 @@ class DemocracyTest(unittest.TestCase):
                 )
             )
             _agora(con, agora)
+            con.execute((SQL / "05_name_key.sql").read_text())
             con.execute((SQL / "42_lobbying.sql").read_text())
             self.assertEqual(
                 con.execute("select name from lobbying_organisations order by id").fetchall(),

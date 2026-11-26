@@ -11,12 +11,16 @@ with totals as (
         try_cast(H as double) * 1000 as net_tax
     from ircom_rows where E = 'Total'
 ), mapped as (
-    select case
-        when code between '75101' and '75120' then '75056'
-        when code between '13201' and '13216' then '13055'
-        when code between '69381' and '69389' then '69123'
-        else code end as insee, * exclude (code)
-    from totals
+    select coalesce(m.insee, c.code) as insee, c.* exclude (code)
+    from (
+        select case
+            when code between '75101' and '75120' then '75056'
+            when code between '13201' and '13216' then '13055'
+            when code between '69381' and '69389' then '69123'
+            else code end as code, * exclude (code)
+        from totals
+    ) c
+    left join commune_code_map m on m.old_insee = c.code
 )
 select insee, 2024 as revenue_year,
     case when count(households) = count(*) then sum(households)::bigint end as households,

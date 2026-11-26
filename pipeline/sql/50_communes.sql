@@ -60,9 +60,12 @@ join commune_years y using (insee, year)
 qualify row_number() over (partition by r.insee order by r.year desc, r.population desc) = 1;
 
 create or replace table commune_finances as
-select f.insee, f.year, f.item, f.amount, case when y.population > 0 then f.amount / y.population end as per_capita
-from (select insee, year, item, sum(amount) as amount from ofgl_rows group by all) f
-join commune_years y using (insee, year);
+select y.insee, y.year, i.item, coalesce(f.amount, 0) as amount,
+    case when y.population > 0 then coalesce(f.amount, 0) / y.population end as per_capita
+from commune_years y
+cross join finance_items i
+left join (select insee, year, item, sum(amount) as amount from ofgl_rows group by all) f
+    on f.insee = y.insee and f.year = y.year and f.item = i.item;
 
 create or replace table strata as
 select

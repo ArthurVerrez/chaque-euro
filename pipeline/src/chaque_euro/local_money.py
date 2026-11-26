@@ -147,7 +147,7 @@ def validate(con: duckdb.DuckDBPyConnection) -> None:
             )
         """,
         "REI duplicate commune": """
-            select count(*) from (select insee from rei_rows group by all having count(*) > 1)
+            select count(*) from (select code from rei_rows group by all having count(*) > 1)
         """,
         "REI CFE zone bases": """
             select count(*) from rei_rows

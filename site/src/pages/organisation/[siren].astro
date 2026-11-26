@@ -25,7 +25,7 @@ import {
   getProcurementOpportunities,
 } from "../../lib/data";
 import { kindIcon, type IconName } from "../../lib/icons";
-import { NBSP, formatEuros, formatSiren, plural } from "../../lib/format";
+import { NBSP, formatEuros, formatNumber, formatSiren, plural } from "../../lib/format";
 
 const siren = Astro.params.siren ?? "";
 const org = /^\d{9}$/.test(siren) ? await getOrganisation(siren) : null;
@@ -83,10 +83,14 @@ const contractClauses = [
 ]
   .filter((clause) => clause !== null && clause !== undefined)
   .sort((a, b) => b.flow.amount - a.flow.amount)
-  .map(
-    ({ flow, verb }) =>
-      `${verb} ${plural(flow.count, "marché public", "marchés publics")} prévoyant ${formatEuros(flow.amount)}`,
-  );
+  .map(({ flow, verb }) => {
+    const contracts = `${verb} ${plural(flow.count, "marché public", "marchés publics")}`;
+    const priced = flow.count - flow.unpriced;
+    if (priced === 0) return `${contracts} sans montant fiable`;
+    return flow.unpriced > 0
+      ? `${contracts}, dont ${formatNumber(priced)} prévoyant ${formatEuros(flow.amount)}`
+      : `${contracts} prévoyant ${formatEuros(flow.amount)}`;
+  });
 const answer =
   [
     org?.grants &&

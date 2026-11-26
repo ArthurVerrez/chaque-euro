@@ -53,6 +53,12 @@ class OfficialDocumentsTest(unittest.TestCase):
         self.assertEqual(appointment("Avis relatif aux modalités de nomination"), "autre")
         self.assertEqual(appointment("Arrêté portant désignation au conseil"), "désignation")
         self.assertEqual(appointment("Décret portant cessation de fonctions"), "cessation")
+        for title in (
+            "Décret portant nomination dans l'ordre national de la Légion d'honneur",
+            "Arrêté portant radiation de spécialités pharmaceutiques de la liste",
+            "Décision portant reconduction de l'autorisation délivrée à l'association Berry FM",
+        ):
+            self.assertEqual(appointment(title), "autre")
 
     def test_replay_reconciles_summaries_and_does_not_count_corrections(self) -> None:
         summary = """<JO><ID>JO1</ID><DATE_PUBLI>2026-11-01</DATE_PUBLI><NUM>0256</NUM>

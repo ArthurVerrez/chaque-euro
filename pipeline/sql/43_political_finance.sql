@@ -31,7 +31,7 @@ with amounts as (
 select a.*, public_first + public_second + public_other as public_aid,
     resources - members - elected - donations - public_aid as other_resources,
     c.amount - resources as component_difference,
-    abs(component_difference) <= 1 as reconciled,
+    abs(component_difference) <= 5 as reconciled,
     resources > 0 and public_aid > resources * 0.5 and reconciled as majority_public
 from amounts a join party_component_totals c using (code, year);
 

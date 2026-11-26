@@ -7,7 +7,7 @@ SQL = Path(__file__).parents[1] / "sql"
 
 
 class LocalMoneyTest(unittest.TestCase):
-    def test_income_units_geography_and_fiscal_secrecy(self) -> None:
+    def test_income_units_geography_merged_communes_and_fiscal_secrecy(self) -> None:
         with duckdb.connect() as con:
             con.execute(
                 "create table ircom_rows (B varchar, C varchar, E varchar, F varchar, "
@@ -21,7 +21,11 @@ class LocalMoneyTest(unittest.TestCase):
                     ("754", "101", "Total", "30", "300", "3", "15"),
                     ("754", "102", "Total", "35", "n.c.", "4", "n.c."),
                     ("010", "001", "0 à 10 000", "9", "90", "0", "0"),
+                    ("010", "002", "Total", "5", "50", "1", "2"),
                 ],
+            )
+            con.execute(
+                "create table commune_code_map as select '01002' as old_insee, '01001' as insee"
             )
             query = (
                 (SQL / "53_local_income.sql")
@@ -32,13 +36,13 @@ class LocalMoneyTest(unittest.TestCase):
             self.assertEqual(
                 con.execute("select * from commune_income order by insee").fetchall(),
                 [
-                    ("01001", 2024, 20, 10, 100500.0, -1500.0),
+                    ("01001", 2024, 25, 12, 150500.0, -500.0),
                     ("75056", 2024, 65, None, None, 7000.0),
                     ("97101", 2024, 40, 12, 200000.0, 4000.0),
                 ],
             )
 
-    def test_department_turnout_uses_electorate_weights(self) -> None:
+    def test_department_turnout_uses_electorate_weights_and_merged_communes(self) -> None:
         with duckdb.connect() as con:
             con.execute(
                 "create table turnout_raw (source_id varchar, insee varchar, "
@@ -47,7 +51,11 @@ class LocalMoneyTest(unittest.TestCase):
             con.execute(
                 "insert into turnout_raw values ('test', '01001', '01', 100, 90, 10), "
                 "('test', '01002', '01', 900, 450, 450), "
-                "('test', '01003', '01', 209, 212, -3)"
+                "('test', '01003', '01', 209, 212, -3), "
+                "('test', '01004', '01', 100, 50, 50), ('test', '01005', '01', 100, 70, 30)"
+            )
+            con.execute(
+                "create table commune_code_map as select '01004' as old_insee, '01005' as insee"
             )
             con.execute((SQL / "54_local_turnout.sql").read_text())
             self.assertEqual(
@@ -55,7 +63,13 @@ class LocalMoneyTest(unittest.TestCase):
                     "select registered, voters, turnout, communes, excluded_communes "
                     "from department_turnout"
                 ).fetchone(),
-                (1000, 540, 54.0, 2, 1),
+                (1200, 660, 55.0, 3, 1),
+            )
+            self.assertEqual(
+                con.execute(
+                    "select registered, voters, turnout from commune_turnout where insee = '01005'"
+                ).fetchone(),
+                (200, 120, 60.0),
             )
             self.assertEqual(
                 con.execute(

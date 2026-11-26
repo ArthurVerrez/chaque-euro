@@ -279,7 +279,8 @@ def _an(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -> None
                     place.get("numDepartement"),
                     place.get("departement"),
                     (mandate.get("infosQualite") or {}).get("libQualite"),
-                    mandate.get("dateDebut"),
+                    (mandate.get("mandature") or {}).get("datePriseFonction")
+                    or mandate.get("dateDebut"),
                     mandate.get("dateFin"),
                     "day",
                     source,
@@ -414,6 +415,7 @@ def _an_votes(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -
                 ("contres", "contre"),
                 ("abstentions", "abstention"),
                 ("nonVotants", "non-votant"),
+                ("nonVotantsVolontaires", "non-votant"),
             ):
                 for item in many(point.get(key)):
                     if not isinstance(item, dict):
@@ -556,7 +558,7 @@ def _campaigns(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) 
     lines = []
     for r in csv_rows(Path(records["cnccfp-leg2024"].path), "cp1252", ";", "campaign"):
         code = r["decision"].strip()
-        department = r["code département"].zfill(2)
+        department = "099" if r["département"] == "ZZ" else r["code département"].zfill(2)
         accounts.append(
             (
                 "legislatives-2024",
@@ -628,18 +630,10 @@ def _campaigns(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) 
                 "cnccfp-eu2024",
             )
         )
-
-    for ordinal, r in enumerate(xlsx_rows(records["cnccfp-eu2024"].path), 1):
-        if ordinal <= 6:
-            continue
-        if r.get("A", "").strip():
-            finish()
-            name = re.sub(r"\s*\(\*+\)", "", r["A"]).strip()
-            current = {"id": f"EU2024-{ordinal}", "name": name, "first": r, "last": r}
-        elif current and (r.get("B") or r.get("R")):
-            current["last"] = r
-        if current:
-            basis = "declared" if current["first"] is r else "retained"
+        rows = [("declared", current["first_ordinal"], first)]
+        if last is not first:
+            rows.append(("retained", current["last_ordinal"], last))
+        for basis, ordinal, row in rows:
             for key, category in [
                 ("B", "Dépenses totales"),
                 ("C", "Recettes totales"),
@@ -655,10 +649,28 @@ def _campaigns(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) 
                         ordinal,
                         basis,
                         category,
-                        cents(r.get(key)),
+                        cents(row.get(key)),
                         "cnccfp-eu2024",
                     )
                 )
+
+    for ordinal, r in enumerate(xlsx_rows(records["cnccfp-eu2024"].path), 1):
+        if ordinal <= 6:
+            continue
+        if r.get("A", "").strip():
+            finish()
+            name = re.sub(r"\s*\(\*+\)", "", r["A"]).strip()
+            current = {
+                "id": f"EU2024-{ordinal}",
+                "name": name,
+                "first": r,
+                "last": r,
+                "first_ordinal": ordinal,
+                "last_ordinal": ordinal,
+            }
+        elif current and (r.get("B") or r.get("R")):
+            current["last"] = r
+            current["last_ordinal"] = ordinal
     finish()
     table(con, "campaign_accounts_raw", SCHEMAS["campaign_accounts"], accounts)
     table(con, "campaign_lines_raw", SCHEMAS["campaign_account_lines"], lines)
@@ -774,12 +786,7 @@ def _interests(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) 
                             )
                         )
         node.clear()
-    table(
-        con,
-        "interests_raw",
-        SCHEMAS["interest_declarations"],
-        (r for r in declarations if matched[r[0]] == 1),
-    )
+    table(con, "interests_raw", SCHEMAS["interest_declarations"], declarations)
     table(
         con,
         "interest_sections_raw",

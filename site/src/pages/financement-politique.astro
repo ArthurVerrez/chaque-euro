@@ -11,16 +11,16 @@ import Term from "../components/Term.astro";
 import Toc from "../components/Toc.astro";
 import Base from "../layouts/Base.astro";
 import { getPoliticalFinance } from "../lib/data";
-import { formatDate, formatEuros, formatNumber, formatPercent } from "../lib/format";
+import { formatDate, formatEuros, formatNumber, formatPercent, plural } from "../lib/format";
 const data = await getPoliticalFinance(Astro.url.searchParams.get("parti"));
 const party = data.selected;
 const total = data.accounts.reduce((n, r) => n + r.resources, 0);
 const aid = data.accounts.reduce((n, r) => n + r.public_aid, 0);
 const alerts = data.accounts.filter((r) => r.majority_public);
 const discrepancies = data.accounts.filter((r) => !r.reconciled);
-const discrepancyList =
-  discrepancies.map((r) => `${r.name} (${formatEuros(r.component_difference)})`).join(" ; ") ||
-  "aucun";
+const discrepancyList = discrepancies
+  .map((r) => `${r.name} (${formatEuros(r.component_difference)})`)
+  .join(" ; ");
 const resources = [
   { label: "Cotisations des adhérents", value: party.members },
   { label: "Dons de personnes physiques, total agrégé", value: party.donations },
@@ -225,9 +225,9 @@ const sections = [
       <Explainer title="Écarts dans les comptes publiés">
         <p>
           La somme des composantes des produits est comparée au total déclaré.{" "}
-          {formatNumber(discrepancies.length)} comptes de 2024 présentent un écart supérieur à un
-          euro : {discrepancyList}. Les montants officiels sont conservés et les comptes concernés
-          sont exclus des alertes.
+          {discrepancies.length
+            ? `${plural(discrepancies.length, "compte", "comptes")} de 2024 ${discrepancies.length > 1 ? "présentent" : "présente"} un écart supérieur à cinq euros : ${discrepancyList}. Les montants officiels sont conservés et les comptes concernés sont exclus des alertes.`
+            : "Aucun compte de 2024 ne présente d’écart supérieur à cinq euros."}
         </p>
       </Explainer>
       <Provenance provenance={data.provenance} />

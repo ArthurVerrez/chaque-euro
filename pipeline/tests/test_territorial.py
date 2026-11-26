@@ -20,10 +20,12 @@ class TerritorialTest(unittest.TestCase):
                 "('69123','69',1),('69123','69',2),('01001','01',1),"
                 "('01002','01',2),('01003','01',3),('01003','01',4),('01006','01',5)"
             )
-            con.execute("create table commune_passage(old_insee varchar,insee varchar)")
             con.execute(
-                "insert into commune_passage values ('69123','69123'),('01001','01004'),"
-                "('01002','01004'),('01003','01003'),('01003','01005')"
+                "create table commune_passage(year integer,old_insee varchar,insee varchar)"
+            )
+            con.execute(
+                "insert into commune_passage values (2021,'69123','69123'),(2021,'01001','01004'),"
+                "(2021,'01002','01004'),(2021,'01003','01003'),(2021,'01003','01005')"
             )
             con.execute("create table communes(insee varchar)")
             con.execute(

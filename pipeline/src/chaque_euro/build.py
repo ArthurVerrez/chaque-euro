@@ -174,7 +174,7 @@ DOWNLOADS = {
     "lobbying_activities": "Fiches d\u2019activité et date de publication, sans texte libre.",
     "lobbying_targets": "Catégories d\u2019institutions et ministères ciblés par fiche.",
     "lobbying_defaults": "Défauts de déclaration figurant dans la liste officielle HATVP.",
-    "lobbying_quarters": "Fiches publiées par trimestre, pas dates des actions.",
+    "lobbying_quarters": "Fiches publiées par trimestre complet, pas dates des actions.",
     "lobbying_crossrefs": "SIREN communs aux lobbyistes, marchés et versements publics.",
     "eu_lobbying": "Organisations françaises UE, coûts et formes juridiques vérifiées.",
     "eu_lobbying_interests": "Domaines d\u2019intérêt du registre UE, libellés officiels.",

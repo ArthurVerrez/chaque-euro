@@ -33,5 +33,5 @@ select *,
 from totals;
 
 create or replace table commune_dgf_history as
-select f.year, sum(f.amount) as amount, count(*) as communes
+select f.year, sum(f.amount) as amount, count(*) filter (where f.amount > 0) as communes
 from commune_finances f where f.item = 'dgf' group by all;

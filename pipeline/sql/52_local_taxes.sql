@@ -1,12 +1,17 @@
 create or replace macro rei_number(value) as try_cast(replace(trim(value), ',', '.') as double);
 
 create or replace table rei_rows as
-select
-    trim(DEP) || lpad(trim(COM), case when length(trim(DEP)) = 3 then 2 else 3 end, '0') as insee,
-    *
-from read_csv(getvariable('rei_path'), delim = ';', header = true, all_varchar = true);
+with raw as (
+    select
+        trim(DEP) || lpad(trim(COM), case when length(trim(DEP)) = 3 then 2 else 3 end, '0') as code,
+        *
+    from read_csv(getvariable('rei_path'), delim = ';', header = true, all_varchar = true)
+)
+select coalesce(m.insee, r.code) as insee, r.*
+from raw r left join commune_code_map m on m.old_insee = r.code;
 
 create or replace table commune_taxes as
+with rows as (
 select
     r.insee, 2025 as year, t.tax, t.authority, t.zone,
     case when t.authority = 'epci' and t.tax != 'teom' then
@@ -40,7 +45,19 @@ lateral (values
     ('teom', case F71 when '1' then 'commune' when '2' then 'syndicat' when '3' then 'epci' end, 'Zone D', F61, F62),
     ('teom', case F71 when '1' then 'commune' when '2' then 'syndicat' when '3' then 'epci' end, 'Zone E', F81, F82)
 ) t(tax, authority, zone, base, rate)
-where t.authority is not null and (rei_number(t.base) > 0 or rei_number(t.rate) > 0);
+where t.authority is not null and (rei_number(t.base) > 0 or rei_number(t.rate) > 0)
+)
+select insee, year, tax, authority, zone,
+    any_value(authority_siren) as authority_siren, any_value(authority_name) as authority_name,
+    sum(base) as base,
+    case when count(*) = 1 then any_value(rate)
+        else round(sum(rate * base) / nullif(sum(base) filter (where rate is not null), 0), 2) end
+        as rate,
+    case when count(*) = 1 then any_value(surtax_rate)
+        else round(sum(surtax_rate * base) / nullif(sum(base) filter (where surtax_rate is not null), 0), 2) end
+        as surtax_rate
+from rows
+group by insee, year, tax, authority, zone;
 
 create or replace table tax_strata as
 select c.stratum, t.year, t.tax, t.authority, t.zone,

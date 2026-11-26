@@ -82,10 +82,24 @@ const near = count((gap) => Math.abs(gap) < 0.05);
 const answer = departement
   ? `En ${departement.year}, les communes du département ont dépensé ${formatEuro(departement.perCapita)} par habitant en moyenne.`
   : null;
+const covered = communes.filter((commune) => commune.perCapita !== null).length;
+const partial = covered < communes.length;
 const figures = departement
   ? [
-      { icon: "town" as const, label: "Communes", value: formatNumber(communes.length) },
-      { icon: "people" as const, label: "Habitants", value: formatNumber(departement.population) },
+      {
+        icon: "town" as const,
+        label: "Communes",
+        value: formatNumber(communes.length),
+        note: partial
+          ? `dont ${formatNumber(covered)} avec des comptes ${departement.year}`
+          : undefined,
+      },
+      {
+        icon: "people" as const,
+        label: "Habitants",
+        value: formatNumber(departement.population),
+        note: partial ? "des communes avec des comptes" : undefined,
+      },
       {
         icon: "spending" as const,
         label: "Dépenses totales",
@@ -96,7 +110,7 @@ const figures = departement
         icon: "person" as const,
         label: "Par habitant",
         value: formatEuro(departement.perCapita),
-        note: "toutes communes confondues",
+        note: partial ? "communes avec des comptes" : "toutes communes confondues",
         term: "par-habitant" as const,
       },
     ]

@@ -13,11 +13,22 @@ with candidates as (
     from budget_legislation_raw b join legislative_files f on f.id = b.file_id
     union all
     select id, list_last(regexp_extract_all(title_public, '\b20\d{2}\b'))::integer,
-        'Loi de résultats', 'État', 'Dossier de loi et intitulé résultats ou règlement'
-    from legislative_files
-    where kind in ('Projet de loi ordinaire', 'PROJET_LOI', 'LOI_PUBLIEE')
-        and regexp_matches(strip_accents(lower(title_public)),
-            'resultats de la gestion|reglement du budget')
+        case
+            when regexp_matches(t, 'resultats de la gestion|reglement du budget') then 'Loi de résultats'
+            when contains(t, 'de finances de fin de gestion') then 'Loi de finances de fin de gestion'
+            when contains(t, 'de financement rectificative de la securite sociale')
+                then 'Financement rectificatif de la sécurité sociale'
+            when contains(t, 'de financement de la securite sociale pour') then 'PLFSS'
+            when contains(t, 'de finances rectificative') then 'Loi de finances rectificative'
+            when regexp_matches(t, 'de finances pour 20[0-9]{2}') then 'PLF'
+        end as law_kind,
+        case when contains(t, 'securite sociale') then 'Sécurité sociale' else 'État' end,
+        'Intitulé du dossier et année du titre'
+    from (select *, strip_accents(lower(title_public)) as t from legislative_files)
+    where regexp_matches(t, '^(projet de loi|loi n\S* ?[0-9-]+( du [0-9a-z]+ [a-z]+ [0-9]{4})?) '
+            || '(relati[fv]e? aux resultats|de reglement|de finances|de financement)')
         and regexp_matches(title_public, '\b20\d{2}\b')
+        and law_kind is not null
+        and id not in (select file_id from budget_legislation_raw)
 )
 select distinct * from candidates;

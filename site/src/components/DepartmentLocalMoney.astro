@@ -18,7 +18,11 @@ const data = await getDepartmentLocal(code);
       <Icon name="administration" />
       Les comptes de la collectivité
     </h2>
-    <p>Distincts de ceux des communes.</p>
+    <p>
+      {code === "75"
+        ? "La Ville de Paris est à la fois commune et département : mêmes comptes."
+        : "Distincts de ceux des communes."}
+    </p>
   </div>
   {data.authorities.length ? (
     data.authorities.map((authority) => <LocalAuthorityAccounts {...authority} />)

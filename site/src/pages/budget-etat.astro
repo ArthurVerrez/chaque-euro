@@ -95,7 +95,7 @@ const figures = [
   },
   {
     icon: "debt" as const,
-    label: "Déficit",
+    label: "Déficit du budget général",
     term: "deficit" as const,
     value: formatEuros(deficit),
     note: "financé par l'emprunt",
@@ -505,8 +505,8 @@ const answer = `En ${budget.year}, l'État a dépensé ${formatEuros(budget.spen
         <p>
           Les programmes sont rattachés aux ministères de 2025, selon la nomenclature DGFiP. Les
           remboursements et dégrèvements sont inclus dans le ministère responsable ; ils
-          correspondent à des impôts rendus aux contribuables. Les pouvoirs publics restent un poste
-          distinct.
+          correspondent à des impôts rendus aux contribuables. Les pouvoirs publics sont comptés
+          avec Budget et comptes publics.
         </p>
       </Explainer>
       <Provenance provenance={execution.ministries.provenance} />

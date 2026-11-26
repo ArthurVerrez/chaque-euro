@@ -131,7 +131,7 @@ export function stateFlow(budget: StateBudget): Flow {
   return balance(
     `Budget de l'État ${budget.year}`,
     { inflows, outflows },
-    { label: "Déficit, financé par l'emprunt", icon: "debt" },
+    { label: "Déficit du budget général, financé par l'emprunt", icon: "debt" },
     { label: "Excédent", icon: "savings" },
   );
 }

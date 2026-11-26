@@ -52,7 +52,7 @@ from public_functions
 union all
 select 'insee-apu-comptes', count(*), 'Années ' || min(year) || ' à ' || max(year) || ', ' || count(distinct sector) || ' administrations'
 from public_accounts
-union all select 'insee-deficit', count(*), 'Soldes 1949-2025, État disponible depuis 1959' from deficit_series
+union all select 'insee-deficit', count(*), 'Soldes 1949-2025, État disponible depuis 1978' from deficit_series
 union all select 'insee-debt', count(*), 'Dette APU et État 1978-2025' from deficit_series where apu_debt is not null
 union all select 'state-balance', count(*), 'Solde budgétaire hors FMI 2009-2025' from deficit_series where budget_balance is not null
 union all select 'eu-budget', count(*), 'Flux France-UE 2000-2025, NGEU séparé' from eu_flows

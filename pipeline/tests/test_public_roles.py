@@ -158,7 +158,13 @@ class DemocracyTests(unittest.TestCase):
         d._interests(self.con, {"hatvp-interests": record(self.root)})
         self.assertEqual(
             self.con.execute("select type from interests_raw order by type").fetchall(),
-            [("DI",), ("DIA",), ("DIAM",), ("DIM",)],
+            [("DI",), ("DI",), ("DIA",), ("DIAM",), ("DIM",)],
+        )
+        self.assertEqual(
+            self.con.execute(
+                "select count(*) from interest_sections_raw where declaration_id = 'public-9.xml'"
+            ).fetchone(),
+            (0,),
         )
         for table in ("interests_raw", "interest_sections_raw"):
             output = str(self.con.execute(f"select * from {table}").fetchall())
