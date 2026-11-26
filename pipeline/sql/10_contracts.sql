@@ -1,13 +1,21 @@
 create or replace table contract_rows as
-with dates as (
-    select uid, coalesce(min(dateNotification) filter (where modification_id = 0),
-        min(dateNotification)) as first_notified_on
+with versions as (
+    select uid, modification_id, dateNotification as notified_on,
+        sourceDataset = 'pes_marche_2024' and dateNotification = date '2022-01-01' as placeholder
     from read_parquet(getvariable('decp_path'))
+), dates as (
+    select uid, coalesce(
+        min(notified_on) filter (where modification_id = 0 and not placeholder),
+        min(notified_on) filter (where not placeholder),
+        min(notified_on)
+    ) as first_notified_on
+    from versions
     group by uid
 ), raw as (
     select
         uid,
         id as record_id,
+        idAccordCadre as framework_id,
         nullif(trim(regexp_replace(objet, '\s+', ' ', 'g')), '') as subject,
         nature,
         procedure,
@@ -53,6 +61,8 @@ qualify row_number() over (
 create or replace temp macro contract_keys() as table
 select uid, min(buyer_siren) as buyer_siren, min(record_id) as record_id,
     regexp_replace(lower(min(record_id)), '[^a-z0-9]', '', 'g') as record_key,
+    nullif(regexp_extract(lower(min(record_id)), '(lot|l)[-_ ]?0*([0-9]{1,2})(00)?$', 2), '')
+        as record_lot,
     min(notified_on) as notified_on, max(modification_id) as modification_id,
     max(published_on) as published_on, min(declared_amount) as declared_amount,
     min(regexp_replace(lower(subject), '\W', '', 'g')) as subject_key,
@@ -124,6 +134,20 @@ delete from contract_rows where uid in (
             > (len(b.holders), b.modification_id, coalesce(b.published_on, date '0001-01-01'), b.uid)
 );
 
+delete from contract_rows where uid in (
+    select b.uid
+    from contract_keys() a
+    join contract_keys() b using (buyer_siren, declared_amount)
+    where a.source_dataset <> b.source_dataset
+        and declared_amount >= 1000 and declared_amount % 100 <> 0
+        and abs(a.notified_on - b.notified_on) <= 31
+        and coalesce(nullif(regexp_extract(a.subject_key, 'lot0*([0-9]+)', 1), '')
+            = nullif(regexp_extract(b.subject_key, 'lot0*([0-9]+)', 1), ''), true)
+        and len(list_intersect(a.holders, b.holders)) > 0
+        and (len(a.holders), a.modification_id, coalesce(a.published_on, date '0001-01-01'), a.uid)
+            > (len(b.holders), b.modification_id, coalesce(b.published_on, date '0001-01-01'), b.uid)
+);
+
 create or replace temp table shared_contracts as
 with keys as (
     select *, notified_on - lag(notified_on) over (
@@ -140,7 +164,8 @@ with keys as (
 select uid, min(uid) over shared as shared_uid, min(notified_on) over shared as shared_notified_on
 from periods
 window shared as (partition by buyer_siren, subject_key, declared_amount, period)
-qualify len(list_distinct(flatten(list(holders) over shared))) > 1;
+qualify len(list_distinct(flatten(list(holders) over shared))) > 1
+    and count(distinct record_lot) over shared <= 1;
 
 update contract_rows set uid = s.shared_uid, notified_on = s.shared_notified_on
 from shared_contracts s
@@ -167,9 +192,19 @@ with retained as (
 select uid, holders, details.amount as amount, details.declared_amount as declared_amount,
     details.amount_estimated as amount_estimated,
     coalesce(details.amount_flag, case
-        when details.amount >= 999999999
+        when details.amount between 0.001 and 1 or details.amount >= 999999999
             or details.amount >= 9999999 and regexp_full_match(details.amount::varchar, '9+(\.0+)?')
             then 'hors_norme'
     end) as amount_flag,
     coalesce(amount_flag is null and details.amount > 0, false) as counted
 from retained;
+
+update contract_amounts set amount_flag = 'subsequent', counted = false
+where counted and uid in (
+    select child.uid
+    from contract_rows child
+    join contract_rows parent
+        on parent.buyer_siren = child.buyer_siren and parent.record_id = child.framework_id
+    join contract_amounts framework on framework.uid = parent.uid
+    where parent.uid <> child.uid and framework.counted
+);

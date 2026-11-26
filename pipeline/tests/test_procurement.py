@@ -56,7 +56,8 @@ class ContractDatingTests(unittest.TestCase):
             path = str(Path(directory) / "decp.parquet")
             con.execute("""
                 create table sample as
-                select 'contract' as uid, 'contract' as id, 'Objet' as objet, 'Marché' as nature,
+                select 'contract' as uid, 'contract' as id, null::varchar as idAccordCadre,
+                    'Objet' as objet, 'Marché' as nature,
                     'Ouverte' as procedure, '123' as codeCPV,
                     date '2024-01-01' as dateNotification, 40000.0 as montant,
                     null::varchar as montant_anomalie, '12345678900012' as acheteur_id,
@@ -65,7 +66,7 @@ class ContractDatingTests(unittest.TestCase):
                     false as donneesActuelles,
                     null::double as montant_rationalise, 1 as offresRecues
                 union all
-                select 'contract', 'contract', 'Objet modifié', 'Marché', 'Ouverte', '123',
+                select 'contract', 'contract', null, 'Objet modifié', 'Marché', 'Ouverte', '123',
                     date '2023-12-01', 999999999.0, null, '12345678900012',
                     '98765432100012', null, 'source', 'feed', 1, true, null, 1;
             """)
@@ -88,7 +89,8 @@ class ContractDatingTests(unittest.TestCase):
             path = str(Path(directory) / "decp.parquet")
             con.execute("""
                 create table sample as
-                select uid, uid as id, 'Objet' as objet, 'Marché' as nature,
+                select uid, uid as id, null::varchar as idAccordCadre,
+                    'Objet' as objet, 'Marché' as nature,
                     'Ouverte' as procedure, '123' as codeCPV,
                     notified::date as dateNotification, amount as montant,
                     null::varchar as montant_anomalie, '12345678900012' as acheteur_id,
@@ -119,7 +121,8 @@ class ContractDatingTests(unittest.TestCase):
             path = str(Path(directory) / "decp.parquet")
             con.execute("""
                 create table sample as
-                select id || '_cpv' as uid, id, subject as objet, 'Marché' as nature,
+                select id || '_cpv' as uid, id, null::varchar as idAccordCadre,
+                    subject as objet, 'Marché' as nature,
                     'Ouverte' as procedure, '123' as codeCPV,
                     date '2019-10-30' as dateNotification, amount as montant,
                     null::varchar as montant_anomalie, '12345678900012' as acheteur_id,
@@ -158,7 +161,8 @@ class ContractDatingTests(unittest.TestCase):
             path = str(Path(directory) / "decp.parquet")
             con.execute("""
                 create table sample as
-                select uid, uid as id, subject as objet, 'Marché' as nature,
+                select uid, uid as id, null::varchar as idAccordCadre,
+                    subject as objet, 'Marché' as nature,
                     'Ouverte' as procedure, '123' as codeCPV,
                     notified::date as dateNotification, amount as montant,
                     null::varchar as montant_anomalie, '12345678900012' as acheteur_id,
@@ -187,6 +191,10 @@ class ContractDatingTests(unittest.TestCase):
                         '2024-04-01'),
                     ('V1', 'atexo', 'TVA', '2024-03-01', 70000.0, 'FR15535340285', 0,
                         '2024-04-01'),
+                    ('AO25L1', 'atexo', 'Denrées', '2024-03-01', 100000.0, '77777777700077', 0,
+                        '2024-04-01'),
+                    ('AO25L2', 'atexo', 'Denrées', '2024-03-01', 100000.0, '88888888800088', 0,
+                        '2024-04-01'),
                     ('N1', 'atexo', 'Sans plafond', '2024-03-01', 9999999.0,
                         '66666666600066', 0, '2024-04-01'))
                     v(uid, feed, subject, notified, amount, holder, version, published);
@@ -205,11 +213,74 @@ class ContractDatingTests(unittest.TestCase):
                 [
                     ("2023399", "2023-03-10", ["111111111"], 1500000.0, True),
                     ("20240036", "2024-05-03", ["222222222"], 60837.38, True),
+                    ("AO25L1", "2024-03-01", ["777777777"], 100000.0, True),
+                    ("AO25L2", "2024-03-01", ["888888888"], 100000.0, True),
                     ("L1", "2024-03-01", ["555555555"], 50000.0, True),
                     ("L2", "2024-03-01", ["555555555"], 50000.0, True),
                     ("N1", "2024-03-01", ["666666666"], 9999999.0, False),
                     ("S1", "2023-12-20", ["333333333", "444444444"], 485250000.0, True),
                     ("V1", "2024-03-01", ["535340285"], 70000.0, True),
+                ],
+            )
+
+    def test_placeholders_cross_feed_amounts_and_subsequent_contracts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, duckdb.connect() as con:
+            path = str(Path(directory) / "decp.parquet")
+            con.execute("""
+                create table sample as
+                select uid, uid as id, framework as idAccordCadre, subject as objet,
+                    'Marché' as nature, 'Ouverte' as procedure, '123' as codeCPV,
+                    notified::date as dateNotification, amount as montant,
+                    null::varchar as montant_anomalie, '12345678900012' as acheteur_id,
+                    holder as titulaire_id, null::varchar as titulaire_activite_libelle,
+                    'source' as sourceFile, feed as sourceDataset, version as modification_id,
+                    current as donneesActuelles, null::double as montant_rationalise,
+                    1 as offresRecues, published::date as datePublicationDonnees
+                from (values
+                    ('P1', 'pes_marche_2024', 'Voirie', '2022-01-01', 90000.0,
+                        '11111111100011', 0, false, null, '2024-01-01'),
+                    ('P1', 'pes_marche_2024', 'Voirie', '2023-12-07', 90000.0,
+                        '11111111100011', 1, true, null, '2024-01-01'),
+                    ('ONE', 'atexo', 'Sans plafond', '2024-03-01', 1.0,
+                        '22222222200022', 0, true, null, '2024-04-01'),
+                    ('20250964', 'pes_marche_2024', 'Train de la Rhune', '2025-06-11',
+                        304915.25, '33333333300033', 0, true, null, '2025-06-30'),
+                    ('20250964', 'pes_marche_2024', 'Train de la Rhune', '2025-06-11',
+                        304915.25, '44444444400044', 0, true, null, '2025-06-30'),
+                    ('2025S00051', 'atexo', 'Maîtrise oeuvre', '2025-06-11', 304915.25,
+                        '33333333300033', 0, true, null, '2025-06-15'),
+                    ('LOT1', 'pes_marche_2024', 'Lot 1 voirie', '2025-02-01', 12345.67,
+                        '55555555500055', 0, true, null, '2025-03-01'),
+                    ('LOT2', 'atexo', 'Lot 2 voirie', '2025-02-01', 12345.67,
+                        '55555555500055', 0, true, null, '2025-03-01'),
+                    ('LOT2', 'atexo', 'Lot 2 voirie', '2025-02-01', 12345.67,
+                        '77777777700077', 0, true, null, '2025-03-01'),
+                    ('AC', 'atexo', 'Accord-cadre', '2024-01-10', 500000.0,
+                        '66666666600066', 0, true, null, '2024-02-01'),
+                    ('MS', 'atexo', 'Marché subséquent', '2024-06-10', 80000.0,
+                        '66666666600066', 0, true, 'AC', '2024-07-01'))
+                    v(uid, feed, subject, notified, amount, holder, version, current,
+                        framework, published);
+            """)
+            con.execute("copy sample to ? (format parquet)", [path])
+            con.execute("set variable decp_path = ?", [path])
+            con.execute("set variable decp_retrieved_on = date '2026-11-26'")
+            con.execute((SQL / "10_contracts.sql").read_text())
+            self.assertEqual(
+                con.execute("""
+                    select uid, any_value(notified_on)::varchar, count(*),
+                        any_value(a.amount_flag), any_value(a.counted)
+                    from contract_rows join contract_amounts a using (uid)
+                    group by uid order by uid
+                """).fetchall(),
+                [
+                    ("20250964", "2025-06-11", 2, None, True),
+                    ("AC", "2024-01-10", 1, None, True),
+                    ("LOT1", "2025-02-01", 1, None, True),
+                    ("LOT2", "2025-02-01", 2, None, True),
+                    ("MS", "2024-06-10", 1, "subsequent", False),
+                    ("ONE", "2024-03-01", 1, "hors_norme", False),
+                    ("P1", "2023-12-07", 1, None, True),
                 ],
             )
 
@@ -307,7 +378,8 @@ class ProcurementAmountTests(unittest.TestCase):
             path = str(Path(directory) / "sample.parquet")
             con.execute("""
                 create table sample as
-                select uid, uid as id, declared as montant, estimate as montant_rationalise,
+                select uid, uid as id, null::varchar as idAccordCadre,
+                    declared as montant, estimate as montant_rationalise,
                     flag as montant_anomalie, uid as objet, 'Marché' as nature,
                     'Ouverte' as procedure, '45000000' as codeCPV,
                     date '2024-01-01' as dateNotification, '12345678900012' as acheteur_id,

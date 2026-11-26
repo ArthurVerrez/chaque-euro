@@ -164,9 +164,10 @@ const toc = [
         <p>
           Chaque marché est compté une fois. Les montants signalés comme aberrants ou suspects par
           le consolidateur ne sont pas comptés : pour les aberrants, son estimation est affichée à
-          titre indicatif sur la ligne du marché. Les valeurs absentes, non positives, d’au moins
-          999 999 999 € ou composées uniquement de 9 à partir de 9 999 999 € sont aussi exclues. Les
-          marchés sans montant restent dans le nombre de contrats. Les mois récents sont incomplets.
+          titre indicatif sur la ligne du marché. Les valeurs absentes, de 1 € ou moins, d’au moins
+          999 999 999 € ou composées uniquement de 9 à partir de 9 999 999 € sont aussi exclues,
+          comme les marchés subséquents d’un accord-cadre déjà compté. Les marchés sans montant
+          restent dans le nombre de contrats. Les mois récents sont incomplets.
         </p>
       </Explainer>
       <Provenance provenance={data.provenance} />

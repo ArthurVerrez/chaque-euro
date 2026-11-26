@@ -13,7 +13,9 @@ const { contracts, role, caption } = Astro.props;
 const flags: Record<string, string> = {
   aberrant: "Montant déclaré jugé aberrant par le consolidateur",
   suspect: "Montant signalé comme suspect, valeur conservée par le consolidateur",
-  hors_norme: "Montant d'au moins 999 999 999 €, non compté",
+  hors_norme:
+    "Montant de remplissage (1 € ou moins, suite de 9 ou au moins 999 999 999 €), non compté",
+  subsequent: "Marché subséquent d'un accord-cadre déjà compté, non compté",
 };
 ---
 
