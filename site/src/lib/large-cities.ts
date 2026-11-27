@@ -165,10 +165,21 @@ export function rankText(rank: number, count: number): string {
     : `${ordinal(count + 1 - rank)}niveau le plus bas des ${count} grandes villes`;
 }
 
-export function changeRankText(rank: number, count: number): string {
-  return rank <= count / 2
-    ? `${ordinal(rank)}plus forte hausse des ${count} grandes villes`
-    : `${ordinal(count + 1 - rank)}plus forte baisse des ${count} grandes villes`;
+export function changePosition(
+  rank: number,
+  count: number,
+  change: number,
+): { position: number; label: string } {
+  const top = rank <= count / 2;
+  const position = top ? rank : count + 1 - rank;
+  if (top && change > 0) return { position, label: "plus forte hausse" };
+  if (!top && change < 0) return { position, label: "plus forte baisse" };
+  return { position, label: `évolution la plus ${top ? "forte" : "faible"}` };
+}
+
+export function changeRankText(rank: number, count: number, change: number): string {
+  const { position, label } = changePosition(rank, count, change);
+  return `${ordinal(position)}${label} des ${count} grandes villes`;
 }
 
 export function medianByYear(cities: LargeCity[], item: string, years: number[]): number[] {
@@ -211,7 +222,7 @@ export function statSentence(stat: CityStat, city: string): string {
   const subject = `${metric.subject.charAt(0).toUpperCase()}${metric.subject.slice(1)} ${ofCity(city)}`;
   if (leadsWithChange(stat) && stat.first !== null && stat.change !== null) {
     const passed = `passé${metric.agreement[0] === "f" ? "e" : ""}${plural ? "s" : ""}`;
-    return `${subject} ${plural ? "sont" : "est"} ${passed} de ${formatValue(metric, stat.first)} à ${formatValue(metric, stat.last)} entre ${firstYear(metric)} et ${LAST_YEAR} (${formatChange(stat.change)}), la ${changeRankText(stat.changeRank!, stat.changeCount)}.`;
+    return `${subject} ${plural ? "sont" : "est"} ${passed} de ${formatValue(metric, stat.first)} à ${formatValue(metric, stat.last)} entre ${firstYear(metric)} et ${LAST_YEAR} (${formatChange(stat.change)}), la ${changeRankText(stat.changeRank!, stat.changeCount, stat.change)}.`;
   }
   return `En ${LAST_YEAR}, ${subject.charAt(0).toLowerCase()}${subject.slice(1)} ${plural ? "atteignent" : "atteint"} ${formatValue(metric, stat.last)}, le ${rankText(stat.rank, stat.count)}.`;
 }

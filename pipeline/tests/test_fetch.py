@@ -1,3 +1,4 @@
+import json
 import ssl
 import subprocess
 import tempfile
@@ -223,9 +224,16 @@ class RefreshTest(unittest.TestCase):
         fetch(source, self.raw, False)
         directory = self.raw / source.id
         (directory / "index.html.fetch.json").unlink()
+        sidecar = directory / f"{recent}.fetch.json"
+        kept = json.loads(sidecar.read_text())
+        sidecar.write_text(
+            json.dumps(kept | {"retrieved_at": "2000-01-01T00:00:00Z", "checked_at": None})
+        )
         self.responses["/index/"] = f'<a href="{latest}">journal</a>'.encode()
         record = fetch(replace(source, rolling_days=30), self.raw, True)
         assert record
+        self.assertGreater(record.retrieved_at, "2000-01-01T00:00:00Z")
+        self.assertGreater(record.checked_at or "", "2000-01-01T00:00:00Z")
         self.assertFalse((directory / old).exists())
         self.assertTrue((directory / recent).exists())
         self.assertIn(base + "/index/" + recent, record.urls)

@@ -28,18 +28,22 @@ select
     'Élu',
     id,
     concat_ws(' · ',
-        case role_kind
+        case when active = 1 then case role_kind
             when 'deputy' then 'Député ou députée'
             when 'senator' then 'Sénateur ou sénatrice'
             when 'minister' then 'Membre du gouvernement'
-            else 'Ancien mandat'
-        end,
+        end else 'Ancien mandat' end,
         territory_label,
-        group_label
+        case when active = 1 then group_label end
     ),
     active,
     unligatured(display_name)
 from public_people
+union all
+select name_public, 'Service public', id, coalesce(category, ''), 1,
+    concat_ws(' ', unligatured(name_public), acronym)
+from administrations
+where siren is null or siren not in (select siren from orgs)
 union all
 select head_name, 'Responsable public', id,
     head_role || ' · ' || name_public, 2, unligatured(head_name)

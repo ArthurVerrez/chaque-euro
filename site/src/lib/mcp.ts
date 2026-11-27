@@ -639,14 +639,14 @@ export function createMcpServer(): McpServer {
         );
       }
       const { deputies, shapes, provenance } = await getAddressConstituencies(local.commune.insee);
-      const constituency = addressConstituency([longitude, latitude], deputies, shapes);
+      const seat = addressConstituency([longitude, latitude], deputies, shapes);
       return reply(
         "/elus#trouver",
         {
           ...local,
           address: {
-            constituency,
-            deputies: deputies.filter((deputy) => deputy.constituency === constituency),
+            constituency: seat,
+            deputies: deputies.filter((deputy) => deputy.seat === seat),
             provenance,
           },
         },

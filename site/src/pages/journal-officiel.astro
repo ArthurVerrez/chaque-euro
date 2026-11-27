@@ -16,7 +16,8 @@ import { formatDate, formatDayMonth, formatNumber } from "../lib/format";
 import DocumentContent from "../components/DocumentContent.astro";
 const data = await getOfficialJournal(Astro.url.searchParams);
 const latest = data.journals[0];
-const total = data.journals.reduce((sum, journal) => sum + journal.public_text_count, 0);
+const complete = data.journals.filter((journal) => journal.missing_reference_count === 0);
+const total = complete.reduce((sum, journal) => sum + journal.public_text_count, 0);
 const nominations = data.appointments.reduce((sum, row) => sum + row.count, 0);
 const params = Astro.url.searchParams;
 const bars = (rows: { label: string; count: number }[]) =>
@@ -36,7 +37,7 @@ const bars = (rows: { label: string; count: number }[]) =>
           <h1>Journal officiel</h1>
         </div>
         <Answer
-          text={`${formatNumber(total)} textes dans les ${formatNumber(data.journals.length)} dernières éditions.`}
+          text={`${formatNumber(total)} textes dans les ${formatNumber(complete.length)} dernières éditions complètes.`}
         />
         <KeyFigures
           figures={[
@@ -235,8 +236,8 @@ const bars = (rows: { label: string; count: number }[]) =>
           </p>
           <p>
             Le stock historique DILA n'est pas reconstitué. Les sommaires sont rapprochés des XML
-            présents dans les 50 derniers jours de livraisons. Une référence manquante reste hors
-            des compteurs.
+            présents dans les 50 derniers jours de livraisons. Une édition dont une référence manque
+            reste hors des compteurs et des graphiques.
           </p>
           <ul>
             {data.journals.map((journal) => (

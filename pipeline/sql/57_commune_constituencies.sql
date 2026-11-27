@@ -1,5 +1,7 @@
 create or replace table constituency_composition as
-select COMMUNE_RESID as insee, DEP as department_code, right(circo, 2)::integer as constituency
+select COMMUNE_RESID as insee,
+    case when circo like '97%' then left(circo, 3) else left(circo, 2) end as department_code,
+    right(circo, 2)::integer as constituency
 from read_xlsx(getvariable('constituency_path'), sheet='table', all_varchar=true)
 union
 select DEPCOM, CODE_COM, right(circo, 2)::integer

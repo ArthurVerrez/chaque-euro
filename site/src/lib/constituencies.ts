@@ -4,7 +4,7 @@ export type ConstituencyGeometry =
   { type: "Polygon"; coordinates: Polygon } | { type: "MultiPolygon"; coordinates: Polygon[] };
 
 export interface ConstituencyShape {
-  constituency: number;
+  seat: string;
   geometry: ConstituencyGeometry;
 }
 
@@ -42,9 +42,9 @@ function nearRing(point: Position, ring: Position[], metres: number): boolean {
   return false;
 }
 
-export function constituencyAt(point: Position, shapes: ConstituencyShape[]): number | null {
+export function constituencyAt(point: Position, shapes: ConstituencyShape[]): string | null {
   if (!point.every(Number.isFinite)) return null;
-  const matches = new Set<number>();
+  const matches = new Set<string>();
   for (const shape of shapes) {
     const polygons =
       shape.geometry.type === "Polygon" ? [shape.geometry.coordinates] : shape.geometry.coordinates;
@@ -55,7 +55,7 @@ export function constituencyAt(point: Position, shapes: ConstituencyShape[]): nu
         insideRing(point, polygon[0]) &&
         !polygon.slice(1).some((ring) => insideRing(point, ring))
       ) {
-        matches.add(shape.constituency);
+        matches.add(shape.seat);
       }
     }
   }
@@ -64,12 +64,12 @@ export function constituencyAt(point: Position, shapes: ConstituencyShape[]): nu
 
 export function addressConstituency(
   point: Position,
-  deputies: { constituency: number }[],
+  deputies: { seat: string }[],
   shapes: ConstituencyShape[],
-): number | null {
-  const numbers = new Set(deputies.map((deputy) => deputy.constituency));
-  if (numbers.size < 2) return deputies[0]?.constituency ?? null;
-  return numbers.size === new Set(shapes.map((shape) => shape.constituency)).size
+): string | null {
+  const seats = new Set(deputies.map((deputy) => deputy.seat));
+  if (seats.size < 2) return deputies[0]?.seat ?? null;
+  return seats.size === new Set(shapes.map((shape) => shape.seat)).size
     ? constituencyAt(point, shapes)
     : null;
 }

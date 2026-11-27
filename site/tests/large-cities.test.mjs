@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { cityStats, standoutStats, statSentence } from "../src/lib/large-cities.ts";
+import { changeRankText, cityStats, standoutStats, statSentence } from "../src/lib/large-cities.ts";
 
 const city = (name, debt2019, debt2025) => ({
   insee: name,
@@ -32,4 +32,11 @@ test("leads with the most unusual figure and describes it", () => {
     statSentence(top, "Angers"),
     /d’Angers .* la plus forte hausse des 3 grandes villes\.$/,
   );
+});
+
+test("names a change by its sign, not only by its rank", () => {
+  assert.equal(changeRankText(1, 4, 0.3), "plus forte hausse des 4 grandes villes");
+  assert.equal(changeRankText(4, 4, -0.1), "plus forte baisse des 4 grandes villes");
+  assert.equal(changeRankText(3, 4, 0.07), "2e évolution la plus faible des 4 grandes villes");
+  assert.equal(changeRankText(2, 4, -0.02), "2e évolution la plus forte des 4 grandes villes");
 });

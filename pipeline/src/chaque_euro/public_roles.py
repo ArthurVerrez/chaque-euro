@@ -437,32 +437,41 @@ def _an_votes(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -
 
 
 def copy_rows(path: str, wanted: set[str]) -> Iterator[tuple[str, dict[str, str | None]]]:
-    with zipfile.ZipFile(path) as archive, archive.open(archive.namelist()[0]) as raw:
-        stream = io.TextIOWrapper(raw, encoding="utf-8")
-        columns: list[str] = []
-        name = ""
-        for line in stream:
-            if line.startswith("COPY "):
-                match = re.fullmatch(r"COPY (?:public\.)?(\w+) \(([^)]+)\) FROM stdin;\n", line)
-                name = match[1] if match and match[1] in wanted else ""
-                columns = match[2].split(", ") if name and match else []
-            elif line.rstrip() == r"\.":
-                name = ""
-            elif name:
-                values = line.rstrip("\n").split("\t")
-                if len(values) != len(columns):
-                    raise ValueError(f"Invalid COPY row in {name}")
+    with zipfile.ZipFile(path) as archive:
+        member = next(n for n in archive.namelist() if n.endswith(".sql"))
+        with io.TextIOWrapper(archive.open(member), encoding="utf-8") as stream:
+            columns: list[str] = []
+            name = ""
+            for line in stream:
+                if line.startswith("COPY "):
+                    match = re.fullmatch(r"COPY (?:public\.)?(\w+) \(([^)]+)\) FROM stdin;\n", line)
+                    name = match[1] if match and match[1] in wanted else ""
+                    columns = match[2].split(", ") if name and match else []
+                elif line.rstrip() == r"\.":
+                    name = ""
+                elif name:
+                    values = line.rstrip("\n").split("\t")
+                    if len(values) != len(columns):
+                        raise ValueError(f"Invalid COPY row in {name}")
+                    yield name, dict(zip(columns, map(_copy_value, values), strict=True))
 
-                def unescape(value: str) -> str | None:
-                    if value == r"\N":
-                        return None
-                    return re.sub(
-                        r"\\([\\tnr])",
-                        lambda m: {"t": "\t", "n": "\n", "r": "\r", "\\": "\\"}[m[1]],
-                        value,
-                    )
 
-                yield name, dict(zip(columns, map(unescape, values), strict=True))
+COPY_ESCAPES = {"t": "\t", "n": "\n", "r": "\r", "b": "\b", "f": "\f", "v": "\v", "\\": "\\"}
+
+
+def _copy_value(value: str) -> str | None:
+    if value == r"\N":
+        return None
+    text = re.sub(
+        r"\\([0-7]{1,3}|.)",
+        lambda m: chr(int(m[1], 8)) if m[1].isdigit() else COPY_ESCAPES.get(m[1], m[1]),
+        value,
+    ).strip()
+    return re.sub(
+        "[\x80-\x9f]",
+        lambda m: bytes([ord(m[0])]).decode("cp1252", errors="ignore"),
+        text,
+    )
 
 
 def _senate_votes(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -> None:
@@ -553,6 +562,20 @@ def xlsx_rows(path: str) -> Iterator[dict[str, str]]:
             yield cells
 
 
+CP1252_CONTINUATION = "".join(bytes([b]).decode("cp1252", "ignore") for b in range(0x80, 0xC0))
+UTF8_READ_AS_CP1252 = re.compile(f"[\\xc2-\\xf4][{re.escape(CP1252_CONTINUATION)}]+")
+
+
+def _utf8_in_cp1252(text: str) -> str:
+    def repair(match: re.Match[str]) -> str:
+        try:
+            return match[0].encode("cp1252").decode("utf-8")
+        except UnicodeError:
+            return match[0]
+
+    return UTF8_READ_AS_CP1252.sub(repair, text)
+
+
 def _campaigns(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) -> None:
     accounts = []
     lines = []
@@ -563,7 +586,7 @@ def _campaigns(con: duckdb.DuckDBPyConnection, records: dict[str, FetchRecord]) 
             (
                 "legislatives-2024",
                 r["candidat"],
-                r["nom"],
+                _utf8_in_cp1252(r["nom"]),
                 department,
                 r["circonscription"],
                 code,

@@ -189,6 +189,23 @@ class DemocracyTests(unittest.TestCase):
             [("votsen", {"senmat": "21077M", "note": "ligne\navec\ttexte\\fin", "missing": None})],
         )
 
+    def test_copy_data_repairs_windows_1252_punctuation(self) -> None:
+        path = self.root / "dosleg.zip"
+        with zipfile.ZipFile(path, "w") as archive:
+            archive.writestr(
+                "dosleg.sql",
+                "COPY scr (scrint) FROM stdin;\nsur l\x92amendement, mise en \x9cuvre\n\\.\n",
+            )
+        self.assertEqual(
+            list(d.copy_rows(str(path), {"scr"})),
+            [("scr", {"scrint": "sur l\u2019amendement, mise en œuvre"})],
+        )
+
+    def test_utf8_names_inside_a_windows_1252_file_are_repaired(self) -> None:
+        self.assertEqual(d._utf8_in_cp1252("M. MÃœLLBACHER Leo"), "M. MÜLLBACHER Leo")
+        self.assertEqual(d._utf8_in_cp1252("Mme LéVÃŠQUE Colette"), "Mme LéVÊQUE Colette")
+        self.assertEqual(d._utf8_in_cp1252("Mme Âne Hélène"), "Mme Âne Hélène")
+
     def test_european_continuation_and_rectification_rows(self) -> None:
         path = self.root / "leg.csv"
         path.write_text("candidat;nom;scrutin;decision\n")
@@ -244,6 +261,17 @@ class DemocracyTests(unittest.TestCase):
                 "where window_kind='legislature' order by person_id"
             ).fetchall(),
             [("SEN1", 1, 2), ("SEN2", 1, 1)],
+        )
+        self.assertEqual(
+            self.con.execute(
+                "select id,result,for_count,against_count,abstention_count,non_voting_count "
+                "from public_ballots order by id"
+            ).fetchall(),
+            [
+                ("0", "Le Sénat a adopté", 1, 0, 0, 0),
+                ("1", "Le Sénat n'a pas adopté", 0, 0, 0, 1),
+                ("2", "Le Sénat n'a pas adopté", 0, 0, 1, 0),
+            ],
         )
 
     def test_participation_excludes_gap_non_voter_and_missing_entry(self) -> None:

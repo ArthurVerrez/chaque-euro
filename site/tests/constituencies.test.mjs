@@ -11,19 +11,19 @@ const square = (x, y, size) => [
 ];
 const shapes = [
   {
-    constituency: 1,
+    seat: "01-1",
     geometry: { type: "Polygon", coordinates: [square(2, 48, 0.1), square(2.04, 48.04, 0.02)] },
   },
   {
-    constituency: 2,
+    seat: "01-2",
     geometry: { type: "MultiPolygon", coordinates: [[square(2.1, 48, 0.1)], [square(3, 49, 0.1)]] },
   },
 ];
 
 test("finds one constituency, preserves holes and disjoint islands", () => {
-  assert.equal(constituencyAt([2.02, 48.02], shapes), 1);
-  assert.equal(constituencyAt([2.15, 48.05], shapes), 2);
-  assert.equal(constituencyAt([3.05, 49.05], shapes), 2);
+  assert.equal(constituencyAt([2.02, 48.02], shapes), "01-1");
+  assert.equal(constituencyAt([2.15, 48.05], shapes), "01-2");
+  assert.equal(constituencyAt([3.05, 49.05], shapes), "01-2");
   assert.equal(constituencyAt([2.05, 48.05], shapes), null);
   assert.equal(constituencyAt([4, 50], shapes), null);
 });
@@ -33,8 +33,8 @@ test("refuses boundaries, points within 200 metres, overlaps and missing polygon
   assert.equal(constituencyAt([2.099, 48.05], shapes), null);
   assert.equal(constituencyAt([2.101, 48.05], shapes), null);
   assert.equal(constituencyAt([2.039, 48.05], shapes), null);
-  assert.equal(constituencyAt([2.096, 48.02], shapes), 1);
-  assert.equal(constituencyAt([2.02, 48.02], [...shapes, { ...shapes[0], constituency: 3 }]), null);
+  assert.equal(constituencyAt([2.096, 48.02], shapes), "01-1");
+  assert.equal(constituencyAt([2.02, 48.02], [...shapes, { ...shapes[0], seat: "01-3" }]), null);
   assert.equal(constituencyAt([2.02, 48.02], []), null);
   assert.equal(constituencyAt([NaN, 48], shapes), null);
 });
@@ -48,11 +48,11 @@ test("maps municipal arrondissement codes without confusing other communes", () 
 });
 
 test("picks the address constituency only when the commune's shapes cover every deputy", () => {
-  const split = [{ constituency: 1 }, { constituency: 2 }];
-  assert.equal(addressConstituency([4, 50], [{ constituency: 3 }], []), 3);
+  const split = [{ seat: "01-1" }, { seat: "01-2" }];
+  assert.equal(addressConstituency([4, 50], [{ seat: "01-3" }], []), "01-3");
   assert.equal(addressConstituency([2.02, 48.02], [], shapes), null);
-  assert.equal(addressConstituency([2.02, 48.02], split, shapes), 1);
-  assert.equal(addressConstituency([2.15, 48.05], split, shapes), 2);
+  assert.equal(addressConstituency([2.02, 48.02], split, shapes), "01-1");
+  assert.equal(addressConstituency([2.15, 48.05], split, shapes), "01-2");
   assert.equal(addressConstituency([2.02, 48.02], split, shapes.slice(0, 1)), null);
   assert.equal(addressConstituency([2.1, 48.05], split, shapes), null);
 });

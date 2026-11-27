@@ -390,6 +390,7 @@ export interface PublicMoney {
   stateBudget: { year: number; spent: number; provenance: Provenance };
   finances: PublicFinances;
   functions: PublicFunctions;
+  summaryProvenance: Provenance;
 }
 
 export interface PublicAccountLine {
@@ -708,6 +709,7 @@ export interface OrganisationsIndex {
   buyers: RankedOrganisation[];
   contractsProvenance: Provenance;
   grantsProvenance: Provenance;
+  grantsTotalProvenance: Provenance;
 }
 
 export interface CommuneSummary {
@@ -859,6 +861,11 @@ export async function getOrganisationsIndex(): Promise<OrganisationsIndex> {
       SQL.orgs,
     ),
     grantsProvenance: index.provenance([index.cite("jaune-associations")], METHOD.grants, SQL.orgs),
+    grantsTotalProvenance: index.provenance(
+      [index.cite("jaune-associations")],
+      "Somme des crédits versés en 2025 à des associations dans l'annexe Jaune du projet de loi de finances 2027. Le fichier regroupe subventions, prestations de services et autres versements sans permettre de les distinguer.",
+      SQL.facts,
+    ),
   };
 }
 
@@ -907,7 +914,7 @@ export async function getDepartement(code: string): Promise<Departement | null> 
     db().prepare("select * from departements where code = ?1").bind(code),
     db()
       .prepare(
-        `select c.insee, c.name, y.population, f.per_capita as perCapita,
+        `select c.insee, c.name, c.population, f.per_capita as perCapita,
            s.median_per_capita as median, g.path, g.cx, g.cy
          from communes c
          join departements d on d.code = c.department_code
@@ -1427,6 +1434,11 @@ export async function getPublicMoney(): Promise<PublicMoney> {
       spent,
       provenance: index.provenance([index.cite("plrg-2025")], METHOD.budget, SQL.budget),
     },
+    summaryProvenance: index.provenance(
+      [index.cite("insee-apu"), index.cite("insee-menages")],
+      METHOD.publicFinances,
+      SQL.publicFinances,
+    ),
     finances: toPublicFinances(finances?.results ?? [], index),
     functions: {
       year: rows[0]?.year ?? 0,
@@ -1559,14 +1571,16 @@ export async function search(query: string): Promise<SearchResult[]> {
           ? "state"
           : row.kind === "Élu"
             ? "elected"
-            : kindIcon(row.kind),
+            : row.kind === "Service public"
+              ? "administration"
+              : kindIcon(row.kind),
       kind: row.kind,
       name: row.name,
       detail: row.detail,
       href:
         row.kind === "Commune"
           ? `/commune/${row.ref}`
-          : row.kind === "Responsable public"
+          : row.kind === "Responsable public" || row.kind === "Service public"
             ? `/administrations/${row.ref}`
             : row.kind === "Élu"
               ? `/elus/${row.ref}`
@@ -1796,7 +1810,7 @@ export async function getParisAnalysis() {
     context: (context?.results ?? []) as unknown as AnalysisContext[],
     provenance: index.provenance(
       [index.cite("crc-paris")],
-      "Rapport CRC 2025, graphique 5 et annexe 5 : fonctionnement 2023, budgets territoriaux rapprochés par allocation à la population des villes. Il ne s’agit pas d’une comparaison de qualité de service. Péréquation 2024 corrigée par la CRC (713 M€), FNGIR distinct. Population présente : estimation Apur 2023 citée par la CRC, non comparable à une population légale. Contributions aux services : tableau 25, 2024. Chiffres extraits du PDF avec contrôle des ratios publiés à 1 € près.",
+      "Rapport CRC 2025, graphique 5 et annexe 5 : fonctionnement 2023, budgets territoriaux rapprochés par allocation à la population des villes. Il ne s’agit pas d’une comparaison de qualité de service. Péréquation 2024 corrigée par la CRC (713 M€), FNGIR distinct. Population présente : estimation Apur 2023 citée par la CRC, non comparable à une population légale. Contributions aux services : tableau 27, 2024. Chiffres extraits du PDF avec contrôle des ratios publiés à 1 € près.",
       "pipeline/sql/33_paris.sql",
     ),
   };
@@ -2204,7 +2218,7 @@ export async function getRailAnalysis() {
     context: (context?.results ?? []) as unknown as AnalysisContext[],
     transferProvenance: index.provenance(
       [index.cite("sdes-rail")],
-      "SDES, subventions d’investissement à SNCF Réseau et transferts publics vers SNCF Voyageurs hors retraites. Les millions d’euros hors taxes sont convertis en euros courants. Exploitation inclut contributions et subventions de fonctionnement, ainsi que SAAD et plan Fret lorsqu’ils existent dans la série historique. Investissement et exploitation rapprochés du total à 2 M€ près, compte tenu des arrondis. Le périmètre de l’entreprise évolue en 2015 et 2020. Ce total n’est pas le coût public complet du rail.",
+      "SDES, subventions d’investissement à SNCF Réseau et transferts publics vers SNCF Voyageurs hors retraites. Montants hors taxes en euros courants. Exploitation inclut contributions et subventions de fonctionnement, ainsi que SAAD et plan Fret (dont sa dotation en capital de 2006) lorsqu’ils existent dans la série historique. Investissement et exploitation rapprochés du total à 2 M€ près, compte tenu des arrondis. Le périmètre de l’entreprise évolue en 2015 et 2020. Ce total n’est pas le coût public complet du rail.",
       "pipeline/sql/34_rail.sql",
     ),
     revenueProvenance: index.provenance(
@@ -2269,7 +2283,7 @@ export async function getStudentAnalysis() {
         index.cite("student-fees-response"),
       ],
       "Annonce ministérielle du 26 octobre 2026 : distingue le repas généralisé le 4 mai 2026 des engagements pour la rentrée 2027 et les années suivantes. Les objectifs de logement sont distincts des places livrées.",
-      "pipeline/sql/36_analysis_context.sql",
+      "pipeline/sql/35_students.sql",
     ),
   };
 }
@@ -3064,6 +3078,9 @@ async function documentProvenance(ids: string[], method: string, calculation: st
   );
 }
 
+const COMPLETE_JOURNAL =
+  "journal_id in (select id from official_journals where missing_reference_count = 0)";
+
 export async function getOfficialJournal(params: URLSearchParams) {
   const filters: string[] = [];
   const values: string[] = [];
@@ -3098,7 +3115,7 @@ export async function getOfficialJournal(params: URLSearchParams) {
         .first<{ count: number }>(),
       db()
         .prepare(
-          "select nature as label, count(*) as count from official_texts group by nature order by count desc",
+          `select nature as label, count(*) as count from official_texts where ${COMPLETE_JOURNAL} group by nature order by count desc`,
         )
         .all<DocumentCount>(),
       db()
@@ -3108,17 +3125,17 @@ export async function getOfficialJournal(params: URLSearchParams) {
         .all<{ label: string }>(),
       db()
         .prepare(
-          "select ministry_label as label, count(*) as count from official_texts where appointment_class = 'nomination' group by ministry_label order by count desc",
+          `select ministry_label as label, count(*) as count from official_texts where appointment_class = 'nomination' and ${COMPLETE_JOURNAL} group by ministry_label order by count desc`,
         )
         .all<DocumentCount>(),
       db()
         .prepare(
-          "select publication_date as label, count(*) as count from official_texts group by publication_date order by publication_date",
+          `select publication_date as label, count(*) as count from official_texts where ${COMPLETE_JOURNAL} group by publication_date order by publication_date`,
         )
         .all<DocumentCount>(),
       documentProvenance(
         ["jorfsimple"],
-        "30 dernières éditions présentes dans 50 jours de livraisons DILA, dédupliquées par identifiant. Stock historique non reconstitué. Les références protégées sont exclues avant export. Les références sans XML disponible ne sont pas comptées. Une nomination est un texte dont le titre annonce une nomination, pas un nombre de personnes. Les désignations, retraites et cessations sont distinctes. Le ministère du texte est prioritaire ; à défaut, celui du sommaire est utilisé sans déduction du NOR.",
+        "30 dernières éditions présentes dans 50 jours de livraisons DILA, dédupliquées par identifiant. Stock historique non reconstitué. Les références protégées sont exclues avant export. Les éditions dont une référence n’a pas de XML disponible restent hors des compteurs et graphiques. Une nomination est un texte dont le titre annonce une nomination, pas un nombre de personnes. Les désignations, retraites et cessations sont distinctes. Le ministère du texte est prioritaire ; à défaut, celui du sommaire est utilisé sans déduction du NOR.",
         "pipeline/sql/65_official_journals.sql",
       ),
     ]);
@@ -3827,7 +3844,7 @@ async function democracyRows<T>(sql: string, values: (string | number)[] = []): 
 const peopleMethod =
   "Identités et mandats officiels. Naissance, profession, contacts et collaborateurs exclus. Les fonctions gouvernementales proviennent du répertoire parlementaire AN et ne constituent pas une reconstitution exhaustive par décret.";
 const voteMethod =
-  "Chaque Euro : pour, contre et abstention, divisés par les scrutins publics publiés pendant les mandats exacts. Au Sénat, dénominateur limité aux personnes du registre nominatif de chaque scrutin. Non-votants exclus du numérateur. Délégation conservée ; aucune mesure de présence physique. Sénat depuis le 8 juillet 2024, AN législature 17.";
+  "Chaque Euro : pour, contre et abstention, divisés par les scrutins publics publiés pendant les mandats exacts. Au Sénat, totaux et résultat recomptés à partir des positions nominatives, rectifications comprises, et dénominateur limité aux personnes du registre nominatif de chaque scrutin. Non-votants exclus du numérateur. Délégation conservée ; aucune mesure de présence physique. Sénat depuis le 8 juillet 2024, AN législature 17.";
 const campaignMethod =
   "Comptes simplifiés publiés par la CNCCFP, euros convertis exactement en centimes. Bases déclarée et retenue distinctes. RFE et FT : remboursements fixés, paiement non attesté. AR et ARR ont des sens différents. Aucun rapprochement automatique par nom avec les parlementaires.";
 
@@ -3985,8 +4002,13 @@ export async function getPublicBallot(id: string) {
       "select coalesce(o.label,'Groupe non renseigné') as group_label,v.position,count(*) as count from public_votes v left join public_organs o on o.chamber=? and o.external_id=v.group_id where v.ballot_id=? group by group_label,v.position order by group_label,v.position",
       [ballot.chamber, id],
     ),
-    democracyRows<{ ordinal: number; person_id: string | null; intended_position: string }>(
-      "select * from public_vote_corrections where ballot_id=? order by ordinal",
+    democracyRows<{
+      ordinal: number;
+      person_id: string | null;
+      display_name: string | null;
+      intended_position: string;
+    }>(
+      "select c.ordinal,c.person_id,p.display_name,c.intended_position from public_vote_corrections c left join public_people p on p.id=c.person_id where c.ballot_id=? order by c.ordinal",
       [id],
     ),
   ]);
@@ -4217,11 +4239,18 @@ export async function getPublicExpenses() {
       "Dossiers Avis et Conseil uniques. Sanctions, texte libre, administrations et requérants exclus. Sens favorable et défavorable peuvent se chevaucher. L’avis ne prouve pas la communication effective du document. La date d’import ne prolonge pas la période des séances.",
       "pipeline/sql/56_public_expenses.sql",
     ),
-    budgetProvenance: sources.provenance(
-      [sources.cite("plrg-2025"), sources.cite("lfi-2026")],
-      "Mission Pouvoirs publics des tables budgétaires existantes : exécution et crédits votés séparés. Ne pas ajouter les indemnités à ces totaux.",
-      "pipeline/sql/25_budget.sql",
-    ),
+    budgetProvenance: [
+      sources.provenance(
+        [sources.cite("plrg-2025")],
+        "Mission Pouvoirs publics, crédits exécutés. Ne pas ajouter les indemnités à ces totaux.",
+        SQL.budget,
+      ),
+      sources.provenance(
+        [sources.cite("lfi-2026")],
+        "Mission Pouvoirs publics, crédits votés. Ne pas ajouter les indemnités à ces totaux.",
+        "pipeline/sql/27_budget_voted.sql",
+      ),
+    ],
     accessProvenance: sources.provenance(
       [
         sources.cite("parliament-access"),
@@ -4364,10 +4393,10 @@ export async function getAddressLookup() {
 
 export async function getAddressConstituencies(insee: string) {
   const [local, lookup] = await Promise.all([getCommuneRepresentatives(insee), getAddressLookup()]);
-  const split = new Set(local.deputies.map((deputy) => deputy.constituency)).size > 1;
+  const split = new Set(local.deputies.map((deputy) => deputy.seat)).size > 1;
   const shapes = split
-    ? await democracyRows<{ constituency: number; geometry: string }>(
-        "select constituency,geometry from constituency_shapes where insee=? order by constituency",
+    ? await democracyRows<{ seat: string; geometry: string }>(
+        "select department_code || '-' || constituency as seat,geometry from constituency_shapes where insee=? order by department_code,constituency",
         [insee],
       )
     : [];
@@ -4375,7 +4404,7 @@ export async function getAddressConstituencies(insee: string) {
     commune: local.commune,
     deputies: local.deputies,
     shapes: shapes.map((shape) => ({
-      constituency: shape.constituency,
+      seat: shape.seat,
       geometry: JSON.parse(shape.geometry) as ConstituencyGeometry,
     })),
     provenance: {
@@ -4404,12 +4433,16 @@ export async function getCommuneRepresentatives(query: string, exactInsee = fals
   const sources = await democracySources();
   const deputies = commune
     ? await democracyRows<{
+        department: string;
         constituency: number;
+        seat: string;
         id: string | null;
         name: string | null;
         group: string | null;
       }>(
-        `select c.constituency,p.id,p.display_name as name,p.group_label as "group"
+        `select c.department_code as department,c.constituency,
+           c.department_code || '-' || c.constituency as seat,
+           p.id,p.display_name as name,p.group_label as "group"
          from commune_constituencies c left join (
            select m.person_id,r.department_code,r.constituency
            from mandate_constituencies r join public_mandates m on m.id=r.mandate_id
@@ -4417,7 +4450,7 @@ export async function getCommuneRepresentatives(query: string, exactInsee = fals
              and (m.ends_on is null or m.ends_on>=date('now'))
          ) m on m.department_code=c.department_code and m.constituency=c.constituency
          left join public_people p on p.id=m.person_id and p.active=1
-         where c.insee=? order by c.constituency,p.display_name`,
+         where c.insee=? order by c.department_code,c.constituency,p.display_name`,
         [commune.insee],
       )
     : [];

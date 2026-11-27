@@ -1,12 +1,12 @@
 create or replace table gleif_units as
 with identifiers as (
-    select lei, siren
+    select lei, siren, legal_name
     from gleif_entity_input
     where entity_status = 'ACTIVE' and registration_status in ('ISSUED', 'LAPSED')
     qualify count(*) over (partition by siren) = 1
         and count(*) over (partition by lei) = 1
 )
-select i.lei, u.siren, u.denominationUniteLegale as name,
+select i.lei, u.siren, u.denominationUniteLegale as name, i.legal_name, u.dateDebut as sirene_since,
     u.categorieJuridiqueUniteLegale::varchar as legal_category,
     u.etatAdministratifUniteLegale = 'A' as active
 from identifiers i
@@ -46,10 +46,14 @@ join gleif_units c on c.lei = r.child_lei
 join gleif_units p on p.lei = r.parent_lei
 join orgs o on o.siren = c.siren
 where not exists (select 1 from org_group_members m where m.siren in (c.siren, p.siren))
+    and not (c.sirene_since > try_cast(left(r.updated_at, 10) as date)
+        and name_key(c.legal_name) <> name_key(c.name))
     and not exists (select 1 from gleif_ultimate_links a where a.child_lei = r.parent_lei);
 
 insert into org_groups
-select p.siren, 'Groupe ' || p.name, getvariable('gleif_as_of')::varchar, null,
+select p.siren,
+    case when regexp_matches(upper(p.name), '\bGROUPE\b') then p.name else 'Groupe ' || p.name end,
+    getvariable('gleif_as_of')::varchar, null,
     year(getvariable('gleif_as_of')) - 1
 from gleif_group_candidates c
 join gleif_units p on p.siren = c.group_siren

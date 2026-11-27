@@ -287,12 +287,13 @@ def fetch_ofgl_records(source: Source, raw_dir: Path, refresh: bool) -> FetchRec
 
 def _collection(source: Source, directory: Path, records: list[FetchRecord]) -> FetchRecord:
     failures = [record for record in records if record.error]
+    latest = max if source.delivery_pattern else min
     return FetchRecord(
         source_id=source.id,
         path=str(directory),
         urls=[url for record in records for url in record.urls],
-        retrieved_at=min(record.retrieved_at for record in records),
-        checked_at=min(record.checked_at or record.retrieved_at for record in records),
+        retrieved_at=latest(record.retrieved_at for record in records),
+        checked_at=latest(record.checked_at or record.retrieved_at for record in records),
         published_at=None,
         bytes=sum(record.bytes for record in records),
         sha256=hashlib.sha256(

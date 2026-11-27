@@ -123,8 +123,11 @@ const sections = [
   </Section>
   <Section id="solde" title="Un solde comptable" icon="scale" provenance={data.provenance}>
     <p>
-      Dépenses en France moins contribution : en {latest.year}, l’écart est de{" "}
-      {formatBillions(-latest.balance)}, soit {formatEuro(-latest.per_capita)} par habitant.
+      Dépenses en France moins contribution : en {latest.year},{" "}
+      {latest.balance < 0 ? "la France verse" : "la France reçoit"}{" "}
+      {formatBillions(Math.abs(latest.balance))} de plus qu’elle ne{" "}
+      {latest.balance < 0 ? "reçoit" : "verse"}, soit {formatEuro(Math.abs(latest.per_capita))} par
+      habitant.
     </p>
     <p slot="caveat">
       Un solde négatif indique que la France verse davantage qu’elle ne reçoit sur ce périmètre. Ce

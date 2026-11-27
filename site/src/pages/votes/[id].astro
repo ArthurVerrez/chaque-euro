@@ -91,7 +91,7 @@ const { ballot, votes, groups, corrections } = data;
         columns={["Référence", "Information"]}
         rows={corrections.map((c) => [
           {
-            text: c.person_id ?? `Rectification ${c.ordinal}`,
+            text: c.display_name ?? c.person_id ?? `Rectification ${c.ordinal}`,
             href: c.person_id ? `/elus/${c.person_id}` : null,
           },
           { text: positionLabels[c.intended_position] ?? c.intended_position },

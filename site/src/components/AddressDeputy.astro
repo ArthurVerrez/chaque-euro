@@ -107,13 +107,13 @@ const lookup = await getAddressLookup();
         if (!response.ok) throw new Error();
         const local: Awaited<ReturnType<typeof getAddressConstituencies>> = await response.json();
         if (current !== request) return;
-        const split = new Set(local.deputies.map((person) => person.constituency)).size > 1;
-        const number = addressConstituency(
+        const split = new Set(local.deputies.map((person) => person.seat)).size > 1;
+        const seat = addressConstituency(
           feature.geometry.coordinates,
           local.deputies,
           local.shapes,
         );
-        const people = local.deputies.filter((person) => person.constituency === number);
+        const people = local.deputies.filter((person) => person.seat === seat);
         commune.href = `/elus?insee=${code}#trouver`;
         commune.hidden = false;
         const person = people[0];
@@ -127,14 +127,14 @@ const lookup = await getAddressLookup();
         link.textContent = person.name;
         deputy.replaceChildren(
           link,
-          ` · ${number}${number === 1 ? "re" : "e"} circonscription (${local.commune?.department})`,
+          ` · ${person.constituency}${person.constituency === 1 ? "re" : "e"} circonscription (${person.department})`,
         );
         certainty.textContent = split
           ? "Résultat indicatif selon les contours simplifiés de l’Insee."
           : "Commune rattachée à une seule circonscription selon l’Insee.";
         result.hidden = false;
         status.classList.add("visually-hidden");
-        status.textContent = `${person.name}, ${number}${number === 1 ? "re" : "e"} circonscription. ${certainty.textContent}`;
+        status.textContent = `${person.name}, ${person.constituency}${person.constituency === 1 ? "re" : "e"} circonscription (${person.department}). ${certainty.textContent}`;
         link.focus();
         choices.replaceChildren();
       } catch {

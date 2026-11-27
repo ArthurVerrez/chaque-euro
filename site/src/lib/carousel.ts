@@ -5,6 +5,7 @@ import {
   LAST_YEAR,
   atCity,
   baseGrowth,
+  changePosition,
   cityLabel,
   cityStats,
   firstYear,
@@ -238,9 +239,13 @@ function legendLine(entries: Legend[]): Node {
 }
 
 function cityFigures(stat: CityStat): Figure[] {
-  if (leadsWithChange(stat) && stat.first !== null && stat.changeRank !== null) {
-    const rise = stat.changeRank <= stat.changeCount / 2;
-    const position = rise ? stat.changeRank : stat.changeCount + 1 - stat.changeRank;
+  if (
+    leadsWithChange(stat) &&
+    stat.first !== null &&
+    stat.changeRank !== null &&
+    stat.change !== null
+  ) {
+    const { position, label } = changePosition(stat.changeRank, stat.changeCount, stat.change);
     return [
       {
         value: formatValue(stat.metric, stat.first),
@@ -249,7 +254,7 @@ function cityFigures(stat: CityStat): Figure[] {
       { value: formatValue(stat.metric, stat.last), label: `en ${LAST_YEAR}` },
       {
         value: position === 1 ? "1re" : `${position}e`,
-        label: `plus forte ${rise ? "hausse" : "baisse"} sur ${stat.changeCount}`,
+        label: `${label} sur ${stat.changeCount}`,
       },
     ];
   }

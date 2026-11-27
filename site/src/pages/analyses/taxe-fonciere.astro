@@ -42,7 +42,7 @@ const figures = [
   },
   {
     icon: "trend" as const,
-    label: `Communes qui l’ont relevé depuis ${firstYear}`,
+    label: `Communes où il a augmenté depuis ${firstYear}`,
     value: share(raised),
     note: `${formatNumber(raised)} sur ${formatNumber(communes)}`,
   },
@@ -63,7 +63,7 @@ const sections = [
 
 <Analysis
   article={analysis("taxe-fonciere")}
-  answer={`Entre ${firstYear} et ${lastYear}, la taxe foncière d’un même logement a pris ${revaluation} sans aucune hausse du taux, par la seule revalorisation légale des valeurs locatives. ${share(raised)} des communes ont en plus relevé leur taux, intercommunalité comprise, et ${formatNumber(lowered)} l’ont baissé.`}
+  answer={`Entre ${firstYear} et ${lastYear}, la taxe foncière d’un même logement a pris ${revaluation} sans aucune hausse du taux, par la seule revalorisation légale des valeurs locatives. Le taux a en plus augmenté dans ${share(raised)} des communes, intercommunalité et syndicats compris, et baissé dans ${formatNumber(lowered)}.`}
   figures={figures}
   provenance={[summary.provenance]}
   sections={sections}
@@ -103,9 +103,9 @@ const sections = [
   >
     <p>
       La taxe suit le taux et la valeur locative du logement. Cette valeur est relevée chaque année
-      avec l’inflation, sans vote local : {revaluation} entre {firstYear} et {lastYear}.{" "}
-      {share(raised)} des communes ont en plus relevé leur taux, {formatNumber(raisedTenth)} d’au
-      moins 10 %.
+      avec l’inflation, sans vote local : {revaluation} entre {firstYear} et {lastYear}. Le taux a
+      en plus augmenté dans {share(raised)} des communes, de 10 % ou plus dans{" "}
+      {formatNumber(raisedTenth)}.
     </p>
     <img
       slot="chart"

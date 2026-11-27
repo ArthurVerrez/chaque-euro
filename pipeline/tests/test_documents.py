@@ -14,11 +14,11 @@ from chaque_euro.documents import (
     administrative_rows,
     an_files,
     appointment,
-    copy_rows,
     dole_files,
     journals,
     protected,
 )
+from chaque_euro.public_roles import copy_rows
 from chaque_euro.registry import load_registry
 
 
@@ -190,7 +190,7 @@ class OfficialDocumentsTest(unittest.TestCase):
                 "DROP TABLE forbidden;\nCOPY loi (id, title, empty) FROM stdin;\n"
                 "1  \tTexte\\tavec\\nretour\\\\fin\t\\N\n\\.\n",
             )
-        rows = copy_rows(str(path), {"loi"})["loi"]
+        rows = [row for _, row in copy_rows(str(path), {"loi"})]
         self.assertEqual(rows, [{"id": "1", "title": "Texte\tavec\nretour\\fin", "empty": None}])
 
     def test_directory_names_only_president_and_government_in_public_roles(self) -> None:

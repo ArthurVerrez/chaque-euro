@@ -78,6 +78,40 @@ class LocalMoneyTest(unittest.TestCase):
                 (None, None, None),
             )
 
+    def test_merged_commune_keeps_the_rate_of_the_commune_that_kept_its_code(self) -> None:
+        with duckdb.connect() as con:
+            con.execute(
+                "create macro rei_number(value) as "
+                "try_cast(replace(trim(value), ',', '.') as double)"
+            )
+            con.execute(
+                "create table rei_rate_history as select * from (values "
+                "('93', '066', 2024, '39,02', '0', '0'), ('93', '059', 2024, '45,1', '0', '0'), "
+                "('01', '001', 2024, '20', '1', '2')) "
+                "t(dep, com, year, commune, syndicate, grouping)"
+            )
+            con.execute(
+                "create table rei_rows as select * from (values "
+                "('93066', '93066', '39,5', '0', '0'), ('93066', '93059', '44', '0', '0'), "
+                "('01001', '01001', '21', '1', '2')) t(insee, code, E12, E22, E32)"
+            )
+            con.execute(
+                "create table commune_code_map as select * from (values "
+                "('93066', '93066'), ('93059', '93066'), ('01001', '01001')) t(old_insee, insee)"
+            )
+            con.execute((SQL / "52a_tax_rates.sql").read_text())
+            self.assertEqual(
+                con.execute(
+                    "select insee, year, commune_rate from commune_tax_rates order by insee, year"
+                ).fetchall(),
+                [
+                    ("01001", 2024, 20.0),
+                    ("01001", 2025, 21.0),
+                    ("93066", 2024, 39.02),
+                    ("93066", 2025, 39.5),
+                ],
+            )
+
     def test_base_revaluation_follows_november_harmonised_prices(self) -> None:
         with duckdb.connect() as con:
             con.execute(

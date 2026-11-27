@@ -18,9 +18,9 @@ export const ANALYSES: Analysis[] = [
     short: "Taxe foncière",
     accent: "var(--series-2)",
     title: "Taxe foncière : ce que votent les communes depuis 2021",
-    question: "Combien de communes ont relevé leur taux de taxe foncière, et de combien ?",
+    question: "Dans combien de communes le taux de taxe foncière a-t-il augmenté, et de combien ?",
     summary:
-      "Le taux de chaque commune, intercommunalité comprise, de 2021 à 2025, et la carte de France.",
+      "Le taux de chaque commune, intercommunalité et syndicats compris, de 2021 à 2025, et la carte de France.",
     icon: "housing",
     published: "2026-11-23",
   },

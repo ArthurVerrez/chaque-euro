@@ -1,10 +1,10 @@
-import io
 import json
 import re
 import tarfile
 import unicodedata
 import xml.etree.ElementTree as ET
 import zipfile
+from collections import defaultdict
 from collections.abc import Iterator
 from datetime import UTC, date, datetime
 from email.utils import parsedate_to_datetime
@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 import duckdb
 
 from .fetch import FetchRecord
+from .public_roles import copy_rows
 from .registry import Source, load_registry
 
 TABLES = {
@@ -426,52 +427,10 @@ def dole_files(path: str, source: Source, today: date) -> dict[str, list[tuple[A
     return {"legislative_files": files, "legislative_file_refs": refs, "legislative_events": events}
 
 
-def copy_rows(path: str, selected: set[str]) -> dict[str, list[dict[str, str | None]]]:
-    tables: dict[str, list[dict[str, str | None]]] = {name: [] for name in selected}
-    with zipfile.ZipFile(path) as archive:
-        name = next(n for n in archive.namelist() if n.endswith(".sql"))
-        with io.TextIOWrapper(archive.open(name), encoding="utf-8") as stream:
-            table = ""
-            columns: list[str] = []
-            for line in stream:
-                match = re.match(r"COPY (?:public\.)?(\w+) \(([^)]+)\) FROM stdin;", line)
-                if match:
-                    table = match[1]
-                    columns = match[2].split(", ")
-                elif line.rstrip() == r"\.":
-                    table = ""
-                elif table in tables:
-                    cells = line.rstrip("\n").split("\t")
-                    if len(cells) != len(columns):
-                        raise ValueError(f"COPY column mismatch: {table}")
-
-                    def decode(value: str) -> str | None:
-                        if value == r"\N":
-                            return None
-                        return re.sub(
-                            r"\\([0-7]{1,3}|.)",
-                            lambda m: (
-                                chr(int(m[1], 8))
-                                if m[1].isdigit()
-                                else {
-                                    "t": "\t",
-                                    "n": "\n",
-                                    "r": "\r",
-                                    "b": "\b",
-                                    "f": "\f",
-                                    "v": "\v",
-                                    "\\": "\\",
-                                }.get(m[1], m[1])
-                            ),
-                            value,
-                        ).strip()
-
-                    tables[table].append(dict(zip(columns, map(decode, cells), strict=True)))
-    return tables
-
-
 def senate_files(path: str, source: Source, today: date) -> dict[str, list[tuple[Any, ...]]]:
-    tables = copy_rows(path, {"loi", "lecture", "lecass", "texte", "typtxt", "typloi"})
+    tables: dict[str, list[dict[str, str | None]]] = defaultdict(list)
+    for name, row in copy_rows(path, {"loi", "lecture", "lecass", "texte", "typtxt", "typloi"}):
+        tables[name].append(row)
     law_types = {row["typloicod"]: row["typloiden"] for row in tables["typloi"]}
     events: list[tuple[Any, ...]] = []
     files, refs, budgets, documents = [], [], [], []

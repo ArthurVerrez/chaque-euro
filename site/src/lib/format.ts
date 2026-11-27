@@ -36,7 +36,7 @@ export function formatEuro(value: number): string {
 
 function scaled(value: number): string | null {
   const abs = Math.abs(value);
-  if (abs >= 1e9) return `${(abs >= 1e10 ? integer : oneDecimal).format(value / 1e9)}${NBSP}Md`;
+  if (abs >= 1e9) return `${(abs >= 1e11 ? integer : oneDecimal).format(value / 1e9)}${NBSP}Md`;
   if (abs >= 1e6) return `${(abs >= 1e8 ? integer : oneDecimal).format(value / 1e6)}${NBSP}M`;
   return null;
 }

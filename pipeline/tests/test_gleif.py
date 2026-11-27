@@ -19,6 +19,7 @@ class GleifInputTests(unittest.TestCase):
             root = Path(directory)
             fields = [
                 "LEI",
+                "Entity.LegalName",
                 "Entity.RegistrationAuthority.RegistrationAuthorityID",
                 "Entity.RegistrationAuthority.RegistrationAuthorityEntityID",
                 "Entity.EntityCategory",
@@ -30,7 +31,7 @@ class GleifInputTests(unittest.TestCase):
                 writer = csv.writer(handle)
                 writer.writerow(fields)
                 writer.writerows(
-                    [lei, authority, siren, category, "ACTIVE", "ISSUED"]
+                    [lei, f"Entité {lei}", authority, siren, category, "ACTIVE", "ISSUED"]
                     for lei, authority, siren, category in (
                         ("A", "RA000189", "012345678", "GENERAL"),
                         ("B", "RA000250", "123456789", "GENERAL"),
@@ -114,14 +115,19 @@ class GleifGroupTests(unittest.TestCase):
                     'SOCIETE ' || n as denominationUniteLegale,
                     case when n = 4 then '1000' else '5599' end as categorieJuridiqueUniteLegale,
                     case when n = 5 then 'C' else 'A' end as etatAdministratifUniteLegale,
-                    case when n = 3 then 'P' else 'O' end as statutDiffusionUniteLegale
-                from range(16) t(n);
+                    case when n = 3 then 'P' else 'O' end as statutDiffusionUniteLegale,
+                    case when n in (2, 16) then date '2026-10-15' else date '2020-01-01' end
+                        as dateDebut
+                from range(17) t(n);
                 create table gleif_entity_input as
-                select 'LEI' || n as lei, (100000000 + n)::varchar as siren,
+                select 'LEI' || n as lei,
+                    case when n = 16 then 'NOM AVANT CESSION' else 'Société ' || n end
+                        as legal_name,
+                    (100000000 + n)::varchar as siren,
                     'ACTIVE' as entity_status, 'ISSUED' as registration_status
-                from range(16) t(n);
+                from range(17) t(n);
                 insert into gleif_entity_input
-                    values ('DUPLICATE', '100000006', 'ACTIVE', 'ISSUED');
+                    values ('DUPLICATE', 'Doublon', '100000006', 'ACTIVE', 'ISSUED');
                 create table orgs as select siren from sample where siren <> '100000015';
                 create macro org_kind(category) as 'Société commerciale';
                 create table org_groups (
@@ -149,6 +155,10 @@ class GleifGroupTests(unittest.TestCase):
                         ends := case when n = 12 then '2026-01-01' else null end)] as periods
                 from range(1, 15) t(n);
                 insert into gleif_relationship_input
+                    select 'LEI16', parent_lei, relationship_type, relationship_status,
+                        registration_status, updated_at, periods
+                    from gleif_relationship_input where child_lei = 'LEI2';
+                insert into gleif_relationship_input
                     select child_lei, parent_lei, relationship_type, relationship_status,
                         registration_status, '2026-10-02', periods
                     from gleif_relationship_input where child_lei = 'LEI1';
@@ -163,6 +173,7 @@ class GleifGroupTests(unittest.TestCase):
             sirene = str(Path(directory) / "sirene.parquet")
             con.execute("copy sample to ? (format parquet)", [sirene])
             con.execute("set variable sirene_path = ?", [sirene])
+            con.execute((SQL / "05_name_key.sql").read_text())
             con.execute((SQL / "40a_organisation_gleif_groups.sql").read_text())
             self.assertEqual(
                 con.execute("select siren, amount_year from org_groups").fetchall(),

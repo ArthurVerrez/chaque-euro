@@ -123,7 +123,7 @@ const sections = [
             <p class="fact-change">
               <strong>{formatChange(entry.change)}</strong> depuis {firstYear(entry.metric)} (
               {formatValue(entry.metric, entry.first)}),{" "}
-              {changeRankText(entry.changeRank!, entry.changeCount)}
+              {changeRankText(entry.changeRank!, entry.changeCount, entry.change)}
             </p>
           )}
         </li>

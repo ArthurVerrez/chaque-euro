@@ -76,7 +76,7 @@ const figure = (kind: string, label: string) => ({
               <Icon name="town" size={20} />
               {local.commune.name} ({local.commune.department})
             </h3>
-            {new Set(local.deputies.map((p) => p.constituency)).size > 1 && (
+            {new Set(local.deputies.map((p) => p.seat)).size > 1 && (
               <p>
                 Votre commune est partagée entre plusieurs{" "}
                 <Term id="circonscription-legislative">circonscriptions législatives</Term>.
@@ -93,7 +93,9 @@ const figure = (kind: string, label: string) => ({
                 caption="Députés en exercice, XVIIe législature"
                 columns={["Circonscription", "Député ou députée", "Groupe"]}
                 rows={local.deputies.map((p) => [
-                  { text: `${p.constituency}${p.constituency === 1 ? "re" : "e"} circonscription` },
+                  {
+                    text: `${p.constituency}${p.constituency === 1 ? "re" : "e"} circonscription${p.department === local.commune?.department ? "" : ` (${p.department})`}`,
+                  },
                   {
                     text: p.name ?? "Mandat en exercice non disponible",
                     href: p.id ? `/elus/${p.id}` : null,

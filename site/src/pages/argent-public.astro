@@ -58,7 +58,7 @@ const europeFunctions = Object.entries(PUBLIC_FUNCTIONS)
   }))
   .filter((row) => row.france !== undefined && row.eu !== undefined);
 const debt = indicators.debt.row;
-const { finances, functions, stateBudget, households } = money;
+const { finances, functions, stateBudget, households, summaryProvenance } = money;
 const sector = (code: string) => finances.sectors.find((entry) => entry.code === code);
 const latest = (code: string) => sector(code)?.years.at(-1);
 const total = latest("S13");
@@ -143,7 +143,7 @@ const answer = `En ${year}, toutes les administrations publiques ont dépensé $
       </div>
       <Answer text={answer} />
       <KeyFigures figures={figures} />
-      <Provenance provenance={finances.provenance} />
+      <Provenance provenance={[summaryProvenance, stateBudget.provenance]} />
     </div>
   </header>
   <Toc
@@ -167,6 +167,7 @@ const answer = `En ${year}, toutes les administrations publiques ont dépensé $
         </h2>
         <p>
           Quatre familles d'<Term id="administrations-publiques">administrations publiques</Term>.
+          Les opérateurs de l'État sont les <Term id="odac">ODAC</Term> de l'Insee.
         </p>
       </div>
       <div class="card">
@@ -175,9 +176,10 @@ const answer = `En ${year}, toutes les administrations publiques ont dépensé $
       <div class="explain">
         <Explainer title={`Et les ${formatEuros(stateBudget.spent)} du budget de l'État ?`}>
           <p>
-            C'est le budget voté par le Parlement. L'Insee compte l'État selon des règles
-            européennes, sur un périmètre un peu différent : {formatEuros(parts[0]?.value ?? 0)} en
-            {year}. Les deux ne s'additionnent pas.
+            C'est ce que l'État a dépensé en {stateBudget.year} sur son budget général. L'Insee
+            compte l'État selon des règles européennes, sur un autre périmètre (les impôts
+            remboursés n'y sont pas des dépenses) : {formatEuros(parts[0]?.value ?? 0)} en {year}.
+            Les deux ne s'additionnent pas.
           </p>
           <p>
             <a href="/budget-etat">Le budget de l'État, mission par mission</a>

@@ -245,7 +245,7 @@ export const PUBLIC_SECTORS: {
 ];
 
 export const PUBLIC_MEMBERS: Record<string, { name: string; icon: IconName }> = {
-  S131311: { name: "Communes", icon: "town" },
+  S131311: { name: "Communes et intercommunalités", icon: "town" },
   S131312: { name: "Départements", icon: "map" },
   S131313: { name: "Régions", icon: "map" },
   S131314: { name: "Syndicats", icon: "town" },
@@ -328,7 +328,7 @@ export function familyFlow(family: PublicFamily): Flow {
 }
 
 export const PUBLIC_FUNCTIONS: Record<string, { label: string; icon: IconName }> = {
-  GF01: { label: "Administration et intérêts de la dette", icon: "administration" },
+  GF01: { label: "Administration, dette et recherche fondamentale", icon: "administration" },
   GF02: { label: "Défense", icon: "defense" },
   GF03: { label: "Police, justice et secours", icon: "security" },
   GF04: { label: "Transports, économie et emploi", icon: "transport" },

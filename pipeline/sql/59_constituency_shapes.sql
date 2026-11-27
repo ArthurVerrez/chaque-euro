@@ -7,7 +7,7 @@ with split_communes as (
     from commune_geometries_raw g join split_communes s using(insee)
 ), clipped as (
     select c.insee, c.department_code, c.constituency,
-        ST_Intersection(s.geom, b.geom) as geom
+        ST_CollectionExtract(ST_Intersection(s.geom, b.geom), 3) as geom
     from commune_constituencies c join bounds b using(insee)
     join constituency_shapes_raw s using(department_code, constituency)
 )

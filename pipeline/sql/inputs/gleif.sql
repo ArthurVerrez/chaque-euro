@@ -1,6 +1,7 @@
 create or replace table gleif_entity_input as
 select
     "LEI" as lei,
+    "Entity.LegalName" as legal_name,
     regexp_replace("Entity.RegistrationAuthority.RegistrationAuthorityEntityID", '\s', '', 'g') as siren,
     "Entity.EntityStatus" as entity_status,
     "Registration.RegistrationStatus" as registration_status
