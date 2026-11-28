@@ -191,12 +191,14 @@ with retained as (
 )
 select uid, holders, details.amount as amount, details.declared_amount as declared_amount,
     details.amount_estimated as amount_estimated,
-    coalesce(details.amount_flag, case
+    case
+        when details.amount_flag = 'aberrant' then 'aberrant'
         when details.amount between 0.001 and 1 or details.amount >= 999999999
             or details.amount >= 9999999 and regexp_full_match(details.amount::varchar, '9+(\.0+)?')
             then 'hors_norme'
-    end) as amount_flag,
-    coalesce(amount_flag is null and details.amount > 0, false) as counted
+        else details.amount_flag
+    end as amount_flag,
+    coalesce(coalesce(amount_flag, 'suspect') = 'suspect' and details.amount > 0, false) as counted
 from retained;
 
 update contract_amounts set amount_flag = 'subsequent', counted = false

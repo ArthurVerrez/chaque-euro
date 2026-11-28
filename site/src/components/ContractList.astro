@@ -11,8 +11,8 @@ interface Props {
 
 const { contracts, role, caption } = Astro.props;
 const flags: Record<string, string> = {
-  aberrant: "Montant déclaré jugé aberrant par le consolidateur",
-  suspect: "Montant signalé comme suspect, valeur conservée par le consolidateur",
+  aberrant: "Montant jugé aberrant par le consolidateur",
+  suspect: "Montant inhabituel selon le consolidateur, compté tel que déclaré",
   hors_norme: "Montant de remplissage (1 € ou moins, suite de 9 ou au moins 999 999 999 €)",
   subsequent: "Marché subséquent d'un accord-cadre déjà compté",
 };
@@ -46,20 +46,11 @@ const flags: Record<string, string> = {
           </p>
         </div>
         <div class="figure">
-          {contract.amount === null ? (
-            <>
-              <span class="muted small">Montant non retenu</span>
-              {contract.declaredAmount !== null && (
-                <span class="small">Déclaré : {formatEuros(contract.declaredAmount)}</span>
-              )}
-            </>
+          {contract.declaredAmount === null ? (
+            <span class="muted small">Montant non publié</span>
           ) : (
             <>
-              <strong class="num">{formatEuros(contract.amount)}</strong>
-              {contract.amountEstimated && <span class="flag">Estimation du consolidateur</span>}
-              {contract.amountEstimated && contract.declaredAmount !== null && (
-                <span class="small">Déclaré : {formatEuros(contract.declaredAmount)}</span>
-              )}
+              <strong class="num">{formatEuros(contract.declaredAmount)}</strong>
               {!contract.amountCounted && <span class="flag">Non compté dans les totaux</span>}
               {contract.amountFlag && (
                 <span class="flag">{flags[contract.amountFlag] ?? "Non compté"}</span>

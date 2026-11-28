@@ -373,7 +373,7 @@ class OpportunityDateTests(unittest.TestCase):
 
 
 class ProcurementAmountTests(unittest.TestCase):
-    def test_flagged_amounts_keep_estimates_but_are_not_counted(self) -> None:
+    def test_suspect_amounts_count_unless_placeholder_and_aberrant_do_not(self) -> None:
         with tempfile.TemporaryDirectory() as directory, duckdb.connect() as con:
             path = str(Path(directory) / "sample.parquet")
             con.execute("""
@@ -389,6 +389,7 @@ class ProcurementAmountTests(unittest.TestCase):
                 from (values ('clean', 50000.0, null, null),
                     ('estimated', 5000000000.0, 200000.0, 'aberrant'),
                     ('suspect', 90000.0, 90000.0, 'suspect'),
+                    ('suspect-cap', 999999999.0, 999999999.0, 'suspect'),
                     ('no-estimate', 5000000000.0, null, 'aberrant'),
                     ('unflagged-cap', 999999999.0, 1000.0, null))
                     v(uid, declared, estimate, flag);
@@ -429,7 +430,8 @@ class ProcurementAmountTests(unittest.TestCase):
                     ("clean", 50000.0, 50000.0, False, True),
                     ("estimated", 200000.0, 5000000000.0, True, False),
                     ("no-estimate", None, 5000000000.0, False, False),
-                    ("suspect", 90000.0, 90000.0, False, False),
+                    ("suspect", 90000.0, 90000.0, False, True),
+                    ("suspect-cap", 999999999.0, 999999999.0, False, False),
                     ("unflagged-cap", 999999999.0, 999999999.0, False, False),
                 ],
             )

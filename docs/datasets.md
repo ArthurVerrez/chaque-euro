@@ -62,6 +62,7 @@ The national-money extension was verified on 2 November 2026. Its new source URL
 - Quality problems observed:
   - `montant` is the amount in the contract, often a ceiling for framework agreements. Summing raw current amounts gives 400 to 600 Md€ per year, well above total French public procurement.
   - Upstream anomaly flags on current rows since 2019: 6 885 contracts "aberrant", 28 179 "suspect". Before filtering, the 8 718 current rows flagged aberrant summed to 14 644 Md€.
+  - "suspect" means more than 4 median absolute deviations above similar contracts (same CPV family, type, buyer category and holder count), or a high amount per inhabitant for communes. The consolidator keeps these amounts in its own `montant_rationalise`. A review of the 2026-11-25 file found them to be mostly framework ceilings of large buyers (RESAH, UGAP, Paris, metro and waste contracts) and real works in very small communes, so we count them (20 688 contracts, 256 Md€), still applying our own placeholder filters. "aberrant" amounts stay excluded and are shown as declared, not as the consolidator's peer-median estimate.
   - Placeholder amounts that are not flagged: 83 IT services contracts of exactly 2 000 000 000 € from one buyer (Communauté urbaine de Dunkerque), 17 contracts of 999 999 999 €. We exclude amounts of 999 999 999 € or more from totals (112 contracts).
   - 64 441 contracts with no usable amount (missing or zero).
   - 131 735 contracts with several holders repeat the full amount on each holder row; we split equally.

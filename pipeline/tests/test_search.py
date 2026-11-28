@@ -26,13 +26,19 @@ class SearchTests(unittest.TestCase):
                     'Élodie Députée' as display_name, 'deputy' as role_kind,
                     'Rhône' as territory_label, null as group_label, 1 as active;
                 create table administrations (id varchar, head_name varchar,
-                    head_role varchar, name_public varchar);
+                    head_role varchar, name_public varchar, siren varchar,
+                    category varchar, acronym varchar);
                 insert into administrations values
-                    ('presidence','Emmanuel MACRON','Président de la République','Présidence'),
-                    ('matignon','Sébastien LECORNU','Premier ministre','Premier ministre'),
-                    ('justice','Gérald DARMANIN','Ministre','Ministère de la Justice'),
-                    ('culture','Catherine PÉGARD','Ministre','Ministère de la Culture'),
-                    ('service',null,null,'Service');
+                    ('presidence','Emmanuel MACRON','Président de la République','Présidence',
+                        null, null, null),
+                    ('matignon','Sébastien LECORNU','Premier ministre','Premier ministre',
+                        null, null, null),
+                    ('justice','Gérald DARMANIN','Ministre','Ministère de la Justice',
+                        null, null, null),
+                    ('culture','Catherine PÉGARD','Ministre','Ministère de la Culture',
+                        null, null, null),
+                    ('service',null,null,'Service', null, 'Préfecture', 'SGAR'),
+                    ('edf-service',null,null,'Électricité', '552081317', null, null);
             """)
             con.execute((PIPELINE / "sql/80_search.sql").read_text())
             rows = con.execute("select * from search").fetchall()
@@ -49,6 +55,7 @@ class SearchTests(unittest.TestCase):
                 ('"darmanin"*', ("Responsable public", "justice")),
                 ('"pegard"*', ("Responsable public", "culture")),
                 ('"edf"*', ("Société commerciale", "552081317")),
+                ('"sgar"*', ("Service public", "service")),
                 ('"oeuilly"*', ("Commune", "02566")),
                 ('"œuilly"*', ("Commune", "02566")),
             ]:
@@ -65,4 +72,8 @@ class SearchTests(unittest.TestCase):
             )
             self.assertEqual(
                 db.execute("select name from search where ref='02566'").fetchone(), ("Œuilly",)
+            )
+            self.assertEqual(
+                db.execute("select ref from search where kind='Service public'").fetchall(),
+                [("presidence",), ("matignon",), ("justice",), ("culture",), ("service",)],
             )
